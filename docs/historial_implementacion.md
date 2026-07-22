@@ -22,7 +22,7 @@ similares) y a commits manuales.
 
 ---
 
-## 2026-07-22 — Implementación inicial · scaffold + hello world WebSocket
+## 2026-07-22 — `5aeee70` — Implementación inicial · scaffold + hello world WebSocket
 **Refs:** SPEC-001 `specs/SPEC-001-fundacion-proyecto.md` (Completada)
 
 **Resumen:** Se levantó la fundación del repositorio: estructura de carpetas del
