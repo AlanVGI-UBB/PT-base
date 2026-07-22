@@ -1,0 +1,22 @@
+{
+    "cursos": [
+        {
+            "id": 1,
+            "nombre": "Cálculo I — Ejemplo piloto"
+        }
+    ],
+    "terminos": [
+        {"curso_id": 1, "lema": "derivado", "texto_visible": "derivada", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "integral", "texto_visible": "integral", "video_url": "/data/videos_senas/integral.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "raíz cuadrado", "texto_visible": "raíz cuadrada", "video_url": "/data/videos_senas/raiz_cuadrada.mp4", "n_palabras": 2},
+        {"curso_id": 1, "lema": "límite", "texto_visible": "límite", "video_url": "/data/videos_senas/limite.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "teorema valor medio", "texto_visible": "teorema del valor medio", "video_url": "/data/videos_senas/teorema_vm.mp4", "n_palabras": 3},
+        {"curso_id": 1, "lema": "función continuo", "texto_visible": "función continua", "video_url": "/data/videos_senas/funcion_continua.mp4", "n_palabras": 2},
+        {"curso_id": 1, "lema": "ecuación", "texto_visible": "ecuación", "video_url": "/data/videos_senas/ecuacion.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "hablar", "texto_visible": "hablar", "video_url": "/data/videos_senas/hablar.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "resultado", "texto_visible": "resultado", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
+        {"curso_id": 1, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1}
+    ]
+}

@@ -30,6 +30,7 @@ Ejecutar antes de dar una tarea por terminada:
 
 ```powershell
 ruff check backend
+pytest backend/tests
 pnpm --prefix frontend build
 ```
 

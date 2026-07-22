@@ -59,5 +59,87 @@ gestionado con `pnpm`, y orquestación con Docker Compose.
 - Gestor de paquetes JS fijado a **pnpm** (no npm/yarn).
 - No se incluyeron submódulos vacíos (`asr/`, `glossary/`, etc.) — se
   introducirán en sus specs correspondientes.
-- Próxima spec prevista: SPEC-002 (PoC de transcripción profesor→alumno con
-  Web Speech API + matching por substring).
+- Próxima spec prevista: SPEC-002 (backend completo del flujo profesor→alumno).
+
+## 2026-07-22 — `7d17881` — Registro de hash en historial
+**Refs:** docs/historial_implementacion.md
+
+**Resumen:** Commit mínimo para sincronizar el hash `5aeee70` en el historial de
+implementación, cumpliendo la regla de AGENTS.md.
+
+**Cambios:**
+- `docs/historial_implementacion.md` — hash añadido al encabezado de la entrada
+  SPEC-001.
+
+**Verificación:** n/a (commit documental).
+
+---
+
+## 2026-07-22 — <pendiente> — Backend completo del flujo profesor→alumno
+**Refs:** SPEC-002 `specs/SPEC-002-backend-flujo-profesor-alumno.md` (Completada)
+
+**Resumen:** Se implementó el backend completo del núcleo profesor→alumno:
+arquitectura modular con ASR streaming (capa abstracta con Google v2 + stub),
+glosario SQLite, motor de coincidencia por lema con spaCy, WebSockets de
+profesor/alumno con broadcast por sala, y logging mínimo de segmentos para
+evaluación futura.
+
+**Cambios:**
+- **Nuevos submódulos** en `backend/app/`:
+  - `core/config.py` — settings con pydantic-settings (`.env`).
+  - `core/nlp.py` — singleton de spaCy (`es_core_news_md`).
+  - `core/db.py` — conexión SQLite + init schema.
+  - `asr/base.py` — interfaz `StreamingASRProvider` + `ResultadoASR` + factory.
+  - `asr/stub.py` — `StubAsrProvider` (sin credenciales, frases prefijadas).
+  - `asr/google_streaming.py` — `GoogleStreamingProvider` (v2 streaming, es-CL).
+  - `glossary/schema.py` — gestión de esquema SQLite.
+  - `glossary/repository.py` — CRUD curso/termino + seed idempotente.
+  - `glossary/matching.py` — `buscar_terminos()` con lematización spaCy + n-gramas,
+    filtrando stopwords (DET, ADP, CCONJ, SCONJ).
+  - `evaluation/logging.py` — persistir sesiones y segmentos en SQLite.
+  - `signs_recognition/__init__.py` — placeholder (módulo secundario, fuera de spec).
+- **Endpoints** en `backend/app/main.py`:
+  - `GET /health` (mantenido de SPEC-001).
+  - `GET /api/cursos` — lista de cursos sembrados.
+  - `GET /api/cursos/{id}/glosario` — términos del curso.
+  - `POST /api/sesiones` — crear sesión de clase.
+  - `WebSocket /ws/profesor?curso_id=...` — recibe audio/texto, ejecuta ASR +
+    matching, emite eventos `{segmento, senas}` a la sala.
+  - `WebSocket /ws/alumno/{curso_id}` — se une a sala, recibe eventos broadcast.
+  - `WebSocket /ws/echo` (mantenido de SPEC-001).
+  - `StaticFiles /data/videos_senas` — sirve clips MP4 de señas.
+- **Esquema SQLite** (`data/schema.sql`): `curso`, `termino`, `sesion`, `segmento`.
+- **Seed** (`scripts/seed_glosario.py` + `data/seed_glosario.json`): 1 curso piloto
+  con 12 términos (lemas ajustados a spaCy real), 12 placeholders MP4.
+- **Tests** (`backend/tests/`):
+  - `test_schema.py` — creación, idempotencia, FK de esquema SQLite.
+  - `test_matching.py` — n-grama largo, varios matches, flexiones verbales, sin match.
+- **Actualizaciones:**
+  - `requirements.txt` — `spacy>=3.8`, `pydantic-settings`, `pytest`, `pytest-asyncio`,
+    `google-cloud-speech`.
+  - `Dockerfile` — descarga `es_core_news_md`, ejecuta seed al arrancar.
+  - `.env.example` — variables nuevas (`ASR_PROVIDER`, `SPACY_MODEL`, `DB_PATH`, etc.).
+  - `AGENTS.md` — comando `pytest backend/tests` añadido a verificación mínima.
+  - `specs/README.md` — SPEC-002 marcada como Completada.
+  - `specs/SPEC-002-backend-flujo-profesor-alumno.md` — estado actualizado.
+
+**Verificación:**
+- `ruff check backend` → `All checks passed!`
+- `pytest backend/tests` → 10/10 passed (matching + schema).
+- Smoke end-to-end con `ASR_PROVIDER=stub`:
+  - `GET /health` → `{"status":"ok"}`
+  - `GET /api/cursos` → 1 curso.
+  - `GET /api/cursos/1/glosario` → 12 términos.
+  - `POST /api/sesiones?curso_id=1` → `sesion_id=1`.
+
+**Notas:**
+- Los lemas del glosario se ajustaron a los lemas reales que spaCy `es_core_news_md`
+  devuelve (e.g., "derivada" → lema "derivado", "raíz cuadrada" → "raíz cuadrado").
+  Esto es un requisito para que el matching por lema funcione correctamente.
+- El matching filtra stopwords (DET, ADP, CCONJ, SCONJ) antes de buscar n-gramas,
+  para que "teorema del valor medio" coincida con el lema "teorema valor medio".
+- `GoogleStreamingProvider` requiere credenciales de Google Cloud; sin ellas,
+  usar `ASR_PROVIDER=stub` para desarrollo.
+- El frontend de SPEC-001 sigue funcionando con el backend nuevo (mismo `/ws/echo`).
+- Próxima spec prevista: SPEC-003 (PWA con vistas profesor/alumno + captura de
+  audio + reproducción de video de señas).

@@ -1,0 +1,26 @@
+import sqlite3
+from pathlib import Path
+
+_conn = None
+
+
+def get_connection() -> sqlite3.Connection:
+    global _conn
+    if _conn is None:
+        from app.core.config import get_settings
+
+        db_path = Path(get_settings().DB_PATH)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        _conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        _conn.row_factory = sqlite3.Row
+        _conn.execute("PRAGMA journal_mode=WAL")
+        _conn.execute("PRAGMA foreign_keys=ON")
+    return _conn
+
+
+def init_schema() -> None:
+    conn = get_connection()
+    schema_path = Path(__file__).resolve().parent.parent.parent / "data" / "schema.sql"
+    if schema_path.exists():
+        conn.executescript(schema_path.read_text(encoding="utf-8"))
+        conn.commit()

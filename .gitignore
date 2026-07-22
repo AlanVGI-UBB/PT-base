@@ -18,6 +18,9 @@ frontend/dist/
 
 # Datos locales
 backend/data/glosario.db
+backend/data/*.db-shm
+backend/data/*.db-wal
+backend/app/data/
 backend/data/videos_senas/
 backend/data/*.db
 *.sqlite3

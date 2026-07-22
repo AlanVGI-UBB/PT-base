@@ -54,6 +54,7 @@ Comandos/procedimientos para validar la implementación.
 
 ## Índice de specs
 
-| ID | Título | Estado |
-|----|--------|--------|
-| SPEC-001 | Fundación del proyecto (scaffold + hello world WebSocket) | Borrador |
+| ID  | Título | Estado |
+|-----|--------|--------|
+| SPEC-001 | Fundación del proyecto (scaffold + hello world WebSocket) | Completada |
+| SPEC-002 | Backend del flujo profesor→alumno (ASR + glosario + matching + logging mínimo) | Completada |
