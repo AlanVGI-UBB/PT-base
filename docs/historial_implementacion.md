@@ -75,7 +75,7 @@ implementación, cumpliendo la regla de AGENTS.md.
 
 ---
 
-## 2026-07-22 — <pendiente> — Backend completo del flujo profesor→alumno
+## 2026-07-22 — `72d0c35` — Backend completo del flujo profesor→alumno
 **Refs:** SPEC-002 `specs/SPEC-002-backend-flujo-profesor-alumno.md` (Completada)
 
 **Resumen:** Se implementó el backend completo del núcleo profesor→alumno:
