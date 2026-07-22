@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.ruff_cache/
+
+# Node / pnpm
+node_modules/
+dist/
+.vite/
+.pnpm-store/
+
+# Frontend build
+frontend/dist/
+
+# Datos locales
+backend/data/glosario.db
+backend/data/videos_senas/
+backend/data/*.db
+*.sqlite3
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
