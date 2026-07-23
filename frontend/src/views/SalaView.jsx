@@ -97,8 +97,6 @@ export default function SalaView({ roomId, user, onVolver }) {
   const [grabando, setGrabando] = useState(false)
   const [pausado, setPausado] = useState(false)
   const [tamFuente, setTamFuente] = useState(18)
-  const [claseFinalizada, setClaseFinalizada] = useState(false)
-  const [claseId, setClaseId] = useState(null)
   const [determinando, setDeterminando] = useState(true)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionIniciada, setSesionIniciada] = useState(false)
@@ -158,9 +156,6 @@ export default function SalaView({ roomId, user, onVolver }) {
               return copia
             })
           }
-        } else if (data.type === 'clase_finalizada') {
-          setClaseFinalizada(true)
-          setClaseId(data.clase_id)
         } else if (data.type === 'error') {
           window.location.hash = '#/dashboard'
         }
@@ -229,6 +224,10 @@ export default function SalaView({ roomId, user, onVolver }) {
     setGrabando(false)
     setPausado(false)
     setModalAbierto(false)
+    setSesionIniciada(false)
+    setTimeout(() => {
+      window.location.hash = '#/dashboard'
+    }, 200)
   }, [])
 
   useEffect(() => {
@@ -241,32 +240,6 @@ export default function SalaView({ roomId, user, onVolver }) {
         <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>
           Verificando sala...
         </p>
-      </main>
-    )
-  }
-
-  if (claseFinalizada) {
-    return (
-      <main className="sala">
-        <header className="sala-topbar">
-          <button className="btn btn--ghost" onClick={() => window.location.hash = '#/dashboard'}>
-            <IconoSalir size={18} /> <span>Salir</span>
-          </button>
-          <h1>Clase finalizada</h1>
-          <div style={{ width: 60 }} />
-        </header>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <p>La clase ha sido guardada en tu historial.</p>
-          {claseId && (
-            <button
-              className="btn btn--primary"
-              style={{ marginTop: '1rem' }}
-              onClick={() => window.location.hash = `#/historial/${claseId}`}
-            >
-              Ver en historial
-            </button>
-          )}
-        </div>
       </main>
     )
   }

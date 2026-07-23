@@ -193,15 +193,20 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 await asyncio.wait_for(receiver_task, timeout=2)
             except asyncio.TimeoutError:
                 receiver_task.cancel()
-            fin_iso = datetime.now(timezone.utc).isoformat()
-            duracion = int(time.time() * 1000) - t_inicio
-            titulo = session_state["titulo"]
-            if titulo is not None:
-                titulo = titulo.strip() or None
-            finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
-            await RoomManager.broadcast(room_id, {"type": "clase_finalizada", "clase_id": clase_id_db})
+
+            if session_state["finalizar"]:
+                fin_iso = datetime.now(timezone.utc).isoformat()
+                duracion = int(time.time() * 1000) - t_inicio
+                titulo = session_state["titulo"]
+                if titulo is not None:
+                    titulo = titulo.strip() or None
+                finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
+                await RoomManager.broadcast(room_id, {"type": "clase_finalizada", "clase_id": clase_id_db})
+                logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
+            else:
+                logger.info("Sala %s cerrada sin finalizar (clase %d queda en progreso)", room_id, clase_id_db)
+
             await RoomManager.eliminar(room_id)
-            logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
 
     elif rol == "listener":
         if not await RoomManager.existe(room_id):

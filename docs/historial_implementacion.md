@@ -490,3 +490,50 @@ transmisión activa (listener).
   para la conexión.
 - El listener no se ve afectado: sigue conectándose automáticamente
   al cargar la Sala si ya hay transmisión activa.
+
+## 2026-07-23 — <pendiente> — Fix: la clase solo se finaliza explícitamente
+**Refs:** Bugfix (sin spec formal)
+
+**Resumen:** En modo stub, al acabarse la lista de frases el WebSocket se cerraba
+y el `finally` del handler llamaba automáticamente a `finalizar_clase`,
+provocando que la Sala saltara a una pantalla de "Clase finalizada" sin que
+el usuario hubiera presionado "Finalizar y Guardar". Se refactorizó para que
+la clase solo se marque como finalizada cuando el emisor envía la acción
+explícita. Al confirmar el modal, se redirige al dashboard.
+
+**Cambios:**
+
+- **Backend:**
+  - `app/asr/stub.py` — el stub ahora itera infinitamente sobre la lista
+    de frases (`while True: idx % len(FRASES)`), en vez de emitir una sola
+    vez y terminar.
+  - `app/main.py` — el `finally` del WebSocket handler del emisor ahora
+    solo llama a `finalizar_clase` si `session_state["finalizar"]` es
+    `True` (es decir, si el receptor detectó la acción `finalizar`
+    explícita del frontend). Si el emisor se desconecta sin finalizar,
+    la sala se cierra pero la clase queda en estado "en progreso" en la
+    BD y se loggea con un warning.
+
+- **Frontend:**
+  - `views/SalaView.jsx`:
+    - Eliminado el estado `claseFinalizada` y `claseId`.
+    - Eliminado el handler de `data.type === 'clase_finalizada'`.
+    - Eliminado el render condicional que mostraba la pantalla
+      "Clase finalizada" con botón "Ver en historial".
+    - En `confirmarFinalizar`, después de enviar el WebSocket se
+      hace `setSesionIniciada(false)` y se redirige a `#/dashboard`
+      tras 200ms (para que el WS se cierre limpiamente antes de
+      desmontar el componente).
+
+**Verificación:**
+- `ruff check .` → All checks passed.
+- `pytest backend/tests` → 21/21 passed.
+- `pnpm build` → build OK.
+
+**Notas:**
+- Si el emisor cierra la pestaña sin finalizar, la clase queda como
+  huérfana en la BD. Esto es aceptable para el MVP; se puede limpiar
+  con un job periódico o al iniciar la siguiente clase del mismo
+  room_id (descartar la anterior sin finalizar).
+- El stub ahora nunca termina solo. Solo termina cuando el emisor
+  envía la acción `finalizar` o cuando se desconecta el WebSocket.

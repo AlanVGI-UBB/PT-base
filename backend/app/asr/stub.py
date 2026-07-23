@@ -25,7 +25,9 @@ class StubAsrProvider:
         lang: str = "es-CL",
     ) -> AsyncIterator[ResultadoASR]:
         interval = get_settings().STUB_INTERVAL_MS / 1000.0
-        for frase in FRASES:
+        idx = 0
+        while True:
+            frase = FRASES[idx % len(FRASES)]
             await asyncio.sleep(interval)
             yield ResultadoASR(
                 texto=frase,
@@ -33,3 +35,4 @@ class StubAsrProvider:
                 inicio_ms=0,
                 fin_ms=int(interval * 1000),
             )
+            idx += 1
