@@ -1,9 +1,15 @@
 {
     "cursos": [
-        {
-            "id": 1,
-            "nombre": "Cálculo I — Ejemplo piloto"
-        }
+        {"id": 1, "cod_ramo": "INF-221", "nombre": "Cálculo I"},
+        {"id": 2, "cod_ramo": "INF-222", "nombre": "Álgebra Lineal"}
+    ],
+    "usuarios": [
+        {"rut": "12345678-9", "password": "test123", "nombre": "Estudiante", "apellido": "Prueba"}
+    ],
+    "inscripciones": [
+        {"rut": "12345678-9", "curso_id": 1, "seccion": "SEC1"},
+        {"rut": "12345678-9", "curso_id": 1, "seccion": "SEC2"},
+        {"rut": "12345678-9", "curso_id": 2, "seccion": "SEC1"}
     ],
     "terminos": [
         {"curso_id": 1, "lema": "derivado", "texto_visible": "derivada", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},

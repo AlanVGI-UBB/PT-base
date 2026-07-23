@@ -6,3 +6,5 @@ pydantic-settings==2.3.*
 pytest==8.*
 pytest-asyncio==0.23.*
 google-cloud-speech==2.31.*
+PyJWT==2.9.*
+httpx==0.28.*

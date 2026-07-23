@@ -203,3 +203,93 @@ de WebSocket.
 - La reconexión WebSocket es simple (1 intento cada 3s); no hay backoff
   exponencial todavía.
 - Próxima spec prevista: SPEC-004 (piloto de evaluación: WER, latencia, SUS).
+
+## 2026-07-23 — <pendiente> — Perfil único centrado en el estudiante + sesiones en vivo con fan-out + historial con replay
+**Refs:** SPEC-004 `specs/SPEC-004-perfil-estudiante-sesiones-fanout-historial.md` (Completada)
+
+**Resumen:** Reestructuración mayor del sistema. Se eliminó el modelo "profesor →
+alumno" y se migró a un perfil único centrado en el estudiante con autenticación
+(RUT + contraseña, JWT), dashboard académico, gestión de salas pub/sub con fan-out,
+y un sistema completo de historial con replay de clases.
+
+**Cambios:**
+
+- **Backend — Modelo de datos:**
+  - `schema.sql` ampliado con tablas `usuario`, `inscripcion`, `clase`, `evento_clase`.
+  - `curso` ahora incluye `cod_ramo` (ej. "INF-221").
+  - Identificador de sala: `[COD_RAMO]-[SECCION]` (ej. `INF-221-SEC1`).
+
+- **Backend — Auth (`app/auth/` + `app/core/auth.py`):**
+  - `POST /api/auth/login` — login con RUT + password, devuelve JWT.
+  - `GET /api/auth/usuario/me?rut=...` — datos del usuario + carga académica.
+  - JWT firmado con HS256, expiración 1h. Hash de passwords con SHA-256 + salt.
+  - Preparado para migrar a SSO/OAuth2 con Intranet institucional en el futuro.
+
+- **Backend — Salas (`app/salas/manager.py`):**
+  - `RoomManager` con `RoomState`: emitter_ws, listeners (set), timeline en memoria.
+  - Patrón pub/sub (fan-out): el audio se procesa una sola vez, resultado broadcast.
+  - `RoomManager.existe()`, `.crear()`, `.obtener()`, `.agregar_listener()`, `.broadcast()`, `.eliminar()`.
+  - Soporte para pausa/reanudación implícita (cuando el emisor deja de enviar audio).
+  - Finalización con persistencia automática del timeline.
+
+- **Backend — Historial (`app/historial/`):**
+  - `repository.py` — CRUD `clase`/`evento_clase`: crear, finalizar, guardar evento, listar, detalle.
+  - `routes.py` — `GET /api/historial?rut=...`, `GET /api/historial/{clase_id}`, `GET /api/salas/{room_id}/estado`.
+
+- **Backend — main.py refactor:**
+  - `WebSocket /ws/sala/{room_id}?rol=emitter|listener&token=...` unificado.
+  - Eliminados `/ws/profesor` y `/ws/alumno/{curso_id}` (reemplazados por `/ws/sala`).
+  - `POST /api/sesiones` eliminado (creado implícito al iniciar sala).
+  - `/api/cursos?rut=...` ahora devuelve asignaturas inscritas del estudiante.
+  - CORS middleware añadido.
+
+- **Backend — Seed y configuración:**
+  - `seed_glosario.json` ampliado: 2 cursos con cod_ramo, 1 usuario, 3 inscripciones.
+  - `seed_glosario.py` siembra usuarios e inscripciones (DELETE ALL + INSERT).
+  - `requirements.txt` añade `PyJWT`, `httpx`.
+  - `config.py` + `.env.example` añaden `JWT_SECRET`, `SALA_TIMEOUT_MS`, `AUTH_PROVIDER`.
+
+- **Backend — Tests (21/21):**
+  - `test_auth.py` — login válido, login inválido, usuario/me, cursos con rut, health.
+  - `test_sala.py` — sala estado sin sala, listener sin sala.
+  - `test_historial.py` — historial lista, detalle, no encontrado.
+  - `test_schema.py` + `test_matching.py` — actualizados y mantenidos.
+
+- **Frontend — Auth:**
+  - `useAuth.js` — hook con login, logout, persistencia en localStorage.
+  - `LoginView.jsx` — formulario RUT + contraseña, manejo de errores.
+
+- **Frontend — Nueva estructura de vistas:**
+  - `DashboardView.jsx` — lista de asignaturas inscritas con estado en vivo, botón Entrar.
+  - `SalaView.jsx` — vista unificada emisor/listener.
+    - Emisor: `getUserMedia` + `MediaRecorder` (chunks 250ms), pausar/reanudar/finalizar.
+    - Listener: recibe subtítulos + señas en tiempo real.
+    - Clase finalizada: notificación + link a historial.
+  - `HistorialView.jsx` — lista de clases guardadas (asignatura, fecha, duración).
+  - `ClaseDetailView.jsx` — dos modos:
+    - Modo Apunte: transcripción completa como texto continuo con badges de señas.
+    - Modo Replay: reproductor interactivo que simula la traducción en vivo con Play/Pausa/velocidad 1x-2x.
+  - `ReplayPlayer.jsx` — reproductor de timeline con barra de progreso.
+  - `ControlesEmisor.jsx` — iniciar/pausar/reanudar/finalizar.
+
+- **Frontend — Eliminaciones:**
+  - `Landing.jsx`, `ProfesorView.jsx`, `AlumnoView.jsx` removidos del routing.
+  - `App.jsx` refactorizado con nuevas rutas (`#/login`, `#/dashboard`, `#/sala/{id}`, `#/historial`, `#/historial/{id}`).
+  - `App.css` reescrito con estilos de login, dashboard, sala, historial, replay, responsive.
+
+- **Frontend — API:**
+  - `cliente.js` ampliado: `loginRequest`, `fetchCursosUsuario`, `fetchUsuario`, `fetchSalaEstado`, `fetchHistorial`, `fetchHistorialDetalle`.
+
+**Verificación:**
+- `ruff check .` → All checks passed.
+- `pytest backend/tests` → 21/21 passed.
+- `pnpm --prefix frontend build` → build OK (43 módulos, PWA generada).
+- `docker compose up --build` → listo para verificar end-to-end con stub.
+
+**Notas:**
+- Cambio de paradigma: el profesor no interactúa con la plataforma. Todo lo gestiona el estudiante.
+- El micrófono lavalier se conecta al dispositivo del estudiante; el transmisor se entrega al profesor.
+- El timeline de la clase se guarda en SQLite (no audio/video). Replay funcional con controles.
+- El sistema está preparado para SSO/OAuth2 con Intranet institucional (interfaz conceptual).
+- Stakeholders: comunidad sorda, estudiantes, profesores (indirectamente a través del lavalier).
+- Próxima spec prevista: SPEC-005 (piloto de evaluación si se retoma el plan original).

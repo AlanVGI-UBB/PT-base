@@ -16,14 +16,14 @@ def conn(db_path):
     c = sqlite3.connect(db_path)
     c.row_factory = sqlite3.Row
     c.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-    c.execute("INSERT INTO curso (id, nombre) VALUES (1, 'Test')")
+    c.execute("INSERT INTO curso (id, cod_ramo, nombre) VALUES (1, 'INF-221', 'Test')")
     c.commit()
     yield c
     c.close()
 
 
 def test_insert_curso(conn):
-    conn.execute("INSERT INTO curso (id, nombre) VALUES (2, 'Otro')")
+    conn.execute("INSERT INTO curso (id, cod_ramo, nombre) VALUES (2, 'INF-222', 'Otro')")
     conn.commit()
     rows = conn.execute("SELECT * FROM curso").fetchall()
     assert len(rows) == 2
@@ -55,3 +55,27 @@ def test_segmento_fk(conn):
     conn.commit()
     row = conn.execute("SELECT * FROM segmento").fetchone()
     assert row["texto"] == "hola"
+
+
+def test_nuevas_tablas(db_path):
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+    conn.execute("INSERT INTO curso (id, cod_ramo, nombre) VALUES (1, 'INF-221', 'Test')")
+    conn.execute(
+        "INSERT INTO usuario (rut, password_hash, nombre, apellido) "
+        "VALUES ('11-1', 'hash', 'A', 'B')"
+    )
+    conn.execute("INSERT INTO inscripcion (rut, curso_id, seccion) VALUES ('11-1', 1, 'SEC1')")
+    conn.execute(
+        "INSERT INTO clase (room_id, curso_id, seccion, rut_emisor, fecha_inicio) "
+        "VALUES ('INF-221-SEC1', 1, 'SEC1', '11-1', '2026-01-01')"
+    )
+    conn.execute(
+        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json) "
+        "VALUES (1, 0, 'test', 1, '[]')"
+    )
+    conn.commit()
+    row = conn.execute("SELECT * FROM usuario").fetchone()
+    assert row["rut"] == "11-1"
+    conn.close()
