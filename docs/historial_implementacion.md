@@ -341,3 +341,53 @@ grid de 3 columnas con "Todas mis Asignaturas".
 - El icono de micrófono en la navbar y el badge "Micrófono Conectado"
   son visuales; el estado real del micrófono se gestiona al iniciar la
   transmisión en la vista de Sala.
+
+## 2026-07-23 — <pendiente> — Rediseño de la Sala de traducción (UI)
+**Refs:** Mejora visual (sin spec formal)
+
+**Resumen:** Rediseño completo de la vista de Sala (traducción en vivo) para
+coincidir con la UI objetivo: top bar con Salir/título/badge EN VIVO/settings,
+panel izquierdo de subtítulos con control de tamaño A+/A− y términos del
+glosario resaltados en bold, panel derecho con reproductor de video de seña
+y tarjeta flotante "TRADUCIENDO CONCEPTO CLAVE", bottom bar con estado del
+sistema y controles Pausar/Finalizar.
+
+**Cambios:**
+- `frontend/src/views/SalaView.jsx` — reescrito:
+  - **Top bar:** botón Salir (izq), título centrado con `roomId` formateado
+    (ej. "INF-221 — Estructuras de Datos"), badge "EN VIVO" con punto rojo
+    pulsante, botón de settings (der).
+  - **Layout 2 columnas:** subtítulos (35%) + video (65%).
+  - **Panel de subtítulos:** header con icono + "Transcripción en Tiempo Real"
+    + A+/A− para tamaño de fuente (12-32px). Subtítulos finales con
+    **términos del glosario resaltados** (bold, fondo azul translúcido).
+    Estado al pie: "Escuchando al profesor..." con icono de micrófono.
+  - **Panel de video:** reproductor con aspect-ratio 16:9, gradiente oscuro,
+    botones flotantes (expandir, más opciones) en esquina inferior derecha.
+  - **Tarjeta concepto clave:** aparece flotante en esquina inferior izquierda
+    cuando se detecta un término, mostrando "TRADUCIENDO CONCEPTO CLAVE" +
+    término + icono de mano. Se oculta automáticamente tras 4s.
+  - **Bottom bar (solo emisor):** "Estado del Sistema — Audio y video
+    sincronizados" (izq) + botones "Pausar/Reanudar Transcripción" (gris
+    oscuro) y "Finalizar y Guardar" (rojo con sombra).
+- `frontend/src/App.css` — sección de Sala completamente nueva:
+  - `.sala`, `.sala-topbar`, `.sala-grid` con grid 2 columnas.
+  - `.sala-subtitulos__contenido` con scroll y tamaño de fuente dinámico.
+  - `.sala-video__player` con gradiente y aspect-ratio.
+  - `.concepto-card` con animación slideIn y backdrop-filter.
+  - `.sala-bottombar` con `btn--ghost-pause` y `btn--detener-finalizar`.
+  - `.termino` para highlight de glosario.
+  - Animación `pulse` para el badge "EN VIVO".
+
+**Verificación:**
+- `pnpm build` → build OK (41 módulos, CSS 12.61 KB, JS 166 KB).
+
+**Notas:**
+- La función `highlightText` usa regex sobre los `texto_visible` de los
+  términos matched para envolverlos en `<strong class="termino">`.
+- El título de la sala se construye reemplazando el primer `-` por ` — `
+  para mostrar "INF-221 — Estructuras de Datos".
+- La tarjeta de concepto se muestra solo cuando hay match, con auto-hide
+  tras 4s para no saturar la UI.
+- El "EN VIVO" badge está siempre visible (la transmisión está activa
+  mientras el emisor no finalice).
