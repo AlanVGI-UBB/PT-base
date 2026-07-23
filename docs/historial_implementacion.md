@@ -342,7 +342,7 @@ grid de 3 columnas con "Todas mis Asignaturas".
   son visuales; el estado real del micrófono se gestiona al iniciar la
   transmisión en la vista de Sala.
 
-## 2026-07-23 — <pendiente> — Rediseño de la Sala de traducción (UI)
+## 2026-07-23 — `9317fbb` — Rediseño de la Sala de traducción (UI)
 **Refs:** Mejora visual (sin spec formal)
 
 **Resumen:** Rediseño completo de la vista de Sala (traducción en vivo) para
