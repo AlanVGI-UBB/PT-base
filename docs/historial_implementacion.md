@@ -204,7 +204,7 @@ de WebSocket.
   exponencial todavía.
 - Próxima spec prevista: SPEC-004 (piloto de evaluación: WER, latencia, SUS).
 
-## 2026-07-23 — <pendiente> — Perfil único centrado en el estudiante + sesiones en vivo con fan-out + historial con replay
+## 2026-07-23 — `d444cfc` — Perfil único centrado en el estudiante + sesiones en vivo con fan-out + historial con replay
 **Refs:** SPEC-004 `specs/SPEC-004-perfil-estudiante-sesiones-fanout-historial.md` (Completada)
 
 **Resumen:** Reestructuración mayor del sistema. Se eliminó el modelo "profesor →
