@@ -144,7 +144,7 @@ evaluación futura.
 - Próxima spec prevista: SPEC-003 (PWA con vistas profesor/alumno + captura de
   audio + reproducción de video de señas).
 
-## 2026-07-23 — <pendiente> — PWA completa: vistas profesor y alumno
+## 2026-07-23 — `75132e3` — PWA completa: vistas profesor y alumno
 **Refs:** SPEC-003 `specs/SPEC-003-pwa-vistas-profesor-alumno.md` (Completada)
 
 **Resumen:** Se implementó la PWA completa del proyecto con dos vistas reales:
