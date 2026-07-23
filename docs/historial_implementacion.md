@@ -294,7 +294,7 @@ y un sistema completo de historial con replay de clases.
 - Stakeholders: comunidad sorda, estudiantes, profesores (indirectamente a través del lavalier).
 - Próxima spec prevista: SPEC-005 (piloto de evaluación si se retoma el plan original).
 
-## 2026-07-23 — <pendiente> — Rediseño del Dashboard (UI)
+## 2026-07-23 — `8b6f79b` — Rediseño del Dashboard (UI)
 **Refs:** Mejora visual (sin spec formal)
 
 **Resumen:** Rediseño completo del Dashboard para coincidir con la UI objetivo:
