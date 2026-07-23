@@ -101,6 +101,7 @@ export default function SalaView({ roomId, user, onVolver }) {
   const [claseId, setClaseId] = useState(null)
   const [determinando, setDeterminando] = useState(true)
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [sesionIniciada, setSesionIniciada] = useState(false)
   const wsRef = useRef(null)
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
@@ -111,13 +112,18 @@ export default function SalaView({ roomId, user, onVolver }) {
   useEffect(() => {
     if (!roomId || !user) return
     fetchSalaEstado(roomId).then((estado) => {
-      setRol(estado.activa ? 'listener' : 'emitter')
+      const r = estado.activa ? 'listener' : 'emitter'
+      setRol(r)
       setDeterminando(false)
+      if (r === 'listener') {
+        setSesionIniciada(true)
+      }
     })
   }, [roomId, user])
 
   useEffect(() => {
     if (!rol || !roomId || !user) return
+    if (!sesionIniciada) return
     const token = JSON.parse(localStorage.getItem('puente_lsch_auth')).token
     const url = `${WS_URL}/ws/sala/${roomId}?rol=${rol}&token=${token}`
     const ws = new WebSocket(url)
@@ -162,7 +168,7 @@ export default function SalaView({ roomId, user, onVolver }) {
     }
 
     return () => ws.close()
-  }, [rol, roomId, user])
+  }, [rol, roomId, user, sesionIniciada])
 
   useEffect(() => {
     if (subtitulosRef.current) {
@@ -189,6 +195,7 @@ export default function SalaView({ roomId, user, onVolver }) {
       setPausado(false)
       setTiempo(0)
       intervalRef.current = setInterval(() => setTiempo((t) => t + 1), 1000)
+      setSesionIniciada(true)
     } catch {
       setEstadoWs('desconectado')
     }

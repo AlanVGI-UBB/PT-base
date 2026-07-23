@@ -449,3 +449,44 @@ historial y en el detalle de la clase.
 - El `Salir` del topbar fue modificado para que durante una sesión activa
   (emitter grabando), su acción sea abrir el modal — garantizando que
   el usuario no pueda salir sin finalizar y guardar.
+
+## 2026-07-23 — <pendiente> — Fix: esperar a 'Iniciar Transmisión' antes del WebSocket
+**Refs:** Bugfix (sin spec formal)
+
+**Resumen:** En modo stub, al entrar a la Sala como emisor el WebSocket se
+conectaba inmediatamente y el stub empezaba a emitir frases antes de que el
+usuario presionara "Iniciar Transmisión" en el bottom bar. Se refactorizó
+SalaView para que el WebSocket solo se conecte cuando el usuario presiona
+explícitamente el botón de iniciar (emitter) o cuando ya existe una
+transmisión activa (listener).
+
+**Cambios:**
+- `frontend/src/views/SalaView.jsx`:
+  - Nuevo estado `sesionIniciada` (boolean, default `false`).
+  - `useEffect` de WebSocket ahora depende también de `sesionIniciada`;
+    solo se conecta cuando es `true`.
+  - Para emitter: `sesionIniciada` se setea en `true` dentro de la
+    función `iniciar()` (después de obtener permisos de micrófono y
+    crear el MediaRecorder).
+  - Para listener: `sesionIniciada` se setea en `true` automáticamente
+    en el `useEffect` que determina el rol (porque ya hay transmisión
+    activa y debe conectarse para recibir el broadcast).
+  - El botón "Iniciar Transmisión" del bottom bar ahora se muestra en
+    el estado inicial (sin grabar), y al presionarlo se obtiene el
+    permiso de micrófono, se inicia MediaRecorder y se activa
+    `sesionIniciada` para conectar el WebSocket.
+  - El status "Escuchando al profesor..." solo aparece cuando
+    `grabando && !pausado`, evitando confusión cuando el stub aún no
+    está activo.
+
+**Verificación:**
+- `pnpm build` → build OK (42 módulos, CSS 14.39 KB, JS 169 KB).
+
+**Notas:**
+- El orden de operaciones en `iniciar()` es: `recorder.start(250)` →
+  `setGrabando(true)` → `setSesionIniciada(true)`. Esto garantiza que
+  cuando el WS se conecte (tras el re-render), el recorder ya está
+  activo. El primer chunk puede llegar 250ms después, tiempo suficiente
+  para la conexión.
+- El listener no se ve afectado: sigue conectándose automáticamente
+  al cargar la Sala si ya hay transmisión activa.
