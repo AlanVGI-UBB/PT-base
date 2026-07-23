@@ -392,7 +392,7 @@ sistema y controles Pausar/Finalizar.
 - El "EN VIVO" badge está siempre visible (la transmisión está activa
   mientras el emisor no finalice).
 
-## 2026-07-23 — <pendiente> — Modal de Finalizar Sesión + título de clase
+## 2026-07-23 — `abcca0f` — Modal de Finalizar Sesión + título de clase
 **Refs:** Mejora UX (sin spec formal)
 
 **Resumen:** Se agregó el modal "¿Finalizar Sesión?" con campo de título/nota
