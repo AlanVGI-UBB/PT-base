@@ -14,8 +14,9 @@ RUN python -m spacy download es_core_news_md
 
 COPY app/ ./app/
 COPY data/schema.sql ./data/
-COPY scripts/ ./scripts/
+COPY data/seed_glosario.json ./data/
 COPY data/videos_senas/ ./data/videos_senas/
+COPY scripts/ ./scripts/
 
 EXPOSE 8000
 

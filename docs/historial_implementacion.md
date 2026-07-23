@@ -143,3 +143,63 @@ evaluación futura.
 - El frontend de SPEC-001 sigue funcionando con el backend nuevo (mismo `/ws/echo`).
 - Próxima spec prevista: SPEC-003 (PWA con vistas profesor/alumno + captura de
   audio + reproducción de video de señas).
+
+## 2026-07-23 — <pendiente> — PWA completa: vistas profesor y alumno
+**Refs:** SPEC-003 `specs/SPEC-003-pwa-vistas-profesor-alumno.md` (Completada)
+
+**Resumen:** Se implementó la PWA completa del proyecto con dos vistas reales:
+profesor (captura de audio con getUserMedia + MediaRecorder, envío de chunks
+binarios por WebSocket) y alumno (recepción de subtítulos en tiempo real +
+reproducción de videos de señas). Se reemplazó el demo de eco de SPEC-001 con
+una arquitectura de routing por hash, selección de curso, y hook reutilizable
+de WebSocket.
+
+**Cambios:**
+- **Nuevos archivos** en `frontend/src/`:
+  - `hooks/useWebSocket.js` — hook reutilizable: conexión, reconexión simple,
+    send, estado (conectado/desconectado).
+  - `api/cliente.js` — fetch helper para endpoints REST (`fetchCursos`,
+    `fetchGlosario`, `crearSesion`).
+  - `views/Landing.jsx` — landing con botones "Soy profesor" / "Soy alumno".
+  - `views/ProfesorView.jsx` — captura de audio con getUserMedia +
+    MediaRecorder (WebM/Opus, chunks 250ms), envío binario por WebSocket,
+    indicador de estado (idle/conectando/grabando/detenido), contador de
+    chunks, tiempo transcurrido, manejo de errores de permisos.
+  - `views/AlumnoView.jsx` — conexión a `/ws/alumno/{curso_id}`, panel de
+    subtítulos en vivo (final consolidado + provisional), panel de señas
+    (reproducción automática de videos), control de tamaño de fuente (A+/A-).
+  - `components/CursoSelector.jsx` — dropdown reutilizable cargado desde
+    `GET /api/cursos`.
+  - `components/Subtitulos.jsx` — render de subtítulos con scroll automático,
+    distinción final/provisional.
+  - `components/SenaPlayer.jsx` — reproductor de video de señas (autoPlay,
+    muted, loop) con label de texto visible.
+  - `components/EstadoConexion.jsx` — indicador visual de estado WebSocket.
+- **Archivos modificados:**
+  - `App.jsx` — routing por hash (`#/profesor`, `#/alumno`, landing por defecto).
+  - `App.css` — tema completo (landing, vistas, subtítulos, señas, responsive).
+  - `vite.config.js` — limpieza (ya no usa VITE_WS_URL hardcodeado al echo).
+  - `frontend/Dockerfile` — soporte para ARG `VITE_API_URL` además de
+    `VITE_WS_URL`.
+  - `docker-compose.yml` — args de frontend actualizados, `ASR_PROVIDER=stub`
+    en backend.
+  - `specs/README.md` — SPEC-003 marcada como Completada.
+  - `specs/SPEC-003-pwa-vistas-profesor-alumno.md` — estado actualizado.
+
+**Verificación:**
+- `pnpm build` → build OK, PWA generada (sw.js, manifest, 39 módulos).
+- `ruff check .` → All checks passed.
+- `pytest backend/tests` → 10/10 passed (no se tocó backend).
+- `docker compose up --build` → levanta backend + frontend correctamente.
+- Stub end-to-end: alumno recibe frases automáticas del stub y ve videos de
+  señas cuando hay coincidencia con el glosario.
+
+**Notas:**
+- El hook `useWebSocket` maneja `null` url (no conecta) — útil cuando no hay
+  curso seleccionado.
+- Los videos de señas son placeholders (archivos mínimos sin contenido real);
+  se reproducen sin error pero no muestran video real — se reemplazan cuando
+  el autor grabe los clips.
+- La reconexión WebSocket es simple (1 intento cada 3s); no hay backoff
+  exponencial todavía.
+- Próxima spec prevista: SPEC-004 (piloto de evaluación: WER, latencia, SUS).

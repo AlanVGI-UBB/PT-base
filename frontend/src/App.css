@@ -1,37 +1,47 @@
 :root {
   --bg: #0d1117;
   --panel: #161b22;
+  --panel-border: #21262d;
   --fg: #e6e9ef;
-  --accent: #1f6feb;
   --muted: #8b949e;
+  --accent: #1f6feb;
+  --accent-soft: #1f6feb22;
+  --success: #2ea043;
+  --danger: #f85149;
+  --warning: #d29922;
+  --grabando: #f85149;
+  --conectado: #2ea043;
+  --desconectado: #8b949e;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--fg);
+  min-height: 100vh;
 }
 
-.app {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 1.5rem;
+.btn {
+  padding: 0.65rem 1.3rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: opacity 0.15s;
 }
+.btn:hover { opacity: 0.9; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.app__header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.app__header h1 {
-  font-size: 1.4rem;
-  margin: 0;
-}
+.btn--profesor { background: var(--accent); color: #fff; }
+.btn--alumno { background: var(--success); color: #fff; }
+.btn--iniciar { background: var(--success); color: #fff; }
+.btn--detener { background: var(--danger); color: #fff; }
+.btn--volver { background: transparent; color: var(--muted); padding: 0.4rem 0.8rem; font-size: 0.9rem; }
+.btn--volver:hover { color: var(--fg); }
+.btn--fuente { background: var(--panel); color: var(--fg); border: 1px solid var(--panel-border); padding: 0.3rem 0.7rem; font-size: 0.9rem; }
 
 .badge {
   font-size: 0.75rem;
@@ -39,64 +49,239 @@ body {
   border-radius: 999px;
   font-weight: 600;
 }
+.badge--conectado { background: #2ea04322; color: #7ee787; }
+.badge--desconectado { background: #f8514922; color: #ff9489; }
+.badge--grabando { background: #f8514922; color: #ff9489; }
 
-.badge--ok { background: #1f6feb22; color: #79b8ff; }
-.badge--off { background: #f8514922; color: #ff9489; }
+/* ===== LANDING ===== */
 
-.app__panel {
-  background: var(--panel);
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-}
-
-.app__hint { color: var(--muted); margin-top: 0; font-size: 0.9rem; }
-
-.app__form {
+.landing {
   display: flex;
-  gap: 0.5rem;
-  margin: 1rem 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 2rem;
+  padding: 2rem;
 }
 
-.app__form input {
-  flex: 1;
-  padding: 0.6rem 0.8rem;
+.landing__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.landing__logo h1 { font-size: 1.8rem; }
+.landing__sub { color: var(--muted); text-align: center; max-width: 500px; }
+
+.landing__botones {
+  display: flex;
+  gap: 1.5rem;
+}
+.landing__botones .btn { font-size: 1.2rem; padding: 1rem 2.5rem; }
+
+/* ===== VISTA COMUN ===== */
+
+.vista {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.vista__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.vista__header h1 { font-size: 1.4rem; flex: 1; }
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.campo span { font-size: 0.85rem; color: var(--muted); }
+
+.selector-curso {
+  padding: 0.5rem 0.8rem;
   border-radius: 8px;
-  border: 1px solid #30363d;
-  background: #0d1117;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
   color: var(--fg);
   font-size: 1rem;
+  min-width: 200px;
 }
 
-.app__form button {
-  padding: 0.6rem 1.1rem;
+/* ===== PROFESOR ===== */
+
+.profesor__panel {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid var(--panel-border);
+}
+
+.profesor__controles {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.profesor__estado {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg);
   border-radius: 8px;
-  border: none;
-  background: var(--accent);
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
 }
 
-.app__form button:disabled { opacity: 0.5; cursor: not-allowed; }
+.profesor__tiempo {
+  font-family: monospace;
+  font-size: 1.3rem;
+  color: var(--grabando);
+}
 
-.app__messages {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.profesor__chunks {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.profesor__error {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #f8514911;
+  border: 1px solid #f8514944;
+  border-radius: 8px;
+  color: #ff9489;
+  font-size: 0.9rem;
+}
+
+/* ===== ALUMNO ===== */
+
+.alumno__panel {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 1px solid var(--panel-border);
+}
+
+.alumno__controles {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.alumno__fuente {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.alumno__contenido {
+  display: flex;
+  gap: 1rem;
+  min-height: 300px;
+}
+
+.alumno__subtitulos {
+  flex: 1;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+/* ===== SUBTITULOS ===== */
+
+.subtitulos {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
-.msg {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.55rem 0.75rem;
-  background: #0d1117;
-  border-radius: 8px;
-  border: 1px solid #21262d;
+.subtitulos--vacio {
+  color: var(--muted);
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
 }
 
-.msg__text { font-weight: 500; }
-.msg__ts { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+.subtitulo {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.subtitulo--final {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.subtitulo--provisional {
+  color: var(--muted);
+  font-style: italic;
+  background: transparent;
+}
+
+/* ===== SEÑAS ===== */
+
+.sena-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 180px;
+  max-width: 250px;
+}
+
+.sena-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 0.5rem;
+  border: 1px solid var(--panel-border);
+}
+
+.sena-video {
+  width: 100%;
+  border-radius: 8px;
+  background: #000;
+}
+
+.sena-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 600px) {
+  .landing__botones { flex-direction: column; width: 100%; }
+  .landing__botones .btn { width: 100%; }
+
+  .alumno__contenido { flex-direction: column; }
+  .sena-grid {
+    flex-direction: row;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .sena-item { min-width: 120px; }
+
+  .profesor__controles,
+  .alumno__controles {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

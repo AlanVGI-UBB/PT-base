@@ -11,8 +11,10 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 
-ARG VITE_WS_URL=ws://localhost:8000/ws/echo
+ARG VITE_WS_URL=ws://localhost:8000
+ARG VITE_API_URL=http://localhost:8000
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 COPY . .
 RUN pnpm build

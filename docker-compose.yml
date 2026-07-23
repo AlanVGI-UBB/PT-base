@@ -8,6 +8,7 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - ASR_PROVIDER=stub
     restart: unless-stopped
 
   frontend:
@@ -15,8 +16,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # En compose se inyecta la URL del backend accesible desde el navegador
-        VITE_WS_URL: ws://localhost:8000/ws/echo
+        VITE_WS_URL: ws://localhost:8000
+        VITE_API_URL: http://localhost:8000
     image: puente-lsch-frontend:dev
     ports:
       - "5173:80"

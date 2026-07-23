@@ -15,8 +15,10 @@ def main() -> None:
     data = json.loads(seed_path.read_text(encoding="utf-8"))
 
     conn = get_connection()
+    conn.execute("PRAGMA foreign_keys=OFF")
     conn.execute("DELETE FROM termino")
     conn.execute("DELETE FROM curso")
+    conn.execute("PRAGMA foreign_keys=ON")
     conn.commit()
 
     for curso in data["cursos"]:
