@@ -139,18 +139,33 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         provider = get_asr_provider()
         t_inicio = int(time.time() * 1000)
         segmento_idx = 0
+        audio_queue: asyncio.Queue = asyncio.Queue()
+        session_state: dict = {"titulo": None, "finalizar": False}
 
-        async def _audio_gen():
+        async def _receiver():
             while True:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
+                    session_state["finalizar"] = True
                     return
                 if "bytes" in msg:
-                    yield msg["bytes"]
+                    await audio_queue.put(msg["bytes"])
                 elif "text" in msg:
-                    texto = msg["text"].strip()
-                    if texto == '{"action":"finalizar"}':
-                        return
+                    try:
+                        data = json.loads(msg["text"])
+                        if data.get("action") == "finalizar":
+                            session_state["titulo"] = data.get("titulo")
+                            session_state["finalizar"] = True
+                            return
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+
+        async def _audio_gen():
+            while True:
+                chunk = await audio_queue.get()
+                yield chunk
+
+        receiver_task = asyncio.create_task(_receiver())
 
         try:
             async for resultado in provider.transcribe_stream(_audio_gen()):
@@ -174,12 +189,19 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         except WebSocketDisconnect:
             pass
         finally:
+            try:
+                await asyncio.wait_for(receiver_task, timeout=2)
+            except asyncio.TimeoutError:
+                receiver_task.cancel()
             fin_iso = datetime.now(timezone.utc).isoformat()
             duracion = int(time.time() * 1000) - t_inicio
-            finalizar_clase(clase_id_db, fin_iso, duracion)
+            titulo = session_state["titulo"]
+            if titulo is not None:
+                titulo = titulo.strip() or None
+            finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
             await RoomManager.broadcast(room_id, {"type": "clase_finalizada", "clase_id": clase_id_db})
             await RoomManager.eliminar(room_id)
-            logger.info("Sala %s finalizada (clase %d, %d ms)", room_id, clase_id_db, duracion)
+            logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
 
     elif rol == "listener":
         if not await RoomManager.existe(room_id):

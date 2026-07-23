@@ -18,11 +18,11 @@ def crear_clase(
     return cur.lastrowid
 
 
-def finalizar_clase(clase_id: int, fin: str, duracion_ms: int) -> None:
+def finalizar_clase(clase_id: int, fin: str, duracion_ms: int, titulo: str | None = None) -> None:
     conn = get_connection()
     conn.execute(
-        "UPDATE clase SET fecha_fin = ?, duracion_ms = ? WHERE id = ?",
-        (fin, duracion_ms, clase_id),
+        "UPDATE clase SET fecha_fin = ?, duracion_ms = ?, titulo = ? WHERE id = ?",
+        (fin, duracion_ms, titulo, clase_id),
     )
     conn.commit()
 
@@ -48,7 +48,7 @@ def listar_clases(rut: str) -> list[dict]:
     rows = conn.execute(
         "SELECT c.id, c.room_id, c.curso_id, co.nombre as curso_nombre, "
         "co.cod_ramo, c.seccion, c.rut_emisor, c.fecha_inicio, c.fecha_fin, "
-        "c.duracion_ms "
+        "c.duracion_ms, c.titulo "
         "FROM clase c "
         "JOIN curso co ON co.id = c.curso_id "
         "JOIN inscripcion i ON i.curso_id = c.curso_id AND i.seccion = c.seccion "

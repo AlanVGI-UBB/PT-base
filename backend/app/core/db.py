@@ -31,3 +31,10 @@ def init_schema() -> None:
     if "cod_ramo" not in columns and len(columns) > 0:
         conn.execute("ALTER TABLE curso ADD COLUMN cod_ramo TEXT NOT NULL DEFAULT ''")
         conn.commit()
+
+    # Migracion: agregar titulo si la tabla clase existe pero no tiene la columna
+    cursor = conn.execute("PRAGMA table_info(clase)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "titulo" not in columns and len(columns) > 0:
+        conn.execute("ALTER TABLE clase ADD COLUMN titulo TEXT")
+        conn.commit()

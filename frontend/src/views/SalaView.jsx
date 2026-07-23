@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchSalaEstado } from '../api/cliente'
+import FinalizarModal from '../components/FinalizarModal'
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000'
 
@@ -99,6 +100,7 @@ export default function SalaView({ roomId, user, onVolver }) {
   const [claseFinalizada, setClaseFinalizada] = useState(false)
   const [claseId, setClaseId] = useState(null)
   const [determinando, setDeterminando] = useState(true)
+  const [modalAbierto, setModalAbierto] = useState(false)
   const wsRef = useRef(null)
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
@@ -202,15 +204,24 @@ export default function SalaView({ roomId, user, onVolver }) {
     setPausado(false)
   }, [])
 
-  const finalizar = useCallback(() => {
+  const abrirModalFinalizar = useCallback(() => {
+    setModalAbierto(true)
+  }, [])
+
+  const cancelarFinalizar = useCallback(() => {
+    setModalAbierto(false)
+  }, [])
+
+  const confirmarFinalizar = useCallback((titulo) => {
     clearInterval(intervalRef.current)
     recorderRef.current?.stop()
     streamRef.current?.getTracks().forEach((t) => t.stop())
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send('{"action":"finalizar"}')
+      wsRef.current.send(JSON.stringify({ action: 'finalizar', titulo: titulo || null }))
     }
     setGrabando(false)
     setPausado(false)
+    setModalAbierto(false)
   }, [])
 
   useEffect(() => {
@@ -256,9 +267,19 @@ export default function SalaView({ roomId, user, onVolver }) {
   return (
     <main className="sala">
       <header className="sala-topbar">
-        <button className="btn btn--ghost" onClick={onVolver}>
-          <IconoSalir size={18} /> <span>Salir</span>
-        </button>
+        {rol === 'emitter' && grabando ? (
+          <button
+            className="btn btn--ghost"
+            onClick={abrirModalFinalizar}
+            title="Para salir debes finalizar y guardar la sesión"
+          >
+            <IconoSalir size={18} /> <span>Salir</span>
+          </button>
+        ) : (
+          <button className="btn btn--ghost" onClick={onVolver}>
+            <IconoSalir size={18} /> <span>Salir</span>
+          </button>
+        )}
         <h1 className="sala-titulo">{roomId.replace('-', ' — ')}</h1>
         <span className="sala-en-vivo">
           <span className="sala-en-vivo__dot" />
@@ -350,7 +371,7 @@ export default function SalaView({ roomId, user, onVolver }) {
                   <IconoPausa size={18} />
                   {pausado ? 'Reanudar' : 'Pausar'} Transcripción
                 </button>
-                <button className="btn btn--detener-finalizar" onClick={finalizar}>
+                <button className="btn btn--detener-finalizar" onClick={abrirModalFinalizar}>
                   <IconoStop size={16} />
                   Finalizar y Guardar
                 </button>
@@ -359,6 +380,12 @@ export default function SalaView({ roomId, user, onVolver }) {
           </div>
         </footer>
       )}
+
+      <FinalizarModal
+        open={modalAbierto}
+        onConfirm={confirmarFinalizar}
+        onCancel={cancelarFinalizar}
+      />
     </main>
   )
 }

@@ -391,3 +391,61 @@ sistema y controles Pausar/Finalizar.
   tras 4s para no saturar la UI.
 - El "EN VIVO" badge está siempre visible (la transmisión está activa
   mientras el emisor no finalice).
+
+## 2026-07-23 — <pendiente> — Modal de Finalizar Sesión + título de clase
+**Refs:** Mejora UX (sin spec formal)
+
+**Resumen:** Se agregó el modal "¿Finalizar Sesión?" con campo de título/nota
+opcional al presionar "Finalizar y Guardar". El botón "Salir" del topbar ya
+no permite cerrar la pantalla mientras hay una sesión activa sin antes
+finalizarla. El título se guarda en la tabla `clase` y se muestra en el
+historial y en el detalle de la clase.
+
+**Cambios:**
+
+- **Backend:**
+  - `schema.sql` — columna `titulo TEXT` agregada a tabla `clase`.
+  - `app/core/db.py` — migración que agrega `titulo` a tablas `clase`
+    existentes (ALTER TABLE si la columna no existe).
+  - `app/historial/repository.py` — `finalizar_clase` acepta `titulo` opcional.
+  - `app/historial/routes.py` — `titulo` incluido en respuestas de
+    `/api/historial` y `/api/historial/{id}`.
+  - `app/main.py` — WebSocket handler refactorizado con `asyncio.Queue` para
+    audio y un receiver task separado. Parsea JSON del emisor para extraer
+    `{action: "finalizar", titulo: "..."}` y lo pasa a `finalizar_clase`.
+
+- **Frontend:**
+  - `components/FinalizarModal.jsx` — **nuevo**: modal con overlay oscuro
+    + blur, header con título "¿Finalizar Sesión?" + botón X, descripción
+    explicando que es opcional, input con placeholder "ej. Algoritmos de
+    ordenamiento" (max 120 chars, autofocus), botones "Cancelar" (gris) y
+    "Guardar y Salir" (azul primario). Cierra con Escape o click fuera.
+  - `views/SalaView.jsx`:
+    - El botón "Finalizar y Guardar" del bottom bar ahora abre el modal
+      en vez de finalizar directamente.
+    - El botón "Salir" del topbar, cuando el emisor está grabando, abre
+      el modal de finalizar (no deja salir sin finalizar). En otros
+      estados (listener, sin iniciar), funciona normal.
+    - Al confirmar el modal, se envía por WebSocket
+      `{"action":"finalizar","titulo":"..."}` con el título.
+  - `views/HistorialView.jsx` — muestra el `titulo` si existe, sino el
+    nombre del curso.
+  - `views/ClaseDetailView.jsx` — el `h1` principal muestra el `titulo`
+    si existe, con fallback a `${cod_ramo} — ${seccion}`. Subtítulo
+    muestra el nombre del curso + sección.
+  - `App.css` — estilos del modal: `.modal-overlay` con backdrop-filter,
+    `.modal` con border, shadow y animación `modalIn`, header/body/footer
+    con padding, input con focus azul, animaciones `fadeIn` y `modalIn`.
+
+**Verificación:**
+- `ruff check .` → All checks passed.
+- `pytest backend/tests` → 21/21 passed.
+- `pnpm build` → build OK (42 módulos, CSS 14.39 KB, JS 169 KB).
+
+**Notas:**
+- El título es opcional: si se deja vacío, se guarda como `null` en la BD.
+- El modal se cierra con Escape, click fuera del modal, o con los botones
+  "X" del header o "Cancelar".
+- El `Salir` del topbar fue modificado para que durante una sesión activa
+  (emitter grabando), su acción sea abrir el modal — garantizando que
+  el usuario no pueda salir sin finalizar y guardar.

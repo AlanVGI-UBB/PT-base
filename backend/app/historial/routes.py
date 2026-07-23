@@ -22,6 +22,7 @@ def api_historial(rut: str = ""):
             "fecha_inicio": c["fecha_inicio"],
             "fecha_fin": c["fecha_fin"],
             "duracion_ms": c["duracion_ms"],
+            "titulo": c.get("titulo"),
         }
         for c in clases
     ]
@@ -43,6 +44,7 @@ def api_historial_detalle(clase_id: int):
             "fecha_inicio": clase["fecha_inicio"],
             "fecha_fin": clase["fecha_fin"],
             "duracion_ms": clase["duracion_ms"],
+            "titulo": clase.get("titulo"),
         },
         "eventos": [
             {

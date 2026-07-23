@@ -30,13 +30,15 @@ export default function ClaseDetailView({ user }) {
   return (
     <main className="vista">
       <header className="vista__header">
-        <h1>{clase.cod_ramo} — {clase.seccion}</h1>
+        <h1>{clase.titulo || `${clase.cod_ramo} — ${clase.seccion}`}</h1>
         <button className="btn btn--volver" onClick={() => window.location.hash = '#/historial'}>Volver</button>
       </header>
 
       <div className="alumno__panel">
         <div className="alumno__controles">
-          <span className="dashboard__nombre">{clase.curso_nombre}</span>
+          <span className="dashboard__nombre">
+            {clase.titulo ? `${clase.curso_nombre} · Sección ${clase.seccion}` : clase.curso_nombre}
+          </span>
           <div className="alumno__fuente">
             <button
               className={`btn ${modo === 'apunte' ? 'btn--profesor' : 'btn--fuente'}`}

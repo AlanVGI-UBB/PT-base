@@ -47,7 +47,9 @@ export default function HistorialView({ user }) {
             >
               <div className="dashboard__card-info">
                 <span className="dashboard__codigo">{c.cod_ramo} — {c.seccion}</span>
-                <span className="dashboard__nombre">{c.curso_nombre}</span>
+                <span className="dashboard__nombre">
+                  {c.titulo || c.curso_nombre}
+                </span>
                 <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{fmtFecha(c.fecha_inicio)}</span>
               </div>
               <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>

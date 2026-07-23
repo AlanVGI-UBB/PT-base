@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS clase (
     rut_emisor TEXT NOT NULL REFERENCES usuario(rut),
     fecha_inicio TEXT NOT NULL,
     fecha_fin TEXT,
-    duracion_ms INTEGER DEFAULT 0
+    duracion_ms INTEGER DEFAULT 0,
+    titulo TEXT
 );
 
 CREATE TABLE IF NOT EXISTS evento_clase (
