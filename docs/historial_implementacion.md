@@ -450,7 +450,7 @@ historial y en el detalle de la clase.
   (emitter grabando), su acción sea abrir el modal — garantizando que
   el usuario no pueda salir sin finalizar y guardar.
 
-## 2026-07-23 — <pendiente> — Fix: esperar a 'Iniciar Transmisión' antes del WebSocket
+## 2026-07-23 — `b7e4498` — Fix: esperar a 'Iniciar Transmisión' antes del WebSocket
 **Refs:** Bugfix (sin spec formal)
 
 **Resumen:** En modo stub, al entrar a la Sala como emisor el WebSocket se
