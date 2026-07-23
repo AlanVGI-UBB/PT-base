@@ -293,3 +293,51 @@ y un sistema completo de historial con replay de clases.
 - El sistema está preparado para SSO/OAuth2 con Intranet institucional (interfaz conceptual).
 - Stakeholders: comunidad sorda, estudiantes, profesores (indirectamente a través del lavalier).
 - Próxima spec prevista: SPEC-005 (piloto de evaluación si se retoma el plan original).
+
+## 2026-07-23 — <pendiente> — Rediseño del Dashboard (UI)
+**Refs:** Mejora visual (sin spec formal)
+
+**Resumen:** Rediseño completo del Dashboard para coincidir con la UI objetivo:
+navbar superior con logo + LSCh Inclusion + tabs Home/History + iconos mic/settings,
+tarjeta de usuario con nombre/RUT/badge de micrófono y botón Historial, sección
+destacada de "Clase Actual" con título grande y botón "Iniciar Transmisión",
+grid de 3 columnas con "Todas mis Asignaturas".
+
+**Cambios:**
+- `frontend/src/components/Header.jsx` — **nuevo**: navbar sticky con logo SVG
+  (azul), título "LSCh Inclusion", tabs Home/History (con underline azul en activo),
+  iconos de micrófono y settings.
+- `frontend/src/views/DashboardView.jsx` — rediseñado:
+  - Tarjeta de usuario: nombre + RUT formateado + badge "Micrófono Conectado"
+    (con punto verde) + botón "Historial de Clases" + botón "Salir".
+  - Sección "CLASE ACTUAL" destacada con badge azul, título grande del ramo
+    actual, sección y botón primario "Iniciar Transmisión de Clase" con icono
+    de micrófono.
+  - Sección "Todas mis Asignaturas" con grid de 3 columnas (responsive a
+    2 en tablet, 1 en móvil), cada card con título, sección y botón "Iniciar"
+    con icono de play.
+- `frontend/src/App.css` — reescrito: variables CSS refinadas, header sticky,
+  user-card, clase-actual (centrado, tipografía grande), grid de asignaturas
+  con `grid-template-columns: repeat(3, 1fr)`, botones con sombras, hover
+  states, badges con punto verde animado, responsive breakpoints.
+- `backend/data/seed_glosario.json` — ampliado:
+  - 4 cursos: INF-221 Estructuras de Datos, MAT-101 Álgebra Lineal,
+    FIS-110 Física General, HUM-105 Ética Profesional.
+  - Usuario de prueba sigue siendo Juan Pérez (RUT 12345678-9, password test123).
+  - Inscrito en los 4 cursos (sección 1 INF-221, sección 3 MAT-101,
+    sección 2 FIS-110, sección 1 HUM-105).
+  - Glosario con 29 términos distribuidos entre los 4 cursos (comparten
+    términos como "duda", "clase", "ejercicio" para que el matching funcione).
+
+**Verificación:**
+- `pnpm build` → build OK (44 módulos, CSS 8.38 KB, JS 161 KB).
+- La primera asignatura inscrita (INF-221) aparece como "Clase Actual"
+  destacada; las otras 3 aparecen en el grid inferior.
+
+**Notas:**
+- La lógica de "Clase Actual" es simple: muestra la primera asignatura
+  inscrita. Si quieres otra lógica (por horario, por uso reciente, etc.),
+  se puede refinar.
+- El icono de micrófono en la navbar y el badge "Micrófono Conectado"
+  son visuales; el estado real del micrófono se gestiona al iniciar la
+  transmisión en la vista de Sala.

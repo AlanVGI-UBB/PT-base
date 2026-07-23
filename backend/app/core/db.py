@@ -24,3 +24,10 @@ def init_schema() -> None:
     if schema_path.exists():
         conn.executescript(schema_path.read_text(encoding="utf-8"))
         conn.commit()
+
+    # Migracion: agregar cod_ramo si la tabla curso existe pero no tiene la columna
+    cursor = conn.execute("PRAGMA table_info(curso)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "cod_ramo" not in columns and len(columns) > 0:
+        conn.execute("ALTER TABLE curso ADD COLUMN cod_ramo TEXT NOT NULL DEFAULT ''")
+        conn.commit()

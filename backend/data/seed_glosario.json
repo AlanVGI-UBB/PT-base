@@ -1,15 +1,18 @@
 {
     "cursos": [
-        {"id": 1, "cod_ramo": "INF-221", "nombre": "Cálculo I"},
-        {"id": 2, "cod_ramo": "INF-222", "nombre": "Álgebra Lineal"}
+        {"id": 1, "cod_ramo": "INF-221", "nombre": "Estructuras de Datos"},
+        {"id": 2, "cod_ramo": "MAT-101", "nombre": "Álgebra Lineal"},
+        {"id": 3, "cod_ramo": "FIS-110", "nombre": "Física General"},
+        {"id": 4, "cod_ramo": "HUM-105", "nombre": "Ética Profesional"}
     ],
     "usuarios": [
-        {"rut": "12345678-9", "password": "test123", "nombre": "Estudiante", "apellido": "Prueba"}
+        {"rut": "12345678-9", "password": "test123", "nombre": "Juan", "apellido": "Pérez"}
     ],
     "inscripciones": [
-        {"rut": "12345678-9", "curso_id": 1, "seccion": "SEC1"},
-        {"rut": "12345678-9", "curso_id": 1, "seccion": "SEC2"},
-        {"rut": "12345678-9", "curso_id": 2, "seccion": "SEC1"}
+        {"rut": "12345678-9", "curso_id": 1, "seccion": "1"},
+        {"rut": "12345678-9", "curso_id": 2, "seccion": "3"},
+        {"rut": "12345678-9", "curso_id": 3, "seccion": "2"},
+        {"rut": "12345678-9", "curso_id": 4, "seccion": "1"}
     ],
     "terminos": [
         {"curso_id": 1, "lema": "derivado", "texto_visible": "derivada", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
@@ -23,6 +26,23 @@
         {"curso_id": 1, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
         {"curso_id": 1, "lema": "resultado", "texto_visible": "resultado", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
         {"curso_id": 1, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1}
+        {"curso_id": 1, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
+        {"curso_id": 2, "lema": "vector", "texto_visible": "vector", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
+        {"curso_id": 2, "lema": "matriz", "texto_visible": "matriz", "video_url": "/data/videos_senas/integral.mp4", "n_palabras": 1},
+        {"curso_id": 2, "lema": "ecuación", "texto_visible": "ecuación", "video_url": "/data/videos_senas/ecuacion.mp4", "n_palabras": 1},
+        {"curso_id": 2, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
+        {"curso_id": 2, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
+        {"curso_id": 2, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
+        {"curso_id": 3, "lema": "fuerza", "texto_visible": "fuerza", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
+        {"curso_id": 3, "lema": "velocidad", "texto_visible": "velocidad", "video_url": "/data/videos_senas/integral.mp4", "n_palabras": 1},
+        {"curso_id": 3, "lema": "energía", "texto_visible": "energía", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
+        {"curso_id": 3, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
+        {"curso_id": 3, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
+        {"curso_id": 3, "lema": "resultado", "texto_visible": "resultado", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
+        {"curso_id": 4, "lema": "ética", "texto_visible": "ética", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
+        {"curso_id": 4, "lema": "valor", "texto_visible": "valor", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
+        {"curso_id": 4, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
+        {"curso_id": 4, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
+        {"curso_id": 4, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1}
     ]
 }
