@@ -491,7 +491,7 @@ transmisión activa (listener).
 - El listener no se ve afectado: sigue conectándose automáticamente
   al cargar la Sala si ya hay transmisión activa.
 
-## 2026-07-23 — <pendiente> — Fix: la clase solo se finaliza explícitamente
+## 2026-07-23 — `50a1df0` — Fix: la clase solo se finaliza explícitamente
 **Refs:** Bugfix (sin spec formal)
 
 **Resumen:** En modo stub, al acabarse la lista de frases el WebSocket se cerraba
