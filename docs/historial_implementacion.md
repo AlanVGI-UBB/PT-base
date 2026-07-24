@@ -606,7 +606,7 @@ para visualizar clases guardadas.
 - En móvil (< 600px) el grid cambia a 1 columna con 2 filas
   (subtítulos arriba, video abajo), ambos con scroll interno.
 
-## 2026-07-23 — <pendiente> — Rediseño del Historial de Clases
+## 2026-07-23 — `886d751` — Rediseño del Historial de Clases
 **Refs:** Mejora UX (sin spec formal)
 
 **Resumen:** Se rediseñó completamente la página de Historial de Clases
