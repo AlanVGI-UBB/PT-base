@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchSalaEstado } from '../api/cliente'
 import FinalizarModal from '../components/FinalizarModal'
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000'
+const WS_BASE = import.meta.env.VITE_WS_URL
+const WS_URL = WS_BASE !== undefined ? WS_BASE : 'ws://localhost:8000'
 
 const IconoMicrofono = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

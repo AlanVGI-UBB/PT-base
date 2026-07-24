@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL
+const API_URL = API_BASE !== undefined ? API_BASE : 'http://localhost:8000'
 
 export default function CursoSelector({ onSelect }) {
   const [cursos, setCursos] = useState([])

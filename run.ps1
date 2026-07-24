@@ -1,4 +1,4 @@
-# run.ps1 — Levanta Docker Compose con la IP local para acceder desde otros dispositivos
+# run.ps1 — Levanta Docker Compose con HTTPS + IP local para acceder desde otros dispositivos
 
 $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
     $_.InterfaceAlias -notmatch "Loopback|Virtual|Hyper-V|WSL|vEthernet" -and
@@ -11,20 +11,34 @@ if (-not $ip) {
     $ip = "localhost"
 }
 
-Write-Host "IP detectada: $ip" -ForegroundColor Cyan
-Write-Host "Frontend: http://${ip}:5173" -ForegroundColor Green
+Write-Host ""
+Write-Host "IP detectada: " -NoNewline
+Write-Host $ip -ForegroundColor Cyan
 Write-Host ""
 
 docker compose down
 
-docker compose build `
-    --build-arg VITE_API_URL="http://${ip}:8000" `
-    --build-arg VITE_WS_URL="ws://${ip}:8000" `
-    frontend
+# Reconstruir frontend con URLs vacías (relativas) + pasar IP para el certificado
+docker compose build frontend
 
-if ($?) {
-    docker compose up -d
-    Write-Host ""
-    Write-Host "Abrí en el celular: http://${ip}:5173" -ForegroundColor Green
-    Write-Host "Logs:  docker compose logs -f" -ForegroundColor DarkGray
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error al buildear el frontend." -ForegroundColor Red
+    exit 1
 }
+
+# Pasar la IP como CERT_HOST para el certificado autofirmado
+$env:CERT_HOST = $ip
+docker compose up -d
+Remove-Item Env:\CERT_HOST -ErrorAction SilentlyContinue
+
+Write-Host ""
+Write-Host "Abrí en este PC:    " -NoNewline
+Write-Host "https://localhost:443" -ForegroundColor Green
+Write-Host "  (aceptá la advertencia de seguridad del certificado)"
+Write-Host ""
+Write-Host "Abrí en el celular:  " -NoNewline
+Write-Host "https://${ip}:443" -ForegroundColor Green
+Write-Host "  (aceptá la advertencia de seguridad del certificado)"
+Write-Host ""
+Write-Host "Para ver logs:" -ForegroundColor DarkGray
+Write-Host "  docker compose logs -f" -ForegroundColor DarkGray

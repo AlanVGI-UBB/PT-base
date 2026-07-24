@@ -16,11 +16,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_WS_URL: ws://localhost:8000
-        VITE_API_URL: http://localhost:8000
+        VITE_WS_URL: ""
+        VITE_API_URL: ""
     image: puente-lsch-frontend:dev
     ports:
-      - "5173:80"
+      - "443:443"
+      - "80:80"
+    environment:
+      - CERT_HOST=localhost
     depends_on:
       - backend
     restart: unless-stopped

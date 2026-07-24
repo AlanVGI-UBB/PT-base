@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchHistorialDetalle } from '../api/cliente'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL
+const API_URL = API_BASE !== undefined ? API_BASE : 'http://localhost:8000'
 
 const IconoVolver = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
