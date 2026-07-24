@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchHistorialDetalle } from '../api/cliente'
-import ReplayPlayer from '../components/ReplayPlayer'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -66,7 +65,7 @@ const IconoMano = ({ size = 20 }) => (
   </svg>
 )
 
-function highlightText(texto, senasJson) {
+function highlight(texto, senasJson) {
   if (!texto || !senasJson) return texto
   let senas = []
   try { senas = JSON.parse(senasJson) } catch { return texto }
@@ -85,6 +84,11 @@ function highlightText(texto, senasJson) {
   })
 }
 
+function parseSenas(senasRaw) {
+  if (!senasRaw) return []
+  try { return JSON.parse(senasRaw) } catch { return [] }
+}
+
 export default function ClaseDetailView() {
   const [clase, setClase] = useState(null)
   const [eventos, setEventos] = useState([])
@@ -95,26 +99,55 @@ export default function ClaseDetailView() {
   const [replayVelocidad, setReplayVelocidad] = useState(1)
   const claseId = window.location.hash.split('/').pop()
   const subtitulosRef = useRef(null)
-  const timerRef = useRef(null)
+  const timeoutRef = useRef(null)
 
   useEffect(() => {
     fetchHistorialDetalle(claseId)
       .then((data) => {
         setClase(data.clase)
-        setEventos(data.eventos)
+        setEventos(data.eventos || [])
       })
       .catch(console.error)
   }, [claseId])
 
+  const estables = (eventos || []).filter((e) => e.estable || e.texto)
+  const tituloPantalla = clase ? (clase.titulo || `${clase.cod_ramo} — ${clase.seccion}`) : ''
+  const senasActuales = modo === 'replay' && estables[replayPos]
+    ? parseSenas(estables[replayPos].senas)
+    : []
+  const conceptoActual = senasActuales.length > 0 ? senasActuales[0] : null
+
   useEffect(() => {
-    return () => clearInterval(timerRef.current)
-  }, [])
+    clearTimeout(timeoutRef.current)
+    if (!replayPlaying || estables.length === 0 || replayPos >= estables.length - 1) {
+      if (replayPos >= estables.length - 1 && replayPlaying) {
+        setReplayPlaying(false)
+      }
+      return
+    }
+    const current = estables[replayPos]
+    const next = estables[replayPos + 1]
+    if (!current || !next) {
+      setReplayPlaying(false)
+      return
+    }
+    const delay = Math.max(200, ((next.timestamp_ms || 0) - (current.timestamp_ms || 0)) / replayVelocidad)
+    const id = setTimeout(() => {
+      setReplayPos((p) => p + 1)
+    }, delay)
+    timeoutRef.current = id
+    return () => clearTimeout(id)
+  }, [replayPlaying, replayPos, replayVelocidad, estables])
 
   useEffect(() => {
     if (subtitulosRef.current) {
       subtitulosRef.current.scrollTop = subtitulosRef.current.scrollHeight
     }
-  }, [eventos, modo, replayPos])
+  }, [replayPos, modo])
+
+  useEffect(() => {
+    return () => clearTimeout(timeoutRef.current)
+  }, [])
 
   if (!clase) {
     return (
@@ -124,14 +157,18 @@ export default function ClaseDetailView() {
     )
   }
 
-  const estables = eventos.filter((e) => e.estable || e.texto)
-  const tituloPantalla = clase.titulo || `${clase.cod_ramo} — ${clase.seccion}`
-  const conceptoActual = modo === 'replay' && estables[replayPos]?.senas
-    ? (() => {
-        try { return JSON.parse(estables[replayPos].senas)[0] }
-        catch { return null }
-      })()
-    : null
+  const handleTogglePlay = () => {
+    if (replayPlaying) {
+      setReplayPlaying(false)
+    } else {
+      if (replayPos >= estables.length - 1) setReplayPos(0)
+      setReplayPlaying(true)
+    }
+  }
+
+  const handleChangePos = (e) => {
+    setReplayPos(Number(e.target.value))
+  }
 
   return (
     <main className="sala">
@@ -158,7 +195,7 @@ export default function ClaseDetailView() {
             <div className="sala-subtitulos__modos">
               <button
                 className={`sala-subtitulos__modo-btn ${modo === 'apunte' ? 'sala-subtitulos__modo-btn--active' : ''}`}
-                onClick={() => setModo('apunte')}
+                onClick={() => { setModo('apunte'); setReplayPlaying(false) }}
               >
                 Apunte
               </button>
@@ -181,17 +218,17 @@ export default function ClaseDetailView() {
             ) : modo === 'apunte' ? (
               estables.map((e, i) => (
                 <p key={i} className="sala-subtitulo sala-subtitulo--final">
-                  {highlightText(e.texto, e.senas)}
+                  {highlight(e.texto, e.senas)}
                 </p>
               ))
             ) : (
               estables.slice(0, replayPos + 1).map((e, i) => (
                 <p
                   key={i}
-                  className={`sala-subtitulo ${i === replayPos ? 'sala-subtitulo--final' : 'sala-subtitulo--final'}`}
+                  className="sala-subtitulo sala-subtitulo--final"
                   style={i === replayPos ? { fontWeight: 600 } : { opacity: 0.6 }}
                 >
-                  {highlightText(e.texto, e.senas)}
+                  {highlight(e.texto, e.senas)}
                 </p>
               ))
             )}
@@ -246,10 +283,7 @@ export default function ClaseDetailView() {
             <div className="sala-estado__sub">Reproducción de la clase guardada</div>
           </div>
           <div className="sala-controles">
-            <button
-              className="btn btn--ghost-pause"
-              onClick={() => setReplayPlaying((p) => !p)}
-            >
+            <button className="btn btn--ghost-pause" onClick={handleTogglePlay}>
               {replayPlaying ? <IconoPausa size={18} /> : <IconoPlay size={18} />}
               {replayPlaying ? 'Pausar' : 'Reproducir'}
             </button>
@@ -268,43 +302,12 @@ export default function ClaseDetailView() {
               min={0}
               max={Math.max(0, estables.length - 1)}
               value={replayPos}
-              onChange={(e) => setReplayPos(Number(e.target.value))}
+              onChange={handleChangePos}
               className="sala-bottombar__progreso"
             />
           </div>
         </footer>
       )}
-
-      {/* Replay logic via interval */}
-      <ReplayEffect
-        playing={replayPlaying}
-        pos={replayPos}
-        velocidad={replayVelocidad}
-        total={estables.length}
-        onChange={setReplayPos}
-        onDone={() => setReplayPlaying(false)}
-        timerRef={timerRef}
-        estables={estables}
-      />
     </main>
   )
-}
-
-function ReplayEffect({ playing, pos, velocidad, total, onChange, onDone, timerRef, estables }) {
-  useEffect(() => {
-    clearInterval(timerRef.current)
-    if (!playing || total === 0) return
-    timerRef.current = setInterval(() => {
-      onChange((p) => {
-        if (p >= total - 1) {
-          clearInterval(timerRef.current)
-          onDone()
-          return p
-        }
-        return p + 1
-      })
-    }, Math.max(200, ((estables[p + 1]?.timestamp_ms || 0) - (estables[p]?.timestamp_ms || 0)) / velocidad) || 800)
-    return () => clearInterval(timerRef.current)
-  }, [playing, pos, velocidad, total])
-  return null
 }
