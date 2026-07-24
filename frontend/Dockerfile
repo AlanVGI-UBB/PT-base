@@ -21,11 +21,13 @@ RUN pnpm build
 # ---- Serve stage (nginx + SSL) ----
 FROM nginx:alpine AS serve
 
+RUN apk add --no-cache openssl
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 EXPOSE 80 443
 
