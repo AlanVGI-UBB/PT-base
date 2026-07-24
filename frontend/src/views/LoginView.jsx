@@ -9,12 +9,21 @@ const IconoInstalar = ({ size = 18 }) => (
   </svg>
 )
 
+const IconoMenu = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="1"/>
+    <circle cx="19" cy="12" r="1"/>
+    <circle cx="5" cy="12" r="1"/>
+  </svg>
+)
+
 export default function LoginView({ onLogin }) {
   const [rut, setRut] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [instalable, setInstalable] = useState(false)
+  const [mostrarAyuda, setMostrarAyuda] = useState(false)
   const installEvent = useRef(null)
 
   useEffect(() => {
@@ -28,12 +37,15 @@ export default function LoginView({ onLogin }) {
   }, [])
 
   const instalar = async () => {
-    if (!installEvent.current) return
-    installEvent.current.prompt()
-    const resultado = await installEvent.current.userChoice
-    if (resultado.outcome === 'accepted') {
-      setInstalable(false)
-      installEvent.current = null
+    if (installEvent.current) {
+      installEvent.current.prompt()
+      const resultado = await installEvent.current.userChoice
+      if (resultado.outcome === 'accepted') {
+        setInstalable(false)
+        installEvent.current = null
+      }
+    } else {
+      setMostrarAyuda((v) => !v)
     }
   }
 
@@ -81,14 +93,18 @@ export default function LoginView({ onLogin }) {
           </button>
         </form>
 
-        {instalable && (
-          <div className="login__instalar">
-            <button onClick={instalar} className="btn btn--fuente" style={{ width: '100%' }}>
-              <IconoInstalar size={18} />
-              Instalar aplicación
-            </button>
-          </div>
-        )}
+        <div className="login__instalar">
+          <button onClick={instalar} className="btn btn--fuente" style={{ width: '100%' }}>
+            <IconoInstalar size={18} />
+            Instalar aplicación
+          </button>
+          {mostrarAyuda && !instalable && (
+            <div className="login__ayuda">
+              <IconoMenu size={16} />
+              <span>Abrí el menú de Chrome (⋮) y seleccioná <strong>"Agregar a pantalla de inicio"</strong></span>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   )
