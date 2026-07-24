@@ -696,3 +696,29 @@ de clase en filas horizontales scrollables agrupadas por mes.
 - En móvil, las cards siguen siendo de 320px y se hace scroll
   horizontal dentro del grupo, lo cual es consistente con la UI
   de apps móviles (estilo Netflix/YouTube).
+
+## 2026-07-23 — <pendiente> — Fix: position: fixed en .sala para evitar scroll de página
+**Refs:** Bugfix (sin spec formal)
+
+**Resumen:** Aunque `.sala` ya tenía `height: 100vh` y `overflow: hidden`,
+el `body`/`html` permitían scroll de página, lo que hacía que cuando el
+contenido crecía, la página completa scrolleara en vez de hacer scroll
+interno en el panel de subtítulos. Se agregó `position: fixed; inset: 0`
+a `.sala` para que la vista esté anclada al viewport independientemente
+del scroll de la página.
+
+**Cambios:**
+- `frontend/src/App.css` — `.sala` ahora incluye `position: fixed;
+  inset: 0; z-index: 1;` además de `height: 100vh; overflow: hidden`.
+  Esto garantiza que la Sala siempre cubra el viewport completo y
+  que el scroll interno del panel de subtítulos funcione correctamente
+  sin que la página completa scrollee.
+
+**Verificación:**
+- `pnpm build` → build OK.
+
+**Notas:**
+- El `FinalizarModal` usa `position: fixed; inset: 0` por su cuenta,
+  así que sigue funcionando correctamente sobre la Sala fija.
+- Las demás vistas (Dashboard, Historial, Login) no se ven afectadas
+  porque no usan la clase `.sala`.
