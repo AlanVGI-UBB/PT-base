@@ -311,12 +311,24 @@ export default function SalaView({ roomId, user, onVolver }) {
 
         <section className="sala-video">
           <div className="sala-video__player">
-            {conceptoClave && (
+            {conceptoClave ? (
               <div className="concepto-card">
                 <div className="concepto-card__label">TRADUCIENDO CONCEPTO CLAVE</div>
                 <div className="concepto-card__value">
                   <IconoMano size={20} />
                   <span>{conceptoClave.texto_visible}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="sala-video__placeholder">
+                <div className="sala-video__placeholder-icon">
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}>
+                    <path d="M23 7l-7 5 7 5V7z"/>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                  </svg>
+                </div>
+                <div className="sala-video__placeholder-text">
+                  Esperando video de la seña...
                 </div>
               </div>
             )}

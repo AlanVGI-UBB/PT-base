@@ -320,7 +320,8 @@ input[type="text"], input[type="password"], select {
 .sala {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--bg);
 }
 
@@ -331,6 +332,7 @@ input[type="text"], input[type="password"], select {
   padding: 1rem 2rem;
   border-bottom: 1px solid var(--panel-border-soft);
   background: var(--bg);
+  flex-shrink: 0;
 }
 
 .sala-titulo {
@@ -365,6 +367,20 @@ input[type="text"], input[type="password"], select {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+.sala-badge-historial {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(74, 126, 255, 0.1);
+  border: 1px solid rgba(74, 126, 255, 0.4);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 6px;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -376,6 +392,8 @@ input[type="text"], input[type="password"], select {
   grid-template-columns: minmax(360px, 1fr) 2fr;
   gap: 0;
   border-top: 1px solid var(--panel-border-soft);
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ===== SUBTÍTULOS ===== */
@@ -385,6 +403,7 @@ input[type="text"], input[type="password"], select {
   border-right: 1px solid var(--panel-border-soft);
   background: var(--bg);
   min-height: 0;
+  overflow: hidden;
 }
 
 .sala-subtitulos__header {
@@ -393,6 +412,8 @@ input[type="text"], input[type="password"], select {
   justify-content: space-between;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--panel-border-soft);
+  flex-shrink: 0;
+  gap: 1rem;
 }
 
 .sala-subtitulos__titulo {
@@ -401,6 +422,33 @@ input[type="text"], input[type="password"], select {
   gap: 0.5rem;
   font-size: 0.85rem;
   color: var(--muted);
+  white-space: nowrap;
+}
+
+.sala-subtitulos__modos {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.sala-subtitulos__modo-btn {
+  background: transparent;
+  border: 1px solid var(--panel-border-soft);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.sala-subtitulos__modo-btn:hover { color: var(--fg); background: var(--panel); }
+
+.sala-subtitulos__modo-btn--active {
+  color: var(--fg);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .sala-subtitulos__tamano {
@@ -452,6 +500,7 @@ input[type="text"], input[type="password"], select {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-shrink: 0;
 }
 
 .sala-subtitulos__status svg { color: var(--accent); }
@@ -464,6 +513,8 @@ input[type="text"], input[type="password"], select {
   background: var(--bg);
   position: relative;
   padding: 2rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sala-video__player {
@@ -486,6 +537,24 @@ input[type="text"], input[type="password"], select {
   inset: 0;
   background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
   pointer-events: none;
+}
+
+.sala-video__placeholder {
+  text-align: center;
+  color: var(--muted);
+  z-index: 1;
+  padding: 1.5rem;
+}
+
+.sala-video__placeholder-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.sala-video__placeholder-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .sala-video__overlay {
@@ -580,6 +649,13 @@ input[type="text"], input[type="password"], select {
 
 .sala-controles { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 
+.sala-bottombar__progreso {
+  flex: 1;
+  min-width: 150px;
+  accent-color: var(--accent);
+  height: 4px;
+}
+
 .btn--ghost-pause {
   background: var(--panel);
   color: var(--fg);
@@ -628,7 +704,7 @@ input[type="text"], input[type="password"], select {
   .asignaturas__grid { grid-template-columns: repeat(2, 1fr); }
   .header { padding: 1rem 1.25rem; }
   .vista { padding: 1.5rem 1.25rem; }
-  .sala-grid { grid-template-columns: 1fr; }
+  .sala-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
   .sala-subtitulos { border-right: none; border-bottom: 1px solid var(--panel-border-soft); }
   .sala-topbar { padding: 1rem 1.25rem; }
   .sala-titulo { text-align: left; flex: 1; }
@@ -644,6 +720,8 @@ input[type="text"], input[type="password"], select {
   .sala-controles .btn { flex: 1; }
   .sala-video { padding: 1rem; }
   .concepto-card { left: 0.75rem; right: 0.75rem; bottom: 0.75rem; }
+  .sala-topbar { flex-wrap: wrap; }
+  .sala-titulo { font-size: 0.9rem; text-align: left; flex-basis: 100%; order: 1; }
 }
 
 /* ===== MODAL ===== */

@@ -537,3 +537,71 @@ explícita. Al confirmar el modal, se redirige al dashboard.
   room_id (descartar la anterior sin finalizar).
 - El stub ahora nunca termina solo. Solo termina cuando el emisor
   envía la acción `finalizar` o cuando se desconecta el WebSocket.
+
+## 2026-07-23 — <pendiente> — Altura fija en Sala + ClaseDetailView con mismo layout
+**Refs:** Mejora UX (sin spec formal)
+
+**Resumen:** Se corrigió el problema de que la pantalla de Sala se alargaba
+hacia abajo a medida que se generaban más transcripciones, empujando los
+controles del bottom bar fuera de la vista. Además, se refactorizó
+ClaseDetailView para que use el mismo layout visual que SalaView (top
+bar + grid 2 columnas + bottom bar condicional) con elementos extras
+para visualizar clases guardadas.
+
+**Cambios:**
+
+- **CSS (frontend/src/App.css):**
+  - `.sala` ahora usa `height: 100vh` + `overflow: hidden` en vez de
+    `min-height: 100vh`, para que la pantalla no crezca con el contenido.
+  - `.sala-grid` y `.sala-subtitulos` tienen `min-height: 0` para
+    permitir que sus hijos con `overflow-y: auto` hagan scroll interno.
+  - `.sala-topbar` y `.sala-bottombar` tienen `flex-shrink: 0` para
+    mantenerse fijos.
+  - `.sala-subtitulos__contenido` mantiene `overflow-y: auto` con
+    `min-height: 0` para scroll interno.
+  - Nuevo `.sala-badge-historial` (badge azul "HISTORIAL" en lugar de
+    "EN VIVO" rojo).
+  - Nuevos `.sala-subtitulos__modos` y `.sala-subtitulos__modo-btn`
+    para el toggle Apunte/Replay.
+  - Nuevo `.sala-video__placeholder` con icono SVG grande y texto
+    descriptivo cuando no hay video de seña.
+  - Nuevo `.sala-bottombar__progreso` para la barra de progreso del
+    Replay.
+
+- **Frontend (views/SalaView.jsx):**
+  - El video player ahora muestra un placeholder "Esperando video de
+    la seña..." cuando no hay `conceptoClave`, en vez de quedar vacío.
+
+- **Frontend (views/ClaseDetailView.jsx) — REFACTORIZADO COMPLETO:**
+  - Ahora usa la misma estructura que SalaView:
+    - Top bar con botón "Volver" (izq), título de la clase (centro),
+      badge "HISTORIAL" (der), icono de settings.
+    - Grid 2 columnas: panel de subtítulos (izq) + video player (der).
+    - Bottom bar condicional (solo en modo Replay) con barra de
+      progreso, Play/Pausa, controles de velocidad 1x/1.5x/2x.
+  - Header del panel de subtítulos tiene:
+    - Título "Transcripción" con icono.
+    - Toggle Apunte/Replay con estilo de botones pill.
+    - Controles A+/A− para tamaño de fuente.
+  - Modo Apunte: muestra todas las frases con términos resaltados.
+  - Modo Replay: muestra frases progresivamente, video player muestra
+    la seña del concepto actual, bottom bar con controles de
+    reproducción.
+  - Función `highlightText` copiada para resaltar términos del
+    glosario en el texto.
+  - Componente interno `ReplayEffect` maneja el timer de avance
+    automático basado en `timestamp_ms` y `velocidad`.
+
+**Verificación:**
+- `ruff check .` → All checks passed.
+- `pytest backend/tests` → 21/21 passed.
+- `pnpm build` → build OK (43 módulos, CSS 15.72 KB, JS 174 KB).
+
+**Notas:**
+- En el modo Replay, las frases pasadas se muestran con opacidad 0.6
+  y la actual con peso 600 para destacar el progreso.
+- El `ReplayEffect` usa `setInterval` con un delay calculado como
+  `(timestamp_ms[pos+1] - timestamp_ms[pos]) / velocidad`, con un
+  mínimo de 200ms para evitar timers demasiado rápidos.
+- En móvil (< 600px) el grid cambia a 1 columna con 2 filas
+  (subtítulos arriba, video abajo), ambos con scroll interno.
