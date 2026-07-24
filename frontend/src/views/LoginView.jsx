@@ -1,11 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { loginRequest } from '../api/cliente'
+
+const IconoInstalar = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+)
 
 export default function LoginView({ onLogin }) {
   const [rut, setRut] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [instalable, setInstalable] = useState(false)
+  const installEvent = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault()
+      installEvent.current = e
+      setInstalable(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const instalar = async () => {
+    if (!installEvent.current) return
+    installEvent.current.prompt()
+    const resultado = await installEvent.current.userChoice
+    if (resultado.outcome === 'accepted') {
+      setInstalable(false)
+      installEvent.current = null
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -50,6 +80,15 @@ export default function LoginView({ onLogin }) {
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>
         </form>
+
+        {instalable && (
+          <div className="login__instalar">
+            <button onClick={instalar} className="btn btn--fuente" style={{ width: '100%' }}>
+              <IconoInstalar size={18} />
+              Instalar aplicación
+            </button>
+          </div>
+        )}
       </div>
     </main>
   )

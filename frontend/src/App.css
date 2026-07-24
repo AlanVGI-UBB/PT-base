@@ -345,6 +345,11 @@ input[type="text"], input[type="password"], select {
   color: #ff9489; font-size: 0.9rem;
 }
 
+.login__instalar {
+  max-width: 400px;
+  margin: 1rem auto 0;
+}
+
 .campo { display: flex; flex-direction: column; gap: 0.3rem; }
 .campo span { font-size: 0.85rem; color: var(--muted); }
 
