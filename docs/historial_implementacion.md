@@ -697,7 +697,7 @@ de clase en filas horizontales scrollables agrupadas por mes.
   horizontal dentro del grupo, lo cual es consistente con la UI
   de apps móviles (estilo Netflix/YouTube).
 
-## 2026-07-23 — <pendiente> — Fix: position: fixed en .sala para evitar scroll de página
+## 2026-07-23 — `0142dc0` — Fix: position: fixed en .sala para evitar scroll de página
 **Refs:** Bugfix (sin spec formal)
 
 **Resumen:** Aunque `.sala` ya tenía `height: 100vh` y `overflow: hidden`,
