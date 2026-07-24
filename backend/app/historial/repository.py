@@ -48,7 +48,12 @@ def listar_clases(rut: str) -> list[dict]:
     rows = conn.execute(
         "SELECT c.id, c.room_id, c.curso_id, co.nombre as curso_nombre, "
         "co.cod_ramo, c.seccion, c.rut_emisor, c.fecha_inicio, c.fecha_fin, "
-        "c.duracion_ms, c.titulo "
+        "c.duracion_ms, c.titulo, "
+        "COALESCE((SELECT SUM(CASE WHEN texto IS NULL OR texto = '' THEN 0 "
+        "ELSE LENGTH(texto) - LENGTH(REPLACE(texto, ' ', '')) + 1 END) "
+        "FROM evento_clase WHERE clase_id = c.id), 0) as palabras, "
+        "(SELECT texto FROM evento_clase WHERE clase_id = c.id AND estable = 1 "
+        "ORDER BY timestamp_ms LIMIT 1) as preview "
         "FROM clase c "
         "JOIN curso co ON co.id = c.curso_id "
         "JOIN inscripcion i ON i.curso_id = c.curso_id AND i.seccion = c.seccion "

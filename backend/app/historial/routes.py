@@ -23,6 +23,8 @@ def api_historial(rut: str = ""):
             "fecha_fin": c["fecha_fin"],
             "duracion_ms": c["duracion_ms"],
             "titulo": c.get("titulo"),
+            "palabras": c.get("palabras", 0),
+            "preview": c.get("preview"),
         }
         for c in clases
     ]

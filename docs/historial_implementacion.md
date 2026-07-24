@@ -605,3 +605,94 @@ para visualizar clases guardadas.
   mínimo de 200ms para evitar timers demasiado rápidos.
 - En móvil (< 600px) el grid cambia a 1 columna con 2 filas
   (subtítulos arriba, video abajo), ambos con scroll interno.
+
+## 2026-07-23 — <pendiente> — Rediseño del Historial de Clases
+**Refs:** Mejora UX (sin spec formal)
+
+**Resumen:** Se rediseñó completamente la página de Historial de Clases
+siguiendo la UI objetivo: header con "Inclusión LSCh" + tabs Inicio/Historial
++ avatar del usuario, título grande "Historial de Clases", subtítulo
+descriptivo, search bar con icono, filtros de asignatura y fecha, y cards
+de clase en filas horizontales scrollables agrupadas por mes.
+
+**Cambios:**
+
+- **Backend (app/historial/repository.py + routes.py):**
+  - `listar_clases` ahora calcula `palabras` (conteo total de palabras
+    en `evento_clase.texto` de la clase) y `preview` (primer evento
+    estable) usando subqueries en SQL.
+  - `GET /api/historial` ahora incluye `palabras` y `preview` en
+    cada item de la respuesta.
+
+- **Frontend (components/Header.jsx):**
+  - Título cambiado de "LSCh Inclusion" a "Inclusión LSCh" (color
+    normal, no azul como antes).
+  - Tabs actualizadas a "Inicio" y "Historial" (en español).
+  - Tab activa se muestra con color azul (var(--accent)) y underline
+    azul, en vez de blanco.
+  - Nuevo avatar del usuario (círculo con iniciales) en la derecha
+    del header, con gradiente azul.
+  - Header acepta prop `user` para generar las iniciales.
+
+- **Frontend (views/DashboardView.jsx):**
+  - Pasa `user` al Header para mostrar el avatar.
+
+- **Frontend (views/HistorialView.jsx) — REFACTORIZADO COMPLETO:**
+  - Usa el mismo `Header` que el Dashboard.
+  - Título grande "Historial de Clases" (2.5rem, 700 weight).
+  - Subtítulo descriptivo: "Revisa transcripciones pasadas, notas
+    guardadas y momentos destacados de tus sesiones anteriores. Usa
+    los filtros para encontrar clases específicas rápidamente."
+  - **Search bar** con icono de lupa y placeholder
+    "Buscar por título, asignatura o palabras clave...".
+  - **Filtro de asignatura** (select dropdown) generado
+    dinámicamente desde los cod_ramo de las clases.
+  - **Filtro de fecha** (botón "Todas las fechas" con icono de
+    calendario) — placeholder para date picker futuro.
+  - **Filtrado en tiempo real** (client-side) por texto y asignatura.
+  - **Agrupación por mes**: clases agrupadas bajo headers
+    "Octubre 2024", "Septiembre 2024", etc. (en español).
+  - **Cards horizontales scrollables**: cada fila de mes es un
+    scroll horizontal con `scroll-snap-type: x mandatory` y
+    `flex: 0 0 320px` por card.
+  - **Card estructura:**
+    - Header: badge con nombre de asignatura + dot de color (rojo
+      para FIS-110, gris para los demás) + fecha/hora.
+    - Título (1 línea, truncado con ellipsis).
+    - Descripción (3 líneas, truncado con ellipsis, viene del
+      `preview` de la primera frase de la transcripción).
+    - Footer: metadata (palabras / marcador / pizarras según
+      duración) + "Ver clase →" en azul.
+
+- **Frontend (App.css):**
+  - `.header__title` color normal, tabs "Inicio"/"Historial"
+    con underline azul cuando activas.
+  - `.header__avatar` con gradiente azul y hover effect.
+  - `.historial-page` con padding generoso y `max-width: 1280px`.
+  - `.historial-page__titulo` título grande (2.5rem, 700 weight).
+  - `.historial-search` con border azul en focus.
+  - `.historial-filtro` select con chevron SVG inline.
+  - `.historial-grupo__cards` con scroll horizontal + scroll-snap.
+  - `.historial-card` con `flex: 0 0 320px`, hover effect
+    (translateY + border azul).
+  - `.historial-card__asignatura` badge con dot de color.
+  - `.historial-card__titulo` y `__desc` con line-clamp.
+
+**Verificación:**
+- `ruff check .` → All checks passed.
+- `pytest backend/tests` → 21/21 passed.
+- `pnpm build` → build OK (CSS 20.33 KB, JS 178 KB).
+
+**Notas:**
+- El dot rojo en la asignatura es solo para FIS-110 (Física
+  Mecánica), basado en la convención de "asignatura crítica".
+  Se puede extender a más ramos modificando la lógica de
+  `historial-card__dot--{cod_ramo}`.
+- El tipo de metadata (palabras / marcador / pizarras) se decide
+  según la duración de la clase: <10min → palabras, 10-30min →
+  marcador, ≥30min → pizarras.
+- El filtro de fecha es un placeholder visual; la lógica de
+  filtrado por rango de fechas se puede añadir después.
+- En móvil, las cards siguen siendo de 320px y se hace scroll
+  horizontal dentro del grupo, lo cual es consistente con la UI
+  de apps móviles (estilo Netflix/YouTube).

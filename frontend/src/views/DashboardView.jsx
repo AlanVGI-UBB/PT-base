@@ -74,7 +74,7 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
 
   return (
     <>
-      <Header activeTab="home" />
+      <Header activeTab="home" user={user} />
 
       <main className="vista">
         <section className="user-card">
