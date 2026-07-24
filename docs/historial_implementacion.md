@@ -538,7 +538,7 @@ explícita. Al confirmar el modal, se redirige al dashboard.
 - El stub ahora nunca termina solo. Solo termina cuando el emisor
   envía la acción `finalizar` o cuando se desconecta el WebSocket.
 
-## 2026-07-23 — <pendiente> — Altura fija en Sala + ClaseDetailView con mismo layout
+## 2026-07-23 — `87d24d5` — Altura fija en Sala + ClaseDetailView con mismo layout
 **Refs:** Mejora UX (sin spec formal)
 
 **Resumen:** Se corrigió el problema de que la pantalla de Sala se alargaba
