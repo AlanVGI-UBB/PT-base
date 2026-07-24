@@ -24,9 +24,14 @@ export default function LoginView({ onLogin }) {
   const [loading, setLoading] = useState(false)
   const [instalable, setInstalable] = useState(false)
   const [mostrarAyuda, setMostrarAyuda] = useState(false)
+  const [standalone, setStandalone] = useState(false)
   const installEvent = useRef(null)
 
   useEffect(() => {
+    const mq = window.matchMedia('(display-mode: standalone)')
+    setStandalone(mq.matches)
+    if (mq.matches) return
+
     const handler = (e) => {
       e.preventDefault()
       installEvent.current = e
@@ -93,18 +98,20 @@ export default function LoginView({ onLogin }) {
           </button>
         </form>
 
-        <div className="login__instalar">
-          <button onClick={instalar} className="btn btn--fuente" style={{ width: '100%' }}>
-            <IconoInstalar size={18} />
-            Instalar aplicación
-          </button>
-          {mostrarAyuda && !instalable && (
-            <div className="login__ayuda">
-              <IconoMenu size={16} />
-              <span>Abrí el menú de Chrome (⋮) y seleccioná <strong>"Agregar a pantalla de inicio"</strong></span>
-            </div>
-          )}
-        </div>
+        {!standalone && (
+          <div className="login__instalar">
+            <button onClick={instalar} className="btn btn--fuente" style={{ width: '100%' }}>
+              <IconoInstalar size={18} />
+              Instalar aplicación
+            </button>
+            {mostrarAyuda && !instalable && (
+              <div className="login__ayuda">
+                <IconoMenu size={16} />
+                <span>Abrí el menú de Chrome (⋮) y seleccioná <strong>"Agregar a pantalla de inicio"</strong></span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   )
