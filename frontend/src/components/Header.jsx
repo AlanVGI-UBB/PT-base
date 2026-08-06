@@ -21,18 +21,22 @@ export default function Header({ activeTab = 'home', user }) {
       </div>
 
       <nav className="header__nav">
-        <a
+        <button
+          type="button"
           className={`header__tab ${activeTab === 'home' ? 'header__tab--active' : ''}`}
-          onClick={() => window.location.hash = '#/dashboard'}
+          aria-current={activeTab === 'home' ? 'page' : undefined}
+          onClick={() => { window.location.hash = '#/dashboard' }}
         >
           Inicio
-        </a>
-        <a
+        </button>
+        <button
+          type="button"
           className={`header__tab ${activeTab === 'history' ? 'header__tab--active' : ''}`}
-          onClick={() => window.location.hash = '#/historial'}
+          aria-current={activeTab === 'history' ? 'page' : undefined}
+          onClick={() => { window.location.hash = '#/historial' }}
         >
           Historial
-        </a>
+        </button>
       </nav>
 
       <div className="header__user">

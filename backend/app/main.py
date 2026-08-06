@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -6,16 +7,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.asr.base import get_asr_provider
 from app.auth.routes import router as auth_router
-from app.core.auth import verificar_token
+from app.core.auth import obtener_rut, verificar_token
+from app.core.config import get_settings
 from app.core.db import get_connection
 from app.glossary.matching import buscar_terminos
-from app.glossary.repository import ensure_schema, get_glosario_por_lema, list_cursos, list_terminos
+from app.glossary.repository import ensure_schema, get_glosario_por_lema, list_terminos
 from app.historial.repository import crear_clase, finalizar_clase, guardar_evento
 from app.historial.routes import router as historial_router
 from app.salas.manager import RoomManager
@@ -55,22 +57,22 @@ async def health() -> dict:
 
 
 @app.get("/api/cursos")
-def api_cursos(rut: str = Query("")):
+def api_cursos(request: Request):
+    rut = obtener_rut(request)
     conn = get_connection()
-    if rut:
-        rows = conn.execute(
-            "SELECT c.id, c.cod_ramo, c.nombre, i.seccion "
-            "FROM inscripcion i "
-            "JOIN curso c ON c.id = i.curso_id "
-            "WHERE i.rut = ? ORDER BY c.id, i.seccion",
-            (rut,),
-        ).fetchall()
-        return [dict(r) for r in rows]
-    return list_cursos()
+    rows = conn.execute(
+        "SELECT c.id, c.cod_ramo, c.nombre, i.seccion "
+        "FROM inscripcion i "
+        "JOIN curso c ON c.id = i.curso_id "
+        "WHERE i.rut = ? ORDER BY c.id, i.seccion",
+        (rut,),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 @app.get("/api/cursos/{curso_id}/glosario")
-async def api_glosario(curso_id: int) -> list[dict]:
+async def api_glosario(request: Request, curso_id: int) -> list[dict]:
+    obtener_rut(request)
     return list_terminos(curso_id)
 
 
@@ -140,13 +142,15 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         t_inicio = int(time.time() * 1000)
         segmento_idx = 0
         audio_queue: asyncio.Queue = asyncio.Queue()
-        session_state: dict = {"titulo": None, "finalizar": False}
+        stop_event = asyncio.Event()
+        session_state: dict = {"titulo": None, "finalizar": False, "disconectado": False}
 
         async def _receiver():
             while True:
                 msg = await ws.receive()
                 if msg["type"] == "websocket.disconnect":
-                    session_state["finalizar"] = True
+                    session_state["disconectado"] = True
+                    stop_event.set()
                     return
                 if "bytes" in msg:
                     await audio_queue.put(msg["bytes"])
@@ -156,6 +160,7 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                         if data.get("action") == "finalizar":
                             session_state["titulo"] = data.get("titulo")
                             session_state["finalizar"] = True
+                            stop_event.set()
                             return
                     except (json.JSONDecodeError, TypeError):
                         pass
@@ -165,10 +170,11 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 chunk = await audio_queue.get()
                 yield chunk
 
-        receiver_task = asyncio.create_task(_receiver())
-
-        try:
+        async def _transcribir():
+            nonlocal segmento_idx
             async for resultado in provider.transcribe_stream(_audio_gen()):
+                if stop_event.is_set():
+                    break
                 if not resultado.texto.strip():
                     continue
                 segmento_idx += 1
@@ -186,27 +192,72 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                     "timestamp_ms": ts_ms,
                 }
                 await RoomManager.broadcast(room_id, evento)
-        except WebSocketDisconnect:
+
+        async def _cerrar_listeners(evento: dict) -> None:
+            await RoomManager.broadcast(room_id, evento)
+            sala_actual = await RoomManager.obtener(room_id)
+            if not sala_actual:
+                return
+            for ws_listener in list(sala_actual.listeners):
+                try:
+                    await ws_listener.close()
+                except Exception:
+                    pass
+            sala_actual.listeners.clear()
+
+        receiver_task = asyncio.create_task(_receiver())
+        transcribe_task = asyncio.create_task(_transcribir())
+
+        try:
+            await asyncio.wait(
+                {receiver_task, transcribe_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if transcribe_task.done() and not transcribe_task.cancelled():
+                exc = transcribe_task.exception()
+                if exc:
+                    logger.error("Error en transcripción de sala %s: %s", room_id, exc)
+        except BaseException:
             pass
         finally:
-            try:
-                await asyncio.wait_for(receiver_task, timeout=2)
-            except asyncio.TimeoutError:
-                receiver_task.cancel()
+            stop_event.set()
+            for t in (transcribe_task, receiver_task):
+                if not t.done():
+                    t.cancel()
+            for t in (transcribe_task, receiver_task):
+                with contextlib.suppress(BaseException):
+                    await t
 
-            if session_state["finalizar"]:
-                fin_iso = datetime.now(timezone.utc).isoformat()
-                duracion = int(time.time() * 1000) - t_inicio
-                titulo = session_state["titulo"]
-                if titulo is not None:
-                    titulo = titulo.strip() or None
-                finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
-                await RoomManager.broadcast(room_id, {"type": "clase_finalizada", "clase_id": clase_id_db})
-                logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
-            else:
-                logger.info("Sala %s cerrada sin finalizar (clase %d queda en progreso)", room_id, clase_id_db)
+            if session_state["disconectado"] and not session_state["finalizar"]:
+                timeout_ms = get_settings().SALA_TIMEOUT_MS
+                logger.info(
+                    "Sala %s: emisor desconectado sin finalizar; cierre en %d ms",
+                    room_id,
+                    timeout_ms,
+                )
+                await RoomManager.broadcast(
+                    room_id,
+                    {
+                        "type": "emisor_desconectado",
+                        "mensaje": "El emisor se desconectó. La clase se guardará automáticamente.",
+                    },
+                )
+                await asyncio.sleep(timeout_ms / 1000)
+
+            fin_iso = datetime.now(timezone.utc).isoformat()
+            duracion = int(time.time() * 1000) - t_inicio
+            titulo = session_state["titulo"]
+            if titulo is not None:
+                titulo = titulo.strip() or None
+            finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
+            await _cerrar_listeners({"type": "clase_finalizada", "clase_id": clase_id_db})
+            logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
 
             await RoomManager.eliminar(room_id)
+            try:
+                await ws.close()
+            except Exception:
+                pass
 
     elif rol == "listener":
         if not await RoomManager.existe(room_id):
@@ -218,8 +269,10 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         logger.info("Listener conectado a sala %s", room_id)
         try:
             while True:
-                await asyncio.wait_for(ws.receive_text(), timeout=30)
-        except (WebSocketDisconnect, asyncio.TimeoutError):
+                msg = await ws.receive()
+                if msg["type"] == "websocket.disconnect":
+                    break
+        except (WebSocketDisconnect, RuntimeError):
             pass
         finally:
             await RoomManager.quitar_listener(room_id, ws)

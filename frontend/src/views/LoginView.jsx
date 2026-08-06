@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loginRequest } from '../api/cliente'
+import { loginRequest, normalizarRut } from '../api/cliente'
 
 const IconoInstalar = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -21,11 +21,20 @@ export default function LoginView({ onLogin }) {
   const [rut, setRut] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [aviso, setAviso] = useState('')
   const [loading, setLoading] = useState(false)
   const [instalable, setInstalable] = useState(false)
   const [mostrarAyuda, setMostrarAyuda] = useState(false)
   const [standalone, setStandalone] = useState(false)
   const installEvent = useRef(null)
+
+  useEffect(() => {
+    const msg = sessionStorage.getItem('puente_auth_msg')
+    if (msg) {
+      setAviso(msg)
+      sessionStorage.removeItem('puente_auth_msg')
+    }
+  }, [])
 
   useEffect(() => {
     const mq = window.matchMedia('(display-mode: standalone)')
@@ -57,9 +66,15 @@ export default function LoginView({ onLogin }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setAviso('')
+    const rutNorm = normalizarRut(rut)
+    if (!rutNorm) {
+      setError('RUT inválido. Verifica el formato (ej. 12.345.678-9).')
+      return
+    }
     setLoading(true)
     try {
-      const data = await loginRequest(rut, password)
+      const data = await loginRequest(rutNorm, password)
       onLogin(data.rut, data.nombre, data.apellido, data.token)
     } catch (err) {
       setError(err.message)
@@ -93,6 +108,7 @@ export default function LoginView({ onLogin }) {
             />
           </label>
           {error && <div className="login__error">{error}</div>}
+          {aviso && <div className="login__error">{aviso}</div>}
           <button className="btn btn--profesor" type="submit" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </button>

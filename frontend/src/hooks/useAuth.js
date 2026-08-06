@@ -21,6 +21,17 @@ export function useAuth() {
     setLoading(false)
   }, [])
 
+  useEffect(() => {
+    const handler = () => {
+      setUser(null)
+      setToken(null)
+      localStorage.removeItem(STORAGE_KEY)
+      if (window.location.hash !== '#/login') window.location.hash = '#/login'
+    }
+    window.addEventListener('puente-auth-expired', handler)
+    return () => window.removeEventListener('puente-auth-expired', handler)
+  }, [])
+
   const login = useCallback((rut, nombre, apellido, token) => {
     const userData = { rut, nombre, apellido, token }
     setUser({ rut, nombre, apellido })

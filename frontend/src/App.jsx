@@ -40,7 +40,6 @@ export default function App() {
     <DashboardView
       user={user}
       onLogout={logout}
-      onIrSala={(roomId) => { window.location.hash = `#/sala/${roomId}` }}
     />
   )
 }

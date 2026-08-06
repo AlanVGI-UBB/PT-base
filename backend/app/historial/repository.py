@@ -86,3 +86,12 @@ def obtener_eventos(clase_id: int) -> list[dict]:
         (clase_id,),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def usuario_participa(rut: str, curso_id: int, seccion: str) -> bool:
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT 1 FROM inscripcion WHERE rut = ? AND curso_id = ? AND seccion = ?",
+        (rut, curso_id, seccion),
+    ).fetchone()
+    return row is not None

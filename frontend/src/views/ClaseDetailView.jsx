@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchHistorialDetalle } from '../api/cliente'
+import Feedback from '../components/Feedback'
+import SenaPlayer from '../components/SenaPlayer'
 
-const API_BASE = import.meta.env.VITE_API_URL
-const API_URL = API_BASE !== undefined ? API_BASE : 'http://localhost:8000'
+const FUENTE_KEY = 'puente_lsch_font_size'
 
 const IconoVolver = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -20,30 +21,6 @@ const IconoTranscripcion = ({ size = 16 }) => (
   </svg>
 )
 
-const IconoAjustes = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-)
-
-const IconoExpandir = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 3 21 3 21 9"/>
-    <polyline points="9 21 3 21 3 15"/>
-    <line x1="21" y1="3" x2="14" y2="10"/>
-    <line x1="3" y1="21" x2="10" y2="14"/>
-  </svg>
-)
-
-const IconoMas = ({ size = 18 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="5" cy="12" r="2"/>
-    <circle cx="12" cy="12" r="2"/>
-    <circle cx="19" cy="12" r="2"/>
-  </svg>
-)
-
 const IconoPlay = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
     <polygon points="5 3 19 12 5 21 5 3"/>
@@ -54,15 +31,6 @@ const IconoPausa = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
     <rect x="6" y="4" width="4" height="16" rx="1"/>
     <rect x="14" y="4" width="4" height="16" rx="1"/>
-  </svg>
-)
-
-const IconoMano = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 11V6a2 2 0 0 0-4 0v5"/>
-    <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
-    <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
-    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
   </svg>
 )
 
@@ -93,8 +61,9 @@ function parseSenas(senasRaw) {
 export default function ClaseDetailView() {
   const [clase, setClase] = useState(null)
   const [eventos, setEventos] = useState([])
+  const [error, setError] = useState('')
   const [modo, setModo] = useState('apunte')
-  const [tamFuente, setTamFuente] = useState(18)
+  const [tamFuente, setTamFuente] = useState(() => Number(localStorage.getItem(FUENTE_KEY)) || 18)
   const [replayPos, setReplayPos] = useState(0)
   const [replayPlaying, setReplayPlaying] = useState(false)
   const [replayVelocidad, setReplayVelocidad] = useState(1)
@@ -103,12 +72,16 @@ export default function ClaseDetailView() {
   const timeoutRef = useRef(null)
 
   useEffect(() => {
+    setError('')
     fetchHistorialDetalle(claseId)
       .then((data) => {
         setClase(data.clase)
         setEventos(data.eventos || [])
       })
-      .catch(console.error)
+      .catch((e) => {
+        setClase(null)
+        setError(e.message || 'No se pudo cargar la clase')
+      })
   }, [claseId])
 
   const estables = (eventos || []).filter((e) => e.estable || e.texto)
@@ -116,7 +89,6 @@ export default function ClaseDetailView() {
   const senasActuales = modo === 'replay' && estables[replayPos]
     ? parseSenas(estables[replayPos].senas)
     : []
-  const conceptoActual = senasActuales.length > 0 ? senasActuales[0] : null
 
   useEffect(() => {
     clearTimeout(timeoutRef.current)
@@ -150,6 +122,25 @@ export default function ClaseDetailView() {
     return () => clearTimeout(timeoutRef.current)
   }, [])
 
+  const cambiarTam = (delta) => setTamFuente((s) => {
+    const nuevo = Math.min(32, Math.max(12, s + delta))
+    localStorage.setItem(FUENTE_KEY, String(nuevo))
+    return nuevo
+  })
+
+  if (error) {
+    return (
+      <main className="vista">
+        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+          <Feedback tipo="error" mensaje={error} />
+          <button className="btn btn--ghost" onClick={() => window.location.hash = '#/historial'}>
+            <IconoVolver size={18} /> <span>Volver al historial</span>
+          </button>
+        </div>
+      </main>
+    )
+  }
+
   if (!clase) {
     return (
       <main className="vista">
@@ -179,11 +170,6 @@ export default function ClaseDetailView() {
         </button>
         <h1 className="sala-titulo">{tituloPantalla}</h1>
         <span className="sala-badge-historial">HISTORIAL</span>
-        <div style={{ marginLeft: 'auto' }}>
-          <button className="header__icon-btn" aria-label="Configuración">
-            <IconoAjustes size={20} />
-          </button>
-        </div>
       </header>
 
       <div className="sala-grid">
@@ -208,8 +194,8 @@ export default function ClaseDetailView() {
               </button>
             </div>
             <div className="sala-subtitulos__tamano">
-              <button onClick={() => setTamFuente((s) => Math.min(s + 2, 32))}>A+</button>
-              <button onClick={() => setTamFuente((s) => Math.max(s - 2, 12))}>A−</button>
+              <button onClick={() => cambiarTam(2)} aria-label="Aumentar tamaño de letra">A+</button>
+              <button onClick={() => cambiarTam(-2)} aria-label="Disminuir tamaño de letra">A−</button>
             </div>
           </div>
 
@@ -244,14 +230,8 @@ export default function ClaseDetailView() {
 
         <section className="sala-video">
           <div className="sala-video__player">
-            {conceptoActual ? (
-              <div className="concepto-card">
-                <div className="concepto-card__label">CONCEPTO DE LA SEÑA</div>
-                <div className="concepto-card__value">
-                  <IconoMano size={20} />
-                  <span>{conceptoActual.texto_visible}</span>
-                </div>
-              </div>
+            {modo === 'replay' && senasActuales.length > 0 ? (
+              <SenaPlayer senas={senasActuales} />
             ) : (
               <div className="sala-video__placeholder">
                 <div className="sala-video__placeholder-icon">
@@ -265,14 +245,6 @@ export default function ClaseDetailView() {
                 </div>
               </div>
             )}
-            <div className="sala-video__overlay">
-              <button className="sala-video__icon-btn" title="Expandir">
-                <IconoExpandir size={16} />
-              </button>
-              <button className="sala-video__icon-btn" title="Más opciones">
-                <IconoMas size={18} />
-              </button>
-            </div>
           </div>
         </section>
       </div>
@@ -305,6 +277,7 @@ export default function ClaseDetailView() {
               value={replayPos}
               onChange={handleChangePos}
               className="sala-bottombar__progreso"
+              aria-label="Progreso del replay"
             />
           </div>
         </footer>

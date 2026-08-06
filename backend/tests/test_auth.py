@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.auth import hash_password
+from app.core.auth import crear_token, hash_password
 from app.core.db import get_connection, init_schema
 from app.main import app
 
@@ -33,6 +33,10 @@ def client(tmp_path, monkeypatch):
         yield c
 
 
+def auth(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_login_valido(client):
     resp = client.post("/api/auth/login", json={"rut": "11111111-1", "password": "test123"})
     assert resp.status_code == 200
@@ -47,7 +51,8 @@ def test_login_invalido(client):
 
 
 def test_usuario_me(client):
-    resp = client.get("/api/auth/usuario/me?rut=11111111-1")
+    token = crear_token("11111111-1")
+    resp = client.get("/api/auth/usuario/me", headers=auth(token))
     assert resp.status_code == 200
     data = resp.json()
     assert data["rut"] == "11111111-1"
@@ -55,12 +60,23 @@ def test_usuario_me(client):
     assert len(data["inscripciones"]) == 1
 
 
-def test_cursos_con_rut(client):
-    resp = client.get("/api/cursos?rut=11111111-1")
+def test_cursos_con_token(client):
+    token = crear_token("11111111-1")
+    resp = client.get("/api/cursos", headers=auth(token))
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
     assert data[0]["cod_ramo"] == "INF-221"
+
+
+def test_cursos_sin_token(client):
+    resp = client.get("/api/cursos")
+    assert resp.status_code == 401
+
+
+def test_usuario_me_sin_token(client):
+    resp = client.get("/api/auth/usuario/me")
+    assert resp.status_code == 401
 
 
 def test_health(client):

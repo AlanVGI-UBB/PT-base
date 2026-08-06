@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchSalaEstado } from '../api/cliente'
+import { fetchSalaEstado, expulsarSesion, getToken } from '../api/cliente'
 import FinalizarModal from '../components/FinalizarModal'
+import Feedback from '../components/Feedback'
+import EstadoConexion from '../components/EstadoConexion'
+import SenaPlayer from '../components/SenaPlayer'
+import { useWebSocket } from '../hooks/useWebSocket'
 
 const WS_BASE = import.meta.env.VITE_WS_URL
 const WS_URL = WS_BASE !== undefined ? WS_BASE : 'ws://localhost:8000'
+const FUENTE_KEY = 'puente_lsch_font_size'
 
 const IconoMicrofono = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -21,13 +26,6 @@ const IconoSalir = ({ size = 18 }) => (
   </svg>
 )
 
-const IconoAjustes = ({ size = 20 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"/>
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-  </svg>
-)
-
 const IconoPausa = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
     <rect x="6" y="4" width="4" height="16" rx="1"/>
@@ -38,38 +36,6 @@ const IconoPausa = ({ size = 18 }) => (
 const IconoStop = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
     <rect x="5" y="5" width="14" height="14" rx="2"/>
-  </svg>
-)
-
-const IconoExpandir = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 3 21 3 21 9"/>
-    <polyline points="9 21 3 21 3 15"/>
-    <line x1="21" y1="3" x2="14" y2="10"/>
-    <line x1="3" y1="21" x2="10" y2="14"/>
-  </svg>
-)
-
-const IconoMas = ({ size = 18 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="5" cy="12" r="2"/>
-    <circle cx="12" cy="12" r="2"/>
-    <circle cx="19" cy="12" r="2"/>
-  </svg>
-)
-
-const IconoCheck = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
-)
-
-const IconoMano = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 11V6a2 2 0 0 0-4 0v5"/>
-    <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
-    <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
-    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
   </svg>
 )
 
@@ -90,87 +56,105 @@ function highlightText(texto, terminos) {
   })
 }
 
+function formatearTiempo(segundos) {
+  const m = String(Math.floor(segundos / 60)).padStart(2, '0')
+  const s = String(segundos % 60).padStart(2, '0')
+  return `${m}:${s}`
+}
+
 export default function SalaView({ roomId, user, onVolver }) {
   const [rol, setRol] = useState(null)
-  const [estadoWs, setEstadoWs] = useState('desconectado')
+  const [determinando, setDeterminando] = useState(true)
   const [subtitulos, setSubtitulos] = useState([])
-  const [conceptoClave, setConceptoClave] = useState(null)
+  const [sena, setSena] = useState(null)
   const [grabando, setGrabando] = useState(false)
   const [pausado, setPausado] = useState(false)
-  const [tamFuente, setTamFuente] = useState(18)
-  const [determinando, setDeterminando] = useState(true)
-  const [modalAbierto, setModalAbierto] = useState(false)
   const [sesionIniciada, setSesionIniciada] = useState(false)
-  const wsRef = useRef(null)
+  const [modalAbierto, setModalAbierto] = useState(false)
+  const [feedback, setFeedback] = useState(null)
+  const [tiempo, setTiempo] = useState(0)
+  const [tamFuente, setTamFuente] = useState(() => Number(localStorage.getItem(FUENTE_KEY)) || 18)
+
   const recorderRef = useRef(null)
   const streamRef = useRef(null)
   const subtitulosRef = useRef(null)
-  const [tiempo, setTiempo] = useState(0)
   const intervalRef = useRef(null)
+  const senaTimeoutRef = useRef(null)
+  const volverTimeoutRef = useRef(null)
 
   useEffect(() => {
     if (!roomId || !user) return
-    fetchSalaEstado(roomId).then((estado) => {
-      const r = estado.activa ? 'listener' : 'emitter'
-      setRol(r)
-      setDeterminando(false)
-      if (r === 'listener') {
-        setSesionIniciada(true)
-      }
-    })
+    fetchSalaEstado(roomId)
+      .then((estado) => {
+        const r = estado.activa ? 'listener' : 'emitter'
+        setRol(r)
+        setDeterminando(false)
+        if (r === 'listener') setSesionIniciada(true)
+      })
+      .catch(() => {
+        setDeterminando(false)
+        setFeedback({ tipo: 'error', mensaje: 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.' })
+      })
   }, [roomId, user])
 
-  useEffect(() => {
-    if (!rol || !roomId || !user) return
-    if (!sesionIniciada) return
-    const token = JSON.parse(localStorage.getItem('puente_lsch_auth')).token
-    const url = `${WS_URL}/ws/sala/${roomId}?rol=${rol}&token=${token}`
-    const ws = new WebSocket(url)
-    wsRef.current = ws
+  const token = getToken()
+  const wsUrl = rol && sesionIniciada && token
+    ? `${WS_URL}/ws/sala/${roomId}?rol=${rol}&token=${encodeURIComponent(token)}`
+    : null
 
-    ws.onopen = () => setEstadoWs('conectado')
-    ws.onclose = () => setEstadoWs('desconectado')
-    ws.onerror = () => setEstadoWs('desconectado')
-    ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data)
-        if (data.type === 'segmento') {
-          if (data.final) {
-            setSubtitulos((prev) => [
-              ...prev,
-              { id: data.segment_id, texto: data.texto, final: true, terminos: data.senas || [] },
-            ])
-            if (data.senas && data.senas.length > 0) {
-              const principal = data.senas[0]
-              setConceptoClave(principal)
-              setTimeout(() => setConceptoClave(null), 4000)
-            }
-          } else {
-            setSubtitulos((prev) => {
-              const copia = [...prev]
-              const last = copia[copia.length - 1]
-              if (last && !last.final) {
-                copia[copia.length - 1] = { ...last, texto: data.texto }
-              } else {
-                copia.push({ id: data.segment_id, texto: data.texto, final: false, terminos: [] })
-              }
-              return copia
-            })
-          }
-        } else if (data.type === 'error') {
-          window.location.hash = '#/dashboard'
+  const manejarMensaje = useCallback((data) => {
+    if (data.type === 'segmento') {
+      if (data.final) {
+        setSubtitulos((prev) => [
+          ...prev,
+          { id: data.segment_id, texto: data.texto, final: true, terminos: data.senas || [] },
+        ])
+        if (data.senas && data.senas.length > 0) {
+          setSena(data.senas)
+          clearTimeout(senaTimeoutRef.current)
+          senaTimeoutRef.current = setTimeout(() => setSena(null), 4000)
         }
-      } catch {}
+      } else {
+        setSubtitulos((prev) => {
+          const copia = [...prev]
+          const last = copia[copia.length - 1]
+          if (last && !last.final) {
+            copia[copia.length - 1] = { ...last, texto: data.texto }
+          } else {
+            copia.push({ id: data.segment_id, texto: data.texto, final: false, terminos: [] })
+          }
+          return copia
+        })
+      }
+    } else if (data.type === 'clase_finalizada') {
+      setFeedback({ tipo: 'info', mensaje: 'La clase terminó y se guardó en tu historial' })
+      volverTimeoutRef.current = setTimeout(() => { window.location.hash = '#/dashboard' }, 3000)
+    } else if (data.type === 'emisor_desconectado') {
+      setFeedback({ tipo: 'warning', mensaje: data.mensaje || 'El emisor se desconectó. La clase se guardará automáticamente.' })
+    } else if (data.type === 'error') {
+      const mensaje = data.mensaje || 'Ocurrió un error en la conexión'
+      setFeedback({ tipo: 'error', mensaje })
+      if (/token/i.test(mensaje)) expulsarSesion()
     }
+  }, [])
 
-    return () => ws.close()
-  }, [rol, roomId, user, sesionIniciada])
+  const { ws: wsRef, estado: estadoWs, intentos, enviar, reintentar } = useWebSocket(wsUrl, {
+    onMessage: manejarMensaje,
+  })
 
   useEffect(() => {
     if (subtitulosRef.current) {
       subtitulosRef.current.scrollTop = subtitulosRef.current.scrollHeight
     }
   }, [subtitulos])
+
+  useEffect(() => {
+    return () => {
+      clearInterval(intervalRef.current)
+      clearTimeout(senaTimeoutRef.current)
+      clearTimeout(volverTimeoutRef.current)
+    }
+  }, [])
 
   const iniciar = useCallback(async () => {
     try {
@@ -193,9 +177,12 @@ export default function SalaView({ roomId, user, onVolver }) {
       intervalRef.current = setInterval(() => setTiempo((t) => t + 1), 1000)
       setSesionIniciada(true)
     } catch {
-      setEstadoWs('desconectado')
+      setFeedback({
+        tipo: 'error',
+        mensaje: 'Permiso de micrófono denegado. Actívalo en la configuración del navegador e inténtalo de nuevo.',
+      })
     }
-  }, [])
+  }, [wsRef])
 
   const pausar = useCallback(() => {
     recorderRef.current?.pause()
@@ -207,33 +194,26 @@ export default function SalaView({ roomId, user, onVolver }) {
     setPausado(false)
   }, [])
 
-  const abrirModalFinalizar = useCallback(() => {
-    setModalAbierto(true)
-  }, [])
-
-  const cancelarFinalizar = useCallback(() => {
-    setModalAbierto(false)
-  }, [])
+  const abrirModalFinalizar = useCallback(() => setModalAbierto(true), [])
+  const cancelarFinalizar = useCallback(() => setModalAbierto(false), [])
 
   const confirmarFinalizar = useCallback((titulo) => {
     clearInterval(intervalRef.current)
     recorderRef.current?.stop()
     streamRef.current?.getTracks().forEach((t) => t.stop())
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ action: 'finalizar', titulo: titulo || null }))
-    }
+    enviar(JSON.stringify({ action: 'finalizar', titulo: titulo || null }))
     setGrabando(false)
     setPausado(false)
     setModalAbierto(false)
     setSesionIniciada(false)
-    setTimeout(() => {
-      window.location.hash = '#/dashboard'
-    }, 200)
-  }, [])
+    setTimeout(() => { window.location.hash = '#/dashboard' }, 200)
+  }, [enviar])
 
-  useEffect(() => {
-    return () => clearInterval(intervalRef.current)
-  }, [])
+  const cambiarTam = (delta) => setTamFuente((s) => {
+    const nuevo = Math.min(32, Math.max(12, s + delta))
+    localStorage.setItem(FUENTE_KEY, String(nuevo))
+    return nuevo
+  })
 
   if (determinando) {
     return (
@@ -241,6 +221,19 @@ export default function SalaView({ roomId, user, onVolver }) {
         <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>
           Verificando sala...
         </p>
+      </main>
+    )
+  }
+
+  if (!rol) {
+    return (
+      <main className="sala">
+        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+          <Feedback tipo="error" mensaje={feedback?.mensaje} onClose={() => setFeedback(null)} />
+          <button className="btn btn--ghost" onClick={onVolver}>
+            <IconoSalir size={18} /> <span>Volver al inicio</span>
+          </button>
+        </div>
       </main>
     )
   }
@@ -262,16 +255,25 @@ export default function SalaView({ roomId, user, onVolver }) {
           </button>
         )}
         <h1 className="sala-titulo">{roomId.replace('-', ' — ')}</h1>
-        <span className="sala-en-vivo">
-          <span className="sala-en-vivo__dot" />
-          EN VIVO
-        </span>
-        <div style={{ marginLeft: 'auto' }}>
-          <button className="header__icon-btn" aria-label="Configuración">
-            <IconoAjustes size={20} />
+        {estadoWs === 'conectado' && (
+          <span className="sala-en-vivo">
+            <span className="sala-en-vivo__dot" />
+            EN VIVO
+          </span>
+        )}
+        {sesionIniciada && <EstadoConexion estado={estadoWs} intentos={intentos} />}
+        {estadoWs === 'fallo' && (
+          <button className="btn btn--ghost" onClick={reintentar}>
+            Reintentar conexión
           </button>
-        </div>
+        )}
       </header>
+
+      {feedback && (
+        <div style={{ flexShrink: 0 }}>
+          <Feedback tipo={feedback.tipo} mensaje={feedback.mensaje} onClose={() => setFeedback(null)} />
+        </div>
+      )}
 
       <div className="sala-grid">
         <section className="sala-subtitulos">
@@ -286,8 +288,8 @@ export default function SalaView({ roomId, user, onVolver }) {
               <span>Transcripción en Tiempo Real</span>
             </div>
             <div className="sala-subtitulos__tamano">
-              <button onClick={() => setTamFuente((s) => Math.min(s + 2, 32))}>A+</button>
-              <button onClick={() => setTamFuente((s) => Math.max(s - 2, 12))}>A−</button>
+              <button onClick={() => cambiarTam(2)} aria-label="Aumentar tamaño de letra">A+</button>
+              <button onClick={() => cambiarTam(-2)} aria-label="Disminuir tamaño de letra">A−</button>
             </div>
           </div>
 
@@ -312,14 +314,8 @@ export default function SalaView({ roomId, user, onVolver }) {
 
         <section className="sala-video">
           <div className="sala-video__player">
-            {conceptoClave ? (
-              <div className="concepto-card">
-                <div className="concepto-card__label">TRADUCIENDO CONCEPTO CLAVE</div>
-                <div className="concepto-card__value">
-                  <IconoMano size={20} />
-                  <span>{conceptoClave.texto_visible}</span>
-                </div>
-              </div>
+            {sena ? (
+              <SenaPlayer senas={sena} />
             ) : (
               <div className="sala-video__placeholder">
                 <div className="sala-video__placeholder-icon">
@@ -333,14 +329,6 @@ export default function SalaView({ roomId, user, onVolver }) {
                 </div>
               </div>
             )}
-            <div className="sala-video__overlay">
-              <button className="sala-video__icon-btn" title="Expandir">
-                <IconoExpandir size={16} />
-              </button>
-              <button className="sala-video__icon-btn" title="Más opciones">
-                <IconoMas size={18} />
-              </button>
-            </div>
           </div>
         </section>
       </div>
@@ -350,7 +338,11 @@ export default function SalaView({ roomId, user, onVolver }) {
           <div className="sala-estado">
             <div className="sala-estado__label">Estado del Sistema</div>
             <div className="sala-estado__sub">
-              <IconoCheck size={12} /> Audio y video sincronizados
+              {grabando ? (
+                <span>Transmitiendo · {formatearTiempo(tiempo)}</span>
+              ) : (
+                <span>Listo para iniciar</span>
+              )}
             </div>
           </div>
           <div className="sala-controles">

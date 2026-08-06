@@ -17,13 +17,6 @@ const IconoPlay = ({ size = 18 }) => (
   </svg>
 )
 
-const IconoReloj = ({ size = 18 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <polyline points="12 6 12 12 16 14"/>
-  </svg>
-)
-
 const IconoHistorial = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -45,10 +38,14 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
   const [cursos, setCursos] = useState([])
   const [estados, setEstados] = useState({})
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     if (!user) return
-    fetchCursosUsuario(user.rut)
+    setLoading(true)
+    setError('')
+    fetchCursosUsuario()
       .then(async (data) => {
         setCursos(data)
         setLoading(false)
@@ -62,8 +59,11 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
         )
         setEstados(map)
       })
-      .catch(() => setLoading(false))
-  }, [user])
+      .catch((e) => {
+        setLoading(false)
+        setError(e.message || 'Error al cargar tus asignaturas')
+      })
+  }, [user, recarga])
 
   const irASala = (roomId) => {
     window.location.hash = `#/sala/${roomId}`
@@ -71,6 +71,8 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
 
   const claseActual = cursos[0]
   const otrasAsignaturas = cursos.slice(1)
+  const roomClaseActual = claseActual ? `${claseActual.cod_ramo}-${claseActual.seccion}` : null
+  const claseActiva = roomClaseActual ? Boolean(estados[roomClaseActual]) : false
 
   return (
     <>
@@ -83,10 +85,6 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
             <div className="user-card__rut">{formatRut(user?.rut)}</div>
           </div>
           <div className="user-card__actions">
-            <span className="mic-badge">
-              <span className="mic-badge__dot" />
-              Micrófono Conectado
-            </span>
             <button className="btn btn--ghost" onClick={() => window.location.hash = '#/historial'}>
               <IconoHistorial size={18} />
               <span>Historial de Clases</span>
@@ -99,6 +97,17 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
 
         {loading ? (
           <p className="dashboard__vacio">Cargando...</p>
+        ) : error ? (
+          <div className="dashboard__vacio">
+            <p>{error}</p>
+            <button
+              className="btn btn--ghost"
+              style={{ marginTop: '1rem' }}
+              onClick={() => setRecarga((r) => r + 1)}
+            >
+              Reintentar
+            </button>
+          </div>
         ) : !claseActual ? (
           <p className="dashboard__vacio">No tienes asignaturas inscritas.</p>
         ) : (
@@ -109,10 +118,14 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
                 {claseActual.cod_ramo} — {claseActual.nombre}
               </h1>
               <span className="clase-actual__seccion">Sección {claseActual.seccion}</span>
+              <div className={`clase-actual__estado ${claseActiva ? 'clase-actual__estado--vivo' : ''}`}>
+                <span className={`estado-dot ${claseActiva ? 'estado-dot--vivo' : ''}`} />
+                {claseActiva ? 'En vivo' : 'Sin clase activa'}
+              </div>
               <div className="clase-actual__actions">
-                <button className="btn btn--primary" onClick={() => irASala(`${claseActual.cod_ramo}-${claseActual.seccion}`)}>
+                <button className="btn btn--primary" onClick={() => irASala(roomClaseActual)}>
                   <IconoMicrofono size={20} />
-                  <span>Iniciar Transmisión de Clase</span>
+                  <span>{claseActiva ? 'Entrar a la clase' : 'Iniciar Transmisión de Clase'}</span>
                 </button>
               </div>
             </section>
@@ -123,6 +136,7 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
                 <div className="asignaturas__grid">
                   {otrasAsignaturas.map((c) => {
                     const roomId = `${c.cod_ramo}-${c.seccion}`
+                    const activa = Boolean(estados[roomId])
                     return (
                       <div key={roomId} className="asignatura-card">
                         <div className="asignatura-card__head">
@@ -130,10 +144,14 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
                             {c.cod_ramo} — {c.nombre}
                           </h3>
                           <span className="asignatura-card__seccion">Sección {c.seccion}</span>
+                          <span className="asignatura-card__estado">
+                            <span className={`estado-dot ${activa ? 'estado-dot--vivo' : ''}`} />
+                            {activa ? 'En vivo' : 'Sin clase activa'}
+                          </span>
                         </div>
                         <button className="btn btn--ghost-outline" onClick={() => irASala(roomId)}>
                           <IconoPlay size={18} />
-                          <span>Iniciar</span>
+                          <span>{activa ? 'Entrar a la clase' : 'Iniciar'}</span>
                         </button>
                       </div>
                     )

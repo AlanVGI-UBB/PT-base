@@ -9,8 +9,10 @@
   --muted: #8b949e;
   --accent: #4a7eff;
   --accent-hover: #6b96ff;
+  --accent-soft: rgba(74, 126, 255, 0.18);
   --success: #2ea043;
   --danger: #f85149;
+  --warning: #d29922;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -207,7 +209,7 @@ body {
   display: block;
   color: var(--muted);
   font-size: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .clase-actual__actions {
@@ -1158,4 +1160,170 @@ input[type="text"], input[type="password"], select {
   color: var(--accent);
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+/* ===== FEEDBACK ===== */
+.feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  border: 1px solid;
+  margin: 1rem 2rem 0;
+}
+
+.feedback--error { background: #f8514918; border-color: #f8514944; color: #ff9489; }
+.feedback--info { background: #4a7eff18; border-color: #4a7eff44; color: #9fc3ff; }
+.feedback--warning { background: #d2992218; border-color: #d2992244; color: #e3b341; }
+
+.feedback__cerrar {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* ===== ESTADO DE CONEXIÓN ===== */
+.estado-conexion {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border-soft);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.estado-conexion__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.estado-conexion--conectado { color: #7ee787; border-color: #2ea04344; }
+.estado-conexion--conectado .estado-conexion__dot { background: var(--success); box-shadow: 0 0 0 3px rgba(46, 160, 67, 0.15); }
+.estado-conexion--reconectando { color: #e3b341; border-color: #d2992244; }
+.estado-conexion--reconectando .estado-conexion__dot { background: var(--warning); animation: pulse 1s ease-in-out infinite; }
+.estado-conexion--desconectado, .estado-conexion--fallo { color: #ff9489; border-color: #f8514944; }
+.estado-conexion--desconectado .estado-conexion__dot, .estado-conexion--fallo .estado-conexion__dot { background: var(--danger); }
+
+/* ===== SENA PLAYER ===== */
+.sena-grid {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1;
+}
+
+.sala-video__player .sena-grid { padding: 0; }
+
+.sena-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.sala-video__player .sena-item {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
+
+.sena-video {
+  width: 100%;
+  max-width: 560px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: #000;
+}
+
+.sala-video__player .sena-video {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  border: none;
+  border-radius: 0;
+}
+
+.sena-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.sala-video__player .sena-label {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13, 17, 23, 0.85);
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.sena-error {
+  padding: 2rem 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* ===== ESTADO EN VIVO (DASHBOARD) ===== */
+.clase-actual__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.clase-actual__estado--vivo { color: #7ee787; }
+
+.estado-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.estado-dot--vivo {
+  background: var(--success);
+  box-shadow: 0 0 0 3px rgba(46, 160, 67, 0.15);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.asignatura-card__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
 }

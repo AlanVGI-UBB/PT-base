@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.auth import hash_password
+from app.core.auth import crear_token, hash_password
 from app.core.db import get_connection, init_schema
 from app.main import app
 
@@ -25,6 +25,10 @@ def client(tmp_path, monkeypatch):
         "INSERT INTO usuario (rut, password_hash, nombre, apellido) VALUES (?, ?, ?, ?)",
         ("11111111-1", hash_password("test123"), "Juan", "Perez"),
     )
+    conn.execute(
+        "INSERT INTO usuario (rut, password_hash, nombre, apellido) VALUES (?, ?, ?, ?)",
+        ("22222222-2", hash_password("otro123"), "Ana", "Lopez"),
+    )
     conn.execute("INSERT INTO inscripcion (rut, curso_id, seccion) VALUES ('11111111-1', 1, 'SEC1')")
     conn.execute(
         "INSERT INTO clase (id, room_id, curso_id, seccion, rut_emisor, fecha_inicio) "
@@ -44,8 +48,13 @@ def client(tmp_path, monkeypatch):
         yield c
 
 
+def auth(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_historial_lista(client):
-    resp = client.get("/api/historial?rut=11111111-1")
+    token = crear_token("11111111-1")
+    resp = client.get("/api/historial", headers=auth(token))
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 1
@@ -53,8 +62,14 @@ def test_historial_lista(client):
     assert data[0]["curso_nombre"] == "Calculo I"
 
 
+def test_historial_sin_token(client):
+    resp = client.get("/api/historial")
+    assert resp.status_code == 401
+
+
 def test_historial_detalle(client):
-    resp = client.get("/api/historial/1")
+    token = crear_token("11111111-1")
+    resp = client.get("/api/historial/1", headers=auth(token))
     assert resp.status_code == 200
     data = resp.json()
     assert data["clase"]["id"] == 1
@@ -63,5 +78,12 @@ def test_historial_detalle(client):
 
 
 def test_historial_no_encontrado(client):
-    resp = client.get("/api/historial/999")
+    token = crear_token("11111111-1")
+    resp = client.get("/api/historial/999", headers=auth(token))
     assert resp.status_code == 404
+
+
+def test_historial_detalle_sin_inscripcion(client):
+    token = crear_token("22222222-2")
+    resp = client.get("/api/historial/1", headers=auth(token))
+    assert resp.status_code == 403

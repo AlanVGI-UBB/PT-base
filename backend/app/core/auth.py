@@ -2,6 +2,7 @@ import hashlib
 import time
 
 import jwt
+from fastapi import HTTPException, Request
 
 from app.core.config import get_settings
 
@@ -21,6 +22,16 @@ def verificar_token(token: str) -> str | None:
         return payload.get("rut")
     except jwt.InvalidTokenError:
         return None
+
+
+def obtener_rut(request: Request) -> str:
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token no proporcionado")
+    rut = verificar_token(header[7:].strip())
+    if not rut:
+        raise HTTPException(status_code=401, detail="Token inválido o expirado")
+    return rut
 
 
 def hash_password(password: str) -> str:

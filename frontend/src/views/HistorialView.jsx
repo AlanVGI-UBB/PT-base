@@ -9,15 +9,6 @@ const IconoBuscar = ({ size = 18 }) => (
   </svg>
 )
 
-const IconoCalendario = ({ size = 16 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-    <line x1="16" y1="2" x2="16" y2="6"/>
-    <line x1="8" y1="2" x2="8" y2="6"/>
-    <line x1="3" y1="10" x2="21" y2="10"/>
-  </svg>
-)
-
 const IconoChevron = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9 18 15 12 9 6"/>
@@ -57,6 +48,17 @@ const formatearMes = (iso) => {
   return `${MESES[d.getMonth()]} ${d.getFullYear()}`
 }
 
+const claveMes = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const etiquetaMes = (clave) => {
+  const [anio, mes] = clave.split('-')
+  return `${MESES[Number(mes) - 1]} ${anio}`
+}
+
 const formatearDiaHora = (iso) => {
   if (!iso) return { dia: '—', hora: '—' }
   const d = new Date(iso)
@@ -93,7 +95,7 @@ export default function HistorialView({ user }) {
 
   useEffect(() => {
     if (!user) return
-    fetchHistorial(user.rut)
+    fetchHistorial()
       .then(setClases)
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -109,9 +111,10 @@ export default function HistorialView({ user }) {
         ramo.includes(search) ||
         (c.preview || '').toLowerCase().includes(search)
       const matchAsig = filtroAsig === 'Todas las Asignaturas' || ramo === filtroAsig
-      return matchBusqueda && matchAsig
+      const matchFecha = filtroFecha === 'Todas las fechas' || claveMes(c.fecha_inicio) === filtroFecha
+      return matchBusqueda && matchAsig && matchFecha
     })
-  }, [clases, busqueda, filtroAsig])
+  }, [clases, busqueda, filtroAsig, filtroFecha])
 
   const grupos = useMemo(() => {
     const map = new Map()
@@ -126,6 +129,11 @@ export default function HistorialView({ user }) {
   const asignaturas = useMemo(() => {
     const set = new Set(clases.map((c) => c.cod_ramo).filter(Boolean))
     return ['Todas las Asignaturas', ...Array.from(set).sort()]
+  }, [clases])
+
+  const meses = useMemo(() => {
+    const set = new Set(clases.map((c) => claveMes(c.fecha_inicio)).filter(Boolean))
+    return ['Todas las fechas', ...Array.from(set).sort().reverse()]
   }, [clases])
 
   return (
@@ -157,20 +165,25 @@ export default function HistorialView({ user }) {
               className="historial-filtro"
               value={filtroAsig}
               onChange={(e) => setFiltroAsig(e.target.value)}
+              aria-label="Filtrar por asignatura"
             >
               {asignaturas.map((a) => (
                 <option key={a} value={a}>{a}</option>
               ))}
             </select>
 
-            <button
+            <select
               className="historial-filtro historial-filtro--fecha"
-              onClick={() => {/* futuro: date picker */}}
-              type="button"
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+              aria-label="Filtrar por fecha"
             >
-              <IconoCalendario size={16} />
-              <span>{filtroFecha}</span>
-            </button>
+              {meses.map((m) => (
+                <option key={m} value={m}>
+                  {m === 'Todas las fechas' ? m : etiquetaMes(m)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -1,15 +1,20 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
-from app.historial.repository import listar_clases, obtener_clase, obtener_eventos
+from app.core.auth import obtener_rut
+from app.historial.repository import (
+    listar_clases,
+    obtener_clase,
+    obtener_eventos,
+    usuario_participa,
+)
 from app.salas.manager import RoomManager
 
 router = APIRouter(prefix="/api", tags=["historial"])
 
 
 @router.get("/historial")
-def api_historial(rut: str = ""):
-    if not rut:
-        raise HTTPException(status_code=400, detail="rut es requerido")
+def api_historial(request: Request):
+    rut = obtener_rut(request)
     clases = listar_clases(rut)
     return [
         {
@@ -31,10 +36,15 @@ def api_historial(rut: str = ""):
 
 
 @router.get("/historial/{clase_id}")
-def api_historial_detalle(clase_id: int):
+def api_historial_detalle(request: Request, clase_id: int):
+    rut = obtener_rut(request)
     clase = obtener_clase(clase_id)
     if not clase:
         raise HTTPException(status_code=404, detail="Clase no encontrada")
+    es_emisor = clase["rut_emisor"] == rut
+    es_participante = usuario_participa(rut, clase["curso_id"], clase["seccion"])
+    if not (es_emisor or es_participante):
+        raise HTTPException(status_code=403, detail="No tienes acceso a esta clase")
     eventos = obtener_eventos(clase_id)
     return {
         "clase": {
@@ -61,7 +71,8 @@ def api_historial_detalle(clase_id: int):
 
 
 @router.get("/salas/{room_id}/estado")
-async def api_sala_estado(room_id: str):
+async def api_sala_estado(request: Request, room_id: str):
+    obtener_rut(request)
     activa = await RoomManager.existe(room_id)
     sala = await RoomManager.obtener(room_id)
     rut_emisor = sala.rut_emisor if sala else None

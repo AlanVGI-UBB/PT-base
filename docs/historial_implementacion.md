@@ -697,8 +697,68 @@ de clase en filas horizontales scrollables agrupadas por mes.
   horizontal dentro del grupo, lo cual es consistente con la UI
   de apps móviles (estilo Netflix/YouTube).
 
+## 2026-08-05 — *(hash pendiente)* — Mejoras de UX: feedback de conexión, reproducción de señas y errores visibles
+**Refs:** SPEC-005 `specs/SPEC-005-mejoras-ux-feedback-conexion-senas.md` (Completada)
+
+**Resumen:** Se implementó la auditoría de UX del flujo completo (login → dashboard → sala → historial → replay): feedback real de conexión y errores, reproducción de los videos de señas en vivo y en replay, cierre correcto de salas (fix de un bug donde la clase nunca se finalizaba), auth con token en REST, y limpieza de controles muertos y código huérfano.
+
+**Cambios:**
+
+- **Backend — Auth REST:**
+  - `app/core/auth.py` — nuevo helper `obtener_rut(request)` (Bearer token, 401 claro).
+  - `app/auth/routes.py` — `GET /api/auth/usuario/me` migrado a token (se elimina `?rut=`).
+  - `app/main.py` — `GET /api/cursos` y `GET /api/cursos/{id}/glosario` requieren token.
+  - `app/historial/routes.py` — `/api/historial`, `/api/historial/{id}` y `/api/salas/{room_id}/estado` requieren token; detalle valida participación (emisor o inscrito en la sección) → 403 si no (R19/R20).
+  - `app/historial/repository.py` — `usuario_participa()`.
+
+- **Backend — Cierre de salas (fix bug crítico + R21/R22):**
+  - `app/main.py` — se reestructuró el handler del emisor con `stop_event` + tareas (`_receiver`, `_transcribir`): antes el `async for` de transcripción nunca terminaba (stub infinito + cola bloqueante) y `finalizar_clase` nunca se ejecutaba; la clase quedaba "en progreso" para siempre.
+  - Distinción entre finalización explícita (`{action: finalizar}`) y desconexión del emisor: en desconexión se difunde `{type: "emisor_desconectado"}`, se espera `SALA_TIMEOUT_MS` (config) y se guarda el timeline parcial.
+  - `_cerrar_listeners()` — al finalizar, se difunde `clase_finalizada` y se cierran los WebSockets de los listeners (antes quedaban 30s colgados en silencio).
+  - Loop de listener simplificado (`ws.receive()` con manejo de disconnect).
+
+- **Backend — Tests (29/29):**
+  - `test_auth.py` — endpoints con/ sin token (401), login, usuario/me.
+  - `test_sala.py` — fan-out + finalizar explícito (título guardado), desconexión de emisor → `emisor_desconectado` + `clase_finalizada` + timeline parcial, segundo emisor rechazado, estado sin token.
+  - `test_historial.py` — lista/detalle con token, 401 sin token, 404, 403 sin inscripción.
+  - Fixtures con `STUB_INTERVAL_MS=200` y `SALA_TIMEOUT_MS=100` para tests rápidos.
+
+- **Frontend — API y hooks:**
+  - `api/cliente.js` — header `Authorization: Bearer` central, manejo de 401 (limpia sesión + evento `puente-auth-expired` + mensaje "Sesión expirada"), `normalizarRut()` (módulo-11 chileno), `getToken()`/`expulsarSesion()`.
+  - `hooks/useAuth.js` — escucha el evento `puente-auth-expired` → logout + redirect a `#/login`.
+  - `hooks/useWebSocket.js` — reconexión con backoff (3s/6s/12s/24s, máx. 5 intentos), estados `conectado/reconectando/fallo`, `reintentar()` manual, handlers vía ref.
+
+- **Frontend — Componentes:**
+  - `components/Feedback.jsx` — **nuevo**: banner de aviso (error/info/warning) con cierre.
+  - `components/EstadoConexion.jsx` — **recreado**: indicador conectado/reconectando/desconectado/fallo con dot animado.
+  - `components/SenaPlayer.jsx` — **mejorado**: fallback "Video no disponible" ante `onError`, `playsInline`, label del término; en el player 16:9 el video llena con `object-fit: contain` y el label se superpone abajo.
+  - `components/Header.jsx` — tabs como `<button>` con `aria-current`.
+
+- **Frontend — Vistas:**
+  - `views/SalaView.jsx` — migrado a `useWebSocket`; indicador de conexión en la topbar (EN VIVO solo si conectado); banners de error de WS (`{type: "error"}` con `mensaje`, sin redirección silenciosa); handlers de `clase_finalizada` (aviso + retorno a dashboard en 3s) y `emisor_desconectado`; video real de la seña con `SenaPlayer`; error visible al denegar micrófono; tiempo transcurrido mm:ss del emisor; persistencia de A+/A− en localStorage; eliminados botones muertos (gear, expandir, más opciones) y el estado falso "Audio y video sincronizados"; estado de error si falla la verificación de sala.
+  - `views/LoginView.jsx` — normalización y validación de RUT (DV mod-11) antes de enviar; aviso de sesión expirada desde `sessionStorage`.
+  - `views/DashboardView.jsx` — estado real "En vivo"/"Sin clase activa" por asignatura (el fetch ya existía pero no se renderizaba); botón dinámico ("Entrar a la clase" / "Iniciar Transmisión de Clase"); eliminado el badge falso "Micrófono Conectado"; estados de carga/error/lista vacía diferenciados con "Reintentar".
+  - `views/HistorialView.jsx` — filtro de fecha funcional (select con meses disponibles de las clases, aplicado al filtrado); eliminado el botón placeholder muerto.
+  - `views/ClaseDetailView.jsx` — estado de error ("Clase no encontrada" + volver al historial, sin "Cargando..." infinito); replay reproduce el video de la seña actual con `SenaPlayer`; persistencia de A+/A−; eliminados botones muertos.
+
+- **Frontend — Limpieza (R23):** eliminados `views/Landing.jsx`, `views/ProfesorView.jsx`, `views/AlumnoView.jsx`, `components/CursoSelector.jsx`, `components/Subtitulos.jsx`, `components/ControlesEmisor.jsx`, `components/ReplayPlayer.jsx` (huérfanos desde SPEC-004; el replay vive en `ClaseDetailView`).
+
+- **Frontend — `App.css`:** variables `--accent-soft` (faltante) y `--warning`; estilos de `.feedback`, `.estado-conexion`, `.sena-grid/.sena-item/.sena-video/.sena-label/.sena-error`, estado en vivo del dashboard (`.clase-actual__estado`, `.estado-dot`, `.asignatura-card__estado`).
+
+**Verificación:**
+- `ruff check backend` → All checks passed.
+- `pytest backend/tests` → 29/29 passed (antes 21).
+- `pnpm --prefix frontend build` → build OK sin warnings (44 módulos, PWA generada).
+
+**Notas:**
+- Fix implícito importante: antes de esta spec, el flujo "Finalizar y Guardar" nunca persistía la clase (el `async for` de transcripción bloqueaba la finalización del handler); ahora se detecta con `stop_event` y tareas.
+- La desconexión del emisor sin "Finalizar" ahora guarda el timeline parcial tras `SALA_TIMEOUT_MS` (comportamiento de SPEC-004 R5 que no se había implementado).
+- Diferido (SPEC-005 §9): catch-up de listeners tardíos, "reclamar emisor", notificaciones push.
+
 ## 2026-07-23 — `0142dc0` — Fix: position: fixed en .sala para evitar scroll de página
 **Refs:** Bugfix (sin spec formal)
+
+
 
 **Resumen:** Aunque `.sala` ya tenía `height: 100vh` y `overflow: hidden`,
 el `body`/`html` permitían scroll de página, lo que hacía que cuando el

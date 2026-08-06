@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.core.auth import crear_token, hash_password
+from app.core.auth import crear_token, hash_password, obtener_rut
 from app.core.db import get_connection
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -42,9 +42,8 @@ def login(req: LoginRequest):
 
 
 @router.get("/usuario/me")
-def usuario_me(rut: str = Query("")):
-    if not rut:
-        raise HTTPException(status_code=400, detail="rut es requerido")
+def usuario_me(request: Request):
+    rut = obtener_rut(request)
     conn = get_connection()
     row = conn.execute(
         "SELECT rut, nombre, apellido FROM usuario WHERE rut = ?",

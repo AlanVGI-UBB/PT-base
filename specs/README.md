@@ -60,3 +60,4 @@ Comandos/procedimientos para validar la implementación.
 | SPEC-002 | Backend del flujo profesor→alumno (ASR + glosario + matching + logging mínimo) | Completada |
 | SPEC-003 | PWA: vistas profesor y alumno + captura de audio + reproducción de señas | Completada |
 | SPEC-004 | Perfil único centrado en el estudiante + sesiones en vivo con fan-out + historial con replay | Completada |
+| SPEC-005 | Mejoras de UX: feedback de conexión, reproducción de señas y errores visibles | Completada |
