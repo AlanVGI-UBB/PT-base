@@ -697,7 +697,7 @@ de clase en filas horizontales scrollables agrupadas por mes.
   horizontal dentro del grupo, lo cual es consistente con la UI
   de apps móviles (estilo Netflix/YouTube).
 
-## 2026-08-05 — *(hash pendiente)* — Mejoras de UX: feedback de conexión, reproducción de señas y errores visibles
+## 2026-08-05 — `62c0cb9` — Mejoras de UX: feedback de conexión, reproducción de señas y errores visibles
 **Refs:** SPEC-005 `specs/SPEC-005-mejoras-ux-feedback-conexion-senas.md` (Completada)
 
 **Resumen:** Se implementó la auditoría de UX del flujo completo (login → dashboard → sala → historial → replay): feedback real de conexión y errores, reproducción de los videos de señas en vivo y en replay, cierre correcto de salas (fix de un bug donde la clase nunca se finalizaba), auth con token en REST, y limpieza de controles muertos y código huérfano.
