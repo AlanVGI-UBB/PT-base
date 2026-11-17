@@ -783,7 +783,7 @@ del scroll de la página.
 - Las demás vistas (Dashboard, Historial, Login) no se ven afectadas
   porque no usan la clase `.sala`.
 
-## 2026-11-16 — Acceso HTTPS por IP local, túnel de Cloudflare y RUT de prueba válidos
+## 2026-11-16 — `7e0e796` — Acceso HTTPS por IP local, túnel de Cloudflare y RUT de prueba válidos
 **Refs:** Mejora de despliegue (sin spec formal)
 
 **Resumen:** Se confirman cambios de despliegue que estaban sin commitear: acceso a la
@@ -808,3 +808,20 @@ un túnel de Cloudflare y RUT de prueba con dígito verificador válido.
 - `pytest backend/tests` → 29/29 passed.
 - `pnpm --prefix frontend build` → build OK.
 - No se verificó el túnel de Cloudflare.
+
+## 2026-11-16 — Specs de cierre del anteproyecto (SPEC-006 a SPEC-009)
+**Refs:** `specs/SPEC-006` a `specs/SPEC-009` (Borrador)
+
+**Resumen:** Se redactan cuatro specs a partir de la revisión del prototipo contra la
+propuesta aprobada y el informe de avance: transcripción real, glosario piloto y
+matching, mediciones de la PoC, y acceso/sesión/saneamiento.
+
+**Cambios:**
+- `specs/SPEC-006-asr-real-captura-pcm.md` — **nueva**.
+- `specs/SPEC-007-glosario-piloto-clips-ensayo-matching.md` — **nueva**.
+- `specs/SPEC-008-mediciones-poc.md` — **nueva**.
+- `specs/SPEC-009-acceso-sesion-saneamiento.md` — **nueva**.
+- `specs/README.md` — índice, orden recomendado y dependencias.
+- Este archivo — hash `7e0e796` registrado en la entrada anterior.
+
+**Verificación:** n/a (commit documental).

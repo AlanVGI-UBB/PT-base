@@ -61,3 +61,17 @@ Comandos/procedimientos para validar la implementación.
 | SPEC-003 | PWA: vistas profesor y alumno + captura de audio + reproducción de señas | Completada |
 | SPEC-004 | Perfil único centrado en el estudiante + sesiones en vivo con fan-out + historial con replay | Completada |
 | SPEC-005 | Mejoras de UX: feedback de conexión, reproducción de señas y errores visibles | Completada |
+| SPEC-006 | Transcripción real: captura PCM en el navegador + faster-whisper local | Borrador |
+| SPEC-007 | Glosario del curso piloto provisional, clips de ensayo y motor de coincidencia | Borrador |
+| SPEC-008 | Mediciones de la prueba de concepto: transcripción, coincidencia y distribución | Borrador |
+| SPEC-009 | Acceso por inscripción, permiso de captura, estado de sesión y saneamiento | Borrador |
+
+### Cierre del anteproyecto (SPEC-006 a SPEC-009)
+
+Estas cuatro specs salen de la revisión del prototipo contra la propuesta aprobada y el informe de avance (2026-11-16).
+
+- **Orden recomendado:** 006 → 007 → 008 → 009. La numeración sigue ese orden.
+- **Dependencias:** 007 necesita el manejo de texto final de 006; 008 mide lo que construyen 006 y 007; 009 solo depende de 007 para la protección de los clips.
+- **Una excepción al orden:** las frases de prueba de SPEC-008 (R11 y R12) se redactan antes de ajustar las formas y los bloqueos de SPEC-007.
+- **Si el tiempo no alcanza:** 009 se puede reducir a su mínimo (R1–R5 y R21–R23, ver su §9).
+- **Lo que ninguna spec resuelve:** la selección del curso piloto, el co-diseño con intérpretes de PIESDI y la grabación y validación del banco de señas (OE1, actividades 1 a 3 del anteproyecto). No son tareas de software.
