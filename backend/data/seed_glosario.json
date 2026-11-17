@@ -6,18 +6,18 @@
         {"id": 4, "cod_ramo": "HUM-105", "nombre": "Ética Profesional"}
     ],
     "usuarios": [
-        {"rut": "12345678-9", "password": "test123", "nombre": "Juan", "apellido": "Pérez"},
-        {"rut": "9876543-2", "password": "test123", "nombre": "María", "apellido": "González"}
+        {"rut": "12345678-5", "password": "test123", "nombre": "Juan", "apellido": "Pérez"},
+        {"rut": "9876543-3", "password": "test123", "nombre": "María", "apellido": "González"}
     ],
     "inscripciones": [
-        {"rut": "12345678-9", "curso_id": 1, "seccion": "1"},
-        {"rut": "12345678-9", "curso_id": 2, "seccion": "3"},
-        {"rut": "12345678-9", "curso_id": 3, "seccion": "2"},
-        {"rut": "12345678-9", "curso_id": 4, "seccion": "1"},
-        {"rut": "9876543-2", "curso_id": 1, "seccion": "1"},
-        {"rut": "9876543-2", "curso_id": 2, "seccion": "3"},
-        {"rut": "9876543-2", "curso_id": 3, "seccion": "2"},
-        {"rut": "9876543-2", "curso_id": 4, "seccion": "1"}
+        {"rut": "12345678-5", "curso_id": 1, "seccion": "1"},
+        {"rut": "12345678-5", "curso_id": 2, "seccion": "3"},
+        {"rut": "12345678-5", "curso_id": 3, "seccion": "2"},
+        {"rut": "12345678-5", "curso_id": 4, "seccion": "1"},
+        {"rut": "9876543-3", "curso_id": 1, "seccion": "1"},
+        {"rut": "9876543-3", "curso_id": 2, "seccion": "3"},
+        {"rut": "9876543-3", "curso_id": 3, "seccion": "2"},
+        {"rut": "9876543-3", "curso_id": 4, "seccion": "1"}
     ],
     "terminos": [
         {"curso_id": 1, "lema": "derivado", "texto_visible": "derivada", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},

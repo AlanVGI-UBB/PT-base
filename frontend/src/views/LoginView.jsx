@@ -94,7 +94,7 @@ export default function LoginView({ onLogin }) {
               type="text"
               value={rut}
               onChange={(e) => setRut(e.target.value)}
-              placeholder="12345678-9"
+              placeholder="12345678-5"
               autoFocus
             />
           </label>

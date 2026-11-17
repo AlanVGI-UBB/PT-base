@@ -58,6 +58,29 @@ docker compose up --build
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:8000`
 
+### 4) Cloudflare Tunnel
+
+Para publicar la PWA mediante un túnel remoto de Cloudflare:
+
+1. Revoca cualquier token que haya sido escrito directamente en `docker-compose.yml` y genera uno nuevo desde Cloudflare Zero Trust.
+2. Crea un archivo `.env` en la raíz del proyecto (está ignorado por Git):
+
+```dotenv
+CLOUDFLARE_TUNNEL_TOKEN=pega_aqui_el_token_nuevo
+```
+
+3. En la ruta de aplicación publicada del túnel, configura el origen como
+   `http://frontend:80`. `localhost` no funciona dentro del contenedor de
+   `cloudflared`.
+4. Ejecuta:
+
+```powershell
+.\run-cloudflare.ps1
+```
+
+Cloudflare termina HTTPS públicamente y la PWA usa automáticamente `wss://`
+para el WebSocket. La URL pública es la configurada en la ruta del túnel.
+
 ## Verificación rápida (lint + build)
 
 ```powershell

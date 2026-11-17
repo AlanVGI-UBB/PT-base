@@ -18,10 +18,10 @@ Write-Host ""
 
 docker compose down
 
-docker compose build frontend
+docker compose build backend frontend
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error al buildear el frontend." -ForegroundColor Red
+    Write-Host "Error al buildear los servicios." -ForegroundColor Red
     exit 1
 }
 
@@ -32,8 +32,9 @@ Remove-Item Env:\CERT_HOST -ErrorAction SilentlyContinue
 Write-Host ""
 Write-Host "=== ACCESO DESDE EL PC ===" -ForegroundColor Yellow
 Write-Host "  URL:   " -NoNewline
-Write-Host "https://localhost:443" -ForegroundColor Green
-Write-Host "  (Acepta la advertencia de seguridad del certificado una sola vez)"
+Write-Host "http://localhost" -ForegroundColor Green
+Write-Host "  (En el PC, localhost funciona como contexto seguro sin advertencia de certificado)" -ForegroundColor DarkGray
+Write-Host "  HTTPS opcional: https://localhost (requiere confiar en la CA de desarrollo)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "=== ACCESO DESDE EL CELULAR ===" -ForegroundColor Yellow
 Write-Host "  URL:   " -NoNewline
@@ -50,7 +51,15 @@ Write-Host "    4. Selecciona 'Instalar certificado CA'" -NoNewline
 Write-Host ""
 Write-Host "    5. Elige el archivo descargado" -NoNewline
 Write-Host ""
-Write-Host "    6. РФЕРФ" -NoNewline
+Write-Host "    6. Vuelve a abrir la URL de la app" -NoNewline
+Write-Host ""
+
+Write-Host "  En Windows, para confiar en la CA para HTTPS:" -ForegroundColor DarkYellow
+Write-Host "    1. Abre https://${ip}:443/ca.crt y continua de forma temporal" -NoNewline
+Write-Host ""
+Write-Host "    2. Guarda el archivo y abre certmgr.msc" -NoNewline
+Write-Host ""
+Write-Host "    3. Importalo en Entidades de certificacion raiz de confianza" -NoNewline
 Write-Host ""
 
 Write-Host ""

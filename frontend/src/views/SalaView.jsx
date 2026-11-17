@@ -7,7 +7,10 @@ import SenaPlayer from '../components/SenaPlayer'
 import { useWebSocket } from '../hooks/useWebSocket'
 
 const WS_BASE = import.meta.env.VITE_WS_URL
-const WS_URL = WS_BASE !== undefined ? WS_BASE : 'ws://localhost:8000'
+const WS_ORIGIN = typeof window !== 'undefined'
+  ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+  : 'ws://localhost:8000'
+const WS_URL = WS_BASE === undefined ? 'ws://localhost:8000' : (WS_BASE || WS_ORIGIN)
 const FUENTE_KEY = 'puente_lsch_font_size'
 
 const IconoMicrofono = ({ size = 18 }) => (

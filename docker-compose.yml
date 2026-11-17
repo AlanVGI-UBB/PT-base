@@ -23,7 +23,22 @@ services:
       - "443:443"
       - "80:80"
     environment:
-      - CERT_HOST=localhost
+      - CERT_HOST=${CERT_HOST:-localhost}
     depends_on:
       - backend
     restart: unless-stopped
+
+  lsch_tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: lsch_tunnel
+    profiles:
+      - cloudflare
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started

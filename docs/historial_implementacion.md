@@ -323,7 +323,7 @@ grid de 3 columnas con "Todas mis Asignaturas".
 - `backend/data/seed_glosario.json` — ampliado:
   - 4 cursos: INF-221 Estructuras de Datos, MAT-101 Álgebra Lineal,
     FIS-110 Física General, HUM-105 Ética Profesional.
-  - Usuario de prueba sigue siendo Juan Pérez (RUT 12345678-9, password test123).
+  - Usuarios de prueba: Juan Pérez (RUT 12345678-5) y María González (RUT 9876543-3); password `test123`.
   - Inscrito en los 4 cursos (sección 1 INF-221, sección 3 MAT-101,
     sección 2 FIS-110, sección 1 HUM-105).
   - Glosario con 29 términos distribuidos entre los 4 cursos (comparten
@@ -782,3 +782,29 @@ del scroll de la página.
   así que sigue funcionando correctamente sobre la Sala fija.
 - Las demás vistas (Dashboard, Historial, Login) no se ven afectadas
   porque no usan la clase `.sala`.
+
+## 2026-11-16 — Acceso HTTPS por IP local, túnel de Cloudflare y RUT de prueba válidos
+**Refs:** Mejora de despliegue (sin spec formal)
+
+**Resumen:** Se confirman cambios de despliegue que estaban sin commitear: acceso a la
+PWA desde otros dispositivos por la IP local con HTTPS, publicación opcional mediante
+un túnel de Cloudflare y RUT de prueba con dígito verificador válido.
+
+**Cambios:**
+- `docker-compose.yml` — `CERT_HOST` configurable desde el entorno; servicio
+  `lsch_tunnel` (perfil `cloudflare`) que toma `CLOUDFLARE_TUNNEL_TOKEN` del `.env`.
+- `run-cloudflare.ps1` — **nuevo**: valida el token en `.env`, construye y levanta
+  backend, frontend y túnel.
+- `run.ps1` — construye backend y frontend; instrucciones para confiar en la CA local.
+- `frontend/src/views/SalaView.jsx` — con `VITE_WS_URL` vacío, el WebSocket usa el
+  mismo origen (`ws://` o `wss://` según la página), necesario detrás de nginx o del túnel.
+- `backend/data/seed_glosario.json`, `frontend/src/views/LoginView.jsx` — RUT de
+  prueba con DV correcto (`12345678-5`, `9876543-3`); antes el login los rechazaba
+  por la validación mod-11 de SPEC-005.
+- `README.md` — sección de Cloudflare Tunnel.
+
+**Verificación:**
+- `ruff check backend` → All checks passed.
+- `pytest backend/tests` → 29/29 passed.
+- `pnpm --prefix frontend build` → build OK.
+- No se verificó el túnel de Cloudflare.
