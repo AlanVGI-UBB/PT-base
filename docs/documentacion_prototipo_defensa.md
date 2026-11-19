@@ -1,6 +1,6 @@
 # Documentación Técnica y Guía de Defensa — Puente LSCh
 
-**Estado del repositorio documentado:** hasta `SPEC-006` (implementada y verificada).  
+**Estado del repositorio documentado:** hasta `SPEC-007` (implementada y verificada), incluyendo el congelamiento previo de la partición de prueba protegida de `SPEC-008` (`ml/datos/frases_anotadas.jsonl`).  
 **Propósito:** reunir en un único documento todo lo que está efectivamente construido en código, cómo funciona internamente cada pieza, qué decisiones técnicas lo respaldan, qué limitaciones existen hoy y cómo defender el proyecto frente a preguntas técnicas, metodológicas o normativas de la comisión evaluadora.
 
 ---
@@ -19,8 +19,8 @@
 | **Perfil estudiante, salas fan-out e historial** | Implementado | Login RUT+JWT, salas `[COD_RAMO]-[SECCION]`, historial y replay | `SPEC-004` |
 | **Auditoría UX y cierre de salas** | Implementado | Auth Bearer en REST, reconexión WS con backoff, manejo de errores y cierre real | `SPEC-005` |
 | **Transcripción real (PCM + faster-whisper)** | Implementado | `AudioWorklet` 16 kHz s16le, `Segmentador` RMS, `FasterWhisperProvider` local, retiro de Google | `SPEC-006` |
-| **Glosario piloto, clips de ensayo y matching v2** | Pendiente (Borrador) | Curso único `INF-221`, clips MP4 generados, doble clave + bloqueos, cola acotada | `SPEC-007` |
-| **Mediciones cuantitativas de la PoC** | Pendiente (Borrador) | WER, latencia de servidor, precisión/recuperación de mapeo, carga 20 receptores | `SPEC-008` |
+| **Glosario piloto, clips de ensayo y matching v2** | Implementado | Curso piloto provisional `INF-221` (15 conceptos) + control `MAT-101`, 15 MP4 de ensayo, doble clave + bloqueos + abstenciones, cola acotada | `SPEC-007` |
+| **Mediciones cuantitativas de la PoC** | Parcial (partición congelada) | Partición `"prueba"` protegida (66 frases) + `"ajuste"` (36) congeladas antes de `SPEC-007`; faltan scripts de WER/latencia/carga y corpus de audio | `SPEC-008` |
 | **Acceso por inscripción, pausa compartida y seguridad** | Pendiente (Borrador) | Permiso `puede_capturar`, clips protegidos, pausa en servidor, `scrypt`, CORS/JWT | `SPEC-009` |
 | **Co-diseño PIESDI y banco real (80–150 términos)** | Fuera de software (`OE1`) | Acuerdo con docente, validación con intérpretes y grabación real | Propuesta / Informe |
 
@@ -44,12 +44,12 @@ flowchart LR
     ASR --> Seg["Segmentador RMS (subtramas 30 ms, pre-roll 240 ms)"]
     Seg -->|"Ventanas PCM float32"| WM["WhisperModel (CTranslate2, CUDA/CPU, Lock único)"]
     WM -->|"final: false (cada 1 s)"| Br["RoomManager.broadcast"]
-    WM -->|"final: true (silencio 600 ms / 15 s / cierre)"| NLP["spaCy (es_core_news_md, n-gramas)"]
-    NLP -->|"Senas detectadas"| DB[("SQLite WAL (evento_clase)")]
-    NLP --> Br
+    WM -->|"final: true (silencio 600 ms / 15 s / cierre)"| NLP["spaCy + Indice (doble clave y bloqueos)"]
+    NLP -->|"senas + abstenciones"| DB[("SQLite WAL (evento_clase)")]
+    NLP -->|"Solo senas (sin abstenciones)"| Br
     Br -->|"JSON segmento"| Em["Emisor (SalaView.jsx)"]
     Br -->|"JSON segmento"| Oy["Oyentes (SalaView.jsx)"]
-    Em --> UI["Subtítulos por segment_id + SenaPlayer"]
+    Em --> UI["Subtítulos por segment_id + useColaSenas + SenaPlayer"]
     Oy --> UI
 ```
 
@@ -70,8 +70,8 @@ stateDiagram-v2
 1. Mientras el docente habla sin pausas mayores a `ASR_SILENCIO_MS` (600 ms), el `Segmentador` emite ventanas provisionales cada `ASR_PARCIAL_MS` (1000 ms) con el mismo `segmento_id`.
 2. El servidor difunde las provisionales con `"final": false` y `"senas": []` — **no ejecuta matching NLP ni escribe en `evento_clase`**. Así se evita disparar clips erróneos si Whisper corrige una palabra al avanzar la frase, y no se ensucia el historial.
 3. Cuando hay 600 ms de silencio tras voz, el segmento alcanza 15 s (`ASR_MAX_SEGMENTO_MS`), dejan de llegar tramas por 600 ms o el emisor finaliza la clase, se emite la ventana final (`estable=True`) con el **mismo `segmento_id`**.
-4. Solo entonces el backend ejecuta `buscar_terminos()` sobre el texto consolidado, inserta **una sola fila** en `evento_clase`, y difunde `"final": true` con la lista `senas`.
-5. En el frontend (`SalaView.jsx`), los subtítulos se indexan y reemplazan por `segment_id`, evitando duplicados al consolidar el texto.
+4. Solo entonces el backend ejecuta `buscar_terminos(texto, sala.indice)` sobre el texto consolidado, inserta **una sola fila** en `evento_clase` (con `senas_json` y `abstenciones_json`), y difunde `"final": true` únicamente con la lista `senas` (las abstenciones no se envían al cliente).
+5. En el frontend (`SalaView.jsx`), los subtítulos se indexan y reemplazan por `segment_id` (resaltando el tramo exacto `texto_detectado`), y las señas entran a la cola secuencial (`useColaSenas`) sin bucle.
 
 ---
 
@@ -87,7 +87,8 @@ Esta sección responde a preguntas del tipo *"¿por qué usaron tecnología X en
 | **Remuestreo lineal en el worklet** | Asumir `AudioContext` a 16 kHz | Navegadores móviles, Firefox o controladores de audio de Windows suelen forzar 44.1 kHz o 48 kHz aunque se solicite 16 kHz. El procesador `pcm-worklet.js` detecta `sampleRate` global y remuestrea en tiempo real con interpolación lineal sin pérdida de continuidad entre bloques de 128 muestras. |
 | **`faster-whisper` local** | Google Cloud Speech-to-Text / Web Speech API | El adaptador anterior de Google (`google_streaming.py`) estaba incompleto, no tenía credenciales y requería enviar voz a un tercero (restringido por autorización y Leyes 19.628 / 21.719). Web Speech API solo opera en motores Chromium y depende de la nube de Google. `faster-whisper` corre offline sobre CTranslate2 (`float16` en GPU CUDA / `int8` en CPU), sin costo por minuto ni fuga de audio. |
 | **`Segmentador` por RMS + `vad_filter`** | Enviar todo el audio crudo al modelo o usar Silero continuo | Whisper no es un modelo streaming puro sino de ventanas. Detectar energía RMS en subtramas de 30 ms con pre-roll de 240 ms permite ignorar silencio sin gastar GPU/CPU, controlar el ritmo de provisionales (`1000 ms`) y omitir provisionales si hay atraso (`> ASR_PARCIAL_MS`). Whisper además aplica su filtro de voz interno (`vad_filter=True`) y `condition_on_previous_text=False` para evitar alucinaciones repetitivas en silencios. |
-| **`spaCy` (`es_core_news_md`) + n-gramas** | Matching exacto por substring o LLM generativo | El matching exacto falla ante flexiones ("hablando" vs "hablar"). `spaCy` provee tokenización, lematización y etiquetas POS en ~3 ms por frase y de forma determinista. Filtrar `DET`, `ADP`, `CCONJ`, `SCONJ` y puntuación permite que *"teorema del valor medio"* coincida con *"teorema valor medio"*. |
+| **`spaCy` (`es_core_news_md`) + doble clave + bloqueos** | Matching exacto por substring, lemas manuales o LLM generativo | El matching exacto falla ante flexiones y mantener lemas a mano rompe cuando cambia el contexto. El sistema indexa automáticamente cada `forma` con **doble clave** (lemas y forma en minúscula, excluyendo `DET`, `ADP`, `CCONJ`, `SCONJ` y puntuación) buscando el n-grama más largo dinámicamente y preservando `texto_detectado` original. Los `bloqueos` conservan preposiciones/artículos (ej. `"de memoria"`) para abstenerse en usos ambiguos conocidos sin inventar señas. |
+| **Cola acotada de señas y tarjetas de ensayo (`ffmpeg`)** | Mostrar todas las señas en bucle por 4 s o usar videos propios | Reproducir clips sin límite genera retraso creciente respecto al habla (§4.1.4). `useColaSenas` reproduce una seña completa a la vez (sin bucle), limita la cola a **3 pendientes** (descarta la más antigua avisando `"disponibles en el historial"`) y omite menciones repetidas del mismo concepto durante **20 s**. Como no hay validación lingüística con PIESDI, las señas no se inventan (`RN08`): los MP4 son tarjetas de ensayo sin personas, rotuladas en pantalla. |
 | **SQLite con modo WAL** | PostgreSQL | Para la PoC (1–4 cursos, decenas de términos y sesiones locales), SQLite con `WAL` y `foreign_keys=ON` elimina la gestión de otro servicio manteniendo integridad relacional y SQL estándar. |
 | **`RoomManager` en memoria** | Redis Pub/Sub / Kafka | Con un único proceso Uvicorn, mantener salas y sets de WebSockets en memoria da latencia mínima (microsegundos) sin dependencias extra. Limitación asumida para Proyecto de Título: no escala horizontalmente a múltiples workers ni soporta recuperación por secuencia ante reconexiones. |
 | **Nginx con HTTPS autofirmado + Cloudflare Tunnel** | HTTP plano | Las APIs web `getUserMedia`, `AudioWorklet` y la instalación como PWA **exigen contexto seguro** (`localhost` o HTTPS). Para probar desde celulares en red local se genera una CA propia y certificado con SAN para la IP local, además de soporte opcional para Cloudflare Tunnel (`wss://` automático). |
@@ -106,7 +107,7 @@ backend/
 │   │   ├── base.py                  # ResultadoASR, StreamingASRProvider, AsrConfigError, get_asr_provider()
 │   │   ├── segmentador.py           # Segmentador por energía RMS (30 ms) + Ventana
 │   │   ├── whisper_local.py         # FasterWhisperProvider, caché singleton de WhisperModel y locks
-│   │   └── stub.py                  # StubAsrProvider (10 frases fijas en bucle para desarrollo/tests)
+│   │   └── stub.py                  # StubAsrProvider (8 frases de INF-221 para desarrollo/tests)
 │   ├── auth/
 │   │   └── routes.py                # POST /api/auth/login, GET /api/auth/usuario/me
 │   ├── core/
@@ -117,22 +118,24 @@ backend/
 │   ├── evaluation/
 │   │   └── logging.py               # Legado de SPEC-002 (tablas sesion/segmento), actualmente sin uso
 │   ├── glossary/
-│   │   ├── matching.py              # buscar_terminos(texto, glosario_por_lema, max_ngrama=3)
-│   │   └── repository.py            # list_cursos, list_terminos, get_glosario_por_lema, inserts
+│   │   ├── indice.py                # construir_indice() (doble clave + bloqueos), obtener_indice_curso()
+│   │   ├── matching.py              # buscar_terminos(texto, indice) → Coincidencias(senas, abstenciones)
+│   │   └── repository.py            # list_cursos, list_terminos (formas, bloqueos, estado), inserts
 │   ├── historial/
 │   │   ├── repository.py            # CRUD de clase y evento_clase + usuario_participa()
 │   │   └── routes.py                # GET /api/historial, GET /api/historial/{id}, GET /api/salas/{id}/estado
 │   ├── salas/
-│   │   └── manager.py               # RoomState y RoomManager (pub/sub en memoria, locks por loop)
+│   │   └── manager.py               # RoomState (con Indice) y RoomManager (pub/sub en memoria)
 │   └── signs_recognition/
 │       └── __init__.py              # Placeholder vacío (módulo secundario alumno→profesor, fuera de PoC)
 ├── data/
 │   ├── schema.sql                   # Definición de las 8 tablas SQLite
-│   ├── seed_glosario.json           # Datos semilla actuales (4 cursos, 2 usuarios, 29 términos)
-│   └── videos_senas/                # 12 MP4 locales de 28 bytes (placeholders en .gitignore)
+│   ├── seed_glosario.json           # Datos semilla provisionales (INF-221 15 conceptos + MAT-101 control)
+│   └── videos_senas/                # 15 clips MP4 de ensayo (H.264, 640×360, 3 s) versionados en Git
 ├── scripts/
-│   └── seed_glosario.py             # Poblamiento destructivo/idempotente desde seed_glosario.json
-├── tests/                           # Suite pytest (46 pruebas totales)
+│   ├── generar_clips_ensayo.py      # Genera tarjetas MP4 de ensayo con ffmpeg sin sobrescribir
+│   └── seed_glosario.py             # Poblamiento destructivo/idempotente y validación de índice
+├── tests/                           # Suite pytest (55 pruebas totales: 54 activas + 1 -m modelo)
 ├── Dockerfile                       # Imagen python:3.11-slim + libgomp1 + es_core_news_md + seed
 └── requirements.txt                 # Dependencias Python fijadas
 ```
@@ -160,21 +163,28 @@ backend/
      * Al drenar la cola tras una inferencia, si había más de `ASR_PARCIAL_MS` de audio pendiente, `_filtrar_ventanas` conserva **todas** las ventanas finales pero omite las provisionales hasta ponerse al día.
    * **Parámetros de inferencia:** `language` normalizado (`"es-CL"` → `"es"`), `vad_filter=True`, `condition_on_previous_text=False` e `initial_prompt` armado con la lista deduplicada de `texto_visible` del glosario si `ASR_PROMPT_GLOSARIO=true`.
 4. **`stub.py` (`StubAsrProvider`):**
-   * Vigila `audio_iter` en segundo plano para detenerse inmediatamente cuando la sala finaliza (`None` en la cola), y mientras tanto emite ciclicamente las 10 frases de `FRASES` cada `STUB_INTERVAL_MS` con `segmento_id` secuencial y tiempos simulados.
+   * Vigila `audio_iter` en segundo plano para detenerse inmediatamente cuando la sala finaliza (`None` en la cola), y mientras tanto emite cíclicamente las 8 frases de `FRASES` (orientadas al curso piloto `INF-221`, incluyendo conceptos y un caso bloqueado `"de memoria"`) cada `STUB_INTERVAL_MS` con `segmento_id` secuencial y tiempos simulados.
 
-### 4.3 Motor de coincidencia lingüística (`app/glossary/matching.py`)
-`buscar_terminos(texto, glosario_por_lema, max_ngrama=3)`:
-1. Ejecuta el modelo `es_core_news_md` de `spaCy` sobre el texto final.
-2. Filtra tokens con `pos_` en `{"DET", "ADP", "CCONJ", "SCONJ"}` (artículos, preposiciones, conjunciones) y puntuación (`is_punct`), extrayendo `token.lemma_.lower()`.
-3. Recorre la secuencia de lemas de izquierda a derecha probando ventanas descendentes de tamaño `n = min(max_ngrama, len - i)` hasta `1` (*greedy longest-match*).
-4. Si `" ".join(lemas[i : i + n])` existe como clave en `glosario_por_lema`, agrega el diccionario del término encontrado y avanza `i += n`; si no, avanza `i += 1`.
+### 4.3 Índice y motor de coincidencia lingüística (`app/glossary/`)
+1. **Construcción del índice (`indice.py` — `construir_indice` / `obtener_indice_curso`):**
+   * Omite los términos con `estado == "retirado"`.
+   * Para cada expresión declarada en `formas`, ejecuta `spaCy` (`es_core_news_md`) excluyendo `STOP_POS` (`DET`, `ADP`, `CCONJ`, `SCONJ`) y puntuación, registrando **dos claves**: la de lemas y la de formas en minúscula.
+   * Calcula `max_ngrama` dinámicamente según la expresión más larga del índice (sin tope fijo de 3).
+   * Si dos conceptos distintos del mismo curso producen la misma clave, lanza `ValueError` nombrando ambos conceptos (validado también al ejecutar `seed_glosario.py`).
+   * Procesa los `bloqueos` conservando todas las palabras no puntuadas (incluidas preposiciones/artículos como `"de"` en `"de memoria"`), marcando `entradas[clave] = None` y fallando si colisiona con una forma sin ser más largo.
+   * Cachea el `Indice` por `(DB_PATH, curso_id)` y lo invalida al resembrar.
+2. **Búsqueda (`matching.py` — `buscar_terminos(texto, indice)`):**
+   * Analiza el texto final con `spaCy` manteniendo dos vistas alineadas sobre el `doc` original: tokens completos (para bloqueos) y tokens filtrados sin `STOP_POS` (para formas).
+   * En cada posición prueba primero los n-gramas más largos y, para cada longitud, consulta primero por clave de lemas y luego por clave de forma.
+   * Si gana un bloqueo por longitud, consume esas palabras y agrega `{"bloqueo", "texto_detectado"}` a `Coincidencias.abstenciones` sin activar seña.
+   * Si gana una forma, recupera el tramo exacto original `doc[tok_ini:tok_fin].text` como `texto_detectado` y agrega `{termino_id, texto_visible, video_url, estado, texto_detectado}` a `Coincidencias.senas`.
 
 ### 4.4 Gestión de salas, vaciado y cierre (`app/main.py` y `app/salas/manager.py`)
 * `RoomManager` administra `_salas: dict[str, RoomState]` con locks indexados por event loop (`WeakKeyDictionary`) para soportar múltiples loops de `pytest` y concurrencia asíncrona en producción.
 * Al conectarse el emisor (`rol=emitter`):
   1. Valida JWT, formato `COD_RAMO-SECCION`, existencia del curso y que no exista ya una sala activa para ese `room_id`.
   2. Instancia el proveedor ASR antes de crear la sala (si falla la configuración, cierra con error sin dejar sala huérfana).
-  3. Crea el `RoomState` con el glosario del curso e inserta un registro inicial en `clase`.
+  3. Carga/obtiene en caché el `Indice` del curso (`obtener_indice_curso`), arma el `contexto` con `texto_visible` de términos no retirados (si `ASR_PROMPT_GLOSARIO=true`), crea el `RoomState` e inserta el registro inicial en `clase`.
   4. Lanza dos tareas concurrentes: `_receiver` y `_transcribir`.
 * **Validación de tramas binarias en `_receiver`:** descarta toda trama con longitud impar o `> ASR_MAX_TRAMA_BYTES` (64000 bytes), emitiendo un único `logger.warning` por sesión.
 * **Finalización explícita vs desconexión abrupta:**
@@ -211,19 +221,24 @@ backend/
 El esquema SQLite habilita `PRAGMA journal_mode=WAL` y `PRAGMA foreign_keys=ON`. Contiene 8 tablas:
 
 1. **`curso`:** `(id PK, cod_ramo, nombre)`. Ej.: `1, "INF-221", "Estructuras de Datos"`.
-2. **`termino`:** `(id PK, curso_id FK, lema, texto_visible, video_url, n_palabras)`. Almacena el vocabulario técnico y la ruta del clip (`/data/videos_senas/...`).
+2. **`termino`:** `(id PK, curso_id FK, texto_visible, formas_json, bloqueos_json, video_url, estado)`. Ya no almacena lemas manuales ni `n_palabras`; `estado` restringe `ensayo | publicado | retirado` vía `CHECK`.
 3. **`usuario`:** `(rut PK, password_hash, nombre, apellido)`.
 4. **`inscripcion`:** `(rut FK, curso_id FK, seccion, PK(rut, curso_id, seccion))`.
 5. **`clase`:** `(id PK, room_id, curso_id FK, seccion, rut_emisor FK, fecha_inicio, fecha_fin, duracion_ms, titulo)`. Registra cada sesión de clase.
-6. **`evento_clase`:** `(id PK, clase_id FK, timestamp_ms, texto, estable, senas_json)`. Almacena los segmentos consolidados y las señas asociadas en formato JSON.
+6. **`evento_clase`:** `(id PK, clase_id FK, timestamp_ms, texto, estable, senas_json, abstenciones_json)`. Almacena los segmentos consolidados, todas las señas detectadas y las abstenciones por bloqueo en JSON.
 7. **`sesion` y `segmento`:** tablas heredadas de `SPEC-002` (usadas solo por `evaluation/logging.py` y un test de FK en `test_schema.py`; `SPEC-009` contempla retirarlas).
 
 ### Datos sembrados actualmente (`backend/data/seed_glosario.json`)
-* **4 cursos:** `INF-221` (Estructuras de Datos), `MAT-101` (Álgebra Lineal), `FIS-110` (Física General), `HUM-105` (Ética Profesional).
+* **2 cursos:**
+  * `INF-221` (*Estructuras de Datos*) — curso piloto **provisional** propuesto por el autor para la PoC (declarado en la clave `"nota"` del JSON y en `README.md`, sin acuerdo con PIESDI ni con un docente), con **15 conceptos** en `estado="ensayo"`: *arreglo, lista enlazada, pila, cola, árbol binario, nodo, puntero, grafo, tabla hash, recursión, algoritmo, complejidad, ordenamiento, búsqueda binaria, memoria*.
+  * `MAT-101` (*Álgebra Lineal*) — curso de control **sin términos** para verificar aislamiento entre salas.
 * **2 usuarios de prueba (password `test123`, RUT con dígito verificador válido):**
-  * `12345678-5` — Juan Pérez (inscrito en los 4 cursos).
-  * `9876543-3` — María González (inscrita en los 4 cursos).
-* **29 términos de prueba** y **12 archivos `.mp4` locales de 28 bytes** en `backend/data/videos_senas/` (que funcionan únicamente como placeholders técnicos y están ignorados en Git; `SPEC-007` los reemplazará por clips de ensayo generados con `ffmpeg` y vocabulario coherente).
+  * `12345678-5` — Juan Pérez (inscrito en ambos cursos).
+  * `9876543-3` — María González (inscrita en ambos cursos).
+* **15 clips MP4 de ensayo** en `backend/data/videos_senas/` (8.2–10.6 kB cada uno, H.264 640×360, 3 s, `-movflags +faststart`), generados por `backend/scripts/generar_clips_ensayo.py` con tarjetas de texto (`"CLIP DE ENSAYO"`, concepto, `"Sin validación lingüística"`) sin personas y **versionados en Git** para que un clon limpio arranque sin pasos manuales.
+
+### Datos congelados para evaluación (`ml/datos/`)
+* **`ml/datos/frases_anotadas.jsonl` y `ml/datos/README.md`:** 102 frases anotadas sobre los 15 conceptos de `INF-221` — **66 de `"prueba"`** (congeladas en el commit `04c6c7f` antes de ajustar formas/bloqueos en `SPEC-007`, cumpliendo `RNF04`) y **36 de `"ajuste"`**. Incluye frases sin conceptos, usos cotidianos ambiguos, compuestos y flexiones.
 
 ---
 
@@ -245,13 +260,14 @@ frontend/
 │   │   └── capturaPcm.js              # Ciclo de captura: iniciar, pausar, reanudar, detener
 │   ├── hooks/
 │   │   ├── useAuth.js                 # Estado de sesión en localStorage y evento puente-auth-expired
+│   │   ├── useColaSenas.js            # Cola secuencial (máx. 3 pendientes) y ventana 20 s anti-repetición
 │   │   └── useWebSocket.js            # Reconexión con backoff exponencial [3, 6, 12, 24] s (máx 5)
 │   ├── components/
 │   │   ├── Header.jsx                 # Navbar con logo, tabs Inicio/Historial y avatar
 │   │   ├── EstadoConexion.jsx         # Indicador visual conectado/reconectando/desconectado/fallo
 │   │   ├── Feedback.jsx               # Banner visual de error/warning/info
 │   │   ├── FinalizarModal.jsx         # Modal para asignar título opcional al cerrar clase
-│   │   └── SenaPlayer.jsx             # Reproductor <video> muted/autoPlay/loop con fallback onError
+│   │   └── SenaPlayer.jsx             # Reproductor <video> sin bucle con rótulo de ensayo y onEnded
 │   └── views/
 │       ├── LoginView.jsx              # Formulario RUT + contraseña + botón Instalar PWA
 │       ├── DashboardView.jsx          # Clase actual destacada + grid de asignaturas + estado en vivo
@@ -280,9 +296,9 @@ frontend/
 * **Dashboard (`DashboardView.jsx`):** consulta las asignaturas inscritas y el estado en vivo de cada sala (`GET /api/salas/{roomId}/estado`), mostrando punto verde `"En vivo"` o `"Sin clase activa"`.
 * **Sala en vivo (`SalaView.jsx`):**
   * **Emisor:** muestra medidor visual de nivel de señal (`.nivel-audio`), contador `mm:ss`, controles de Pausa/Reanudar y Finalizar y Guardar (`FinalizarModal`). Si el nivel RMS permanece bajo `UMBRAL_SILENCIO` (0.004) por 10 s mientras está activo, muestra el aviso `"No se detecta audio en el micrófono"` sin cortar la sesión y lo oculta al volver la señal. Al confirmar finalizar, detiene el micrófono, envía `{"action": "finalizar", "titulo"}` y espera `clase_finalizada` (hasta 6 s de respaldo) antes de cerrar el WebSocket para permitir el vaciado del último tramo hablado.
-  * **Subtítulos:** actualiza o inserta entradas por `segment_id` (sin duplicar ni perder el lugar), resalta términos coincidentes con `<strong class="termino">` y persiste el tamaño de letra (`12–32 px`) en `localStorage`.
-  * **Señas:** al llegar un segmento final con señas, las pasa a `SenaPlayer` y las muestra durante 4 s (nota: en `SPEC-007` se reemplazará el timeout de 4 s y el bucle por una cola secuencial completa).
-* **Historial y Detalle (`HistorialView.jsx`, `ClaseDetailView.jsx`):** búsqueda en tiempo real por título/ramo/preview, filtros por asignatura y mes, vista **Apunte** (texto completo resaltado) y vista **Replay** (reproducción temporizada según `timestamp_ms`, velocidades `1x/1.5x/2x`, barra deslizante y video de seña sincronizado con el evento actual).
+  * **Subtítulos:** actualiza o inserta entradas por `segment_id` (sin duplicar ni perder el lugar), resalta el tramo real reconocido (`texto_detectado || texto_visible`) con `<strong class="termino">` —destacando incluso variantes como *"listas ligadas"* o *"recursiva"*— y persiste el tamaño de letra (`12–32 px`) en `localStorage`.
+  * **Cola de señas (`useColaSenas` + `SenaPlayer`):** al llegar un segmento final con señas, `encolar()` reproduce **un clip completo a la vez sin bucle** y avanza al siguiente vía `onEnded` (con recuperación de 1.5 s ante `onError`). Admite hasta **3 pendientes**; si se llena, descarta el pendiente más antiguo e incrementa el contador visible (`"En cola: ... · ... disponibles en el historial"`). Si un mismo concepto ya se está reproduciendo, está en cola o terminó hace **menos de 20 s**, no vuelve a encolarse (manteniéndose resaltado en el subtítulo y registrado completo en el historial). Cuando `estado === "ensayo"`, muestra el rótulo `"Clip de ensayo · sin validación lingüística"`.
+* **Historial y Detalle (`HistorialView.jsx`, `ClaseDetailView.jsx`):** búsqueda en tiempo real por título/ramo/preview, filtros por asignatura y mes, vista **Apunte** (texto completo resaltado por `texto_detectado`) y vista **Replay** (reproducción temporizada según `timestamp_ms`, velocidades `1x/1.5x/2x`, barra deslizante y reproducción secuencial única de los clips del evento actual con el mismo rótulo de ensayo).
 
 ---
 
@@ -313,9 +329,17 @@ frontend/
     {
       "type": "segmento",
       "segment_id": 1,
-      "texto": "hoy vemos la derivada",
+      "texto": "hoy vemos las listas enlazadas",
       "final": true,
-      "senas": [{"id": 1, "curso_id": 1, "lema": "derivado", "texto_visible": "derivada", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1}],
+      "senas": [
+        {
+          "termino_id": 2,
+          "texto_visible": "lista enlazada",
+          "video_url": "/data/videos_senas/lista_enlazada.mp4",
+          "estado": "ensayo",
+          "texto_detectado": "listas enlazadas"
+        }
+      ],
       "timestamp_ms": 2150
     }
     ```
@@ -346,19 +370,20 @@ frontend/
 | Verificación | Resultado observado | Alcance / Condición |
 |---|---|---|
 | `ruff check backend` | `All checks passed!` | Lint completo de `backend/` |
-| `pytest backend/tests` | **45 passed, 1 skipped** | Cubre auth (7), historial (5), matching (6), sala/WS (9), esquema SQLite (5), segmentador + `FasterWhisperProvider` con modelo simulado (13) |
-| `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA |
-| `pnpm --prefix frontend build` | OK (45 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
+| `pytest backend/tests` | **54 passed, 1 skipped** | Cubre auth (7), historial (5), índice (4), matching (7), sala/WS (9), esquema SQLite (5), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (13) |
+| `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA (verificada en `SPEC-006`) |
+| `pnpm --prefix frontend build` | OK (46 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
+| Generación de clips y seed | OK | `generar_clips_ensayo.py` (15 MP4 H.264 640×360 de 3 s validados con `ffprobe`) y `seed_glosario.py` |
 | Prueba controlada de audio español | OK | Síntesis de voz en español (`Microsoft Helena Desktop`) pasada en tramas de 100 ms por `FasterWhisperProvider` (`small`, CUDA) produjo provisional y final exactos |
-| Prueba unitaria JS de `pcm-worklet.js` | OK | Ejecución en Node simulando `sampleRate` 48 kHz y 44.1 kHz produjo tramas de 3200 bytes con RMS teórico exacto |
-| `docker compose up --build` | **No ejecutado en esta revisión** | El daemon de Docker Desktop no estaba iniciado al cerrar `SPEC-006` |
+| Pruebas unitarias JS en Node | OK | Simulación de `pcm-worklet.js` (48 kHz y 44.1 kHz → tramas 3200 B) y de `useColaSenas.js` (cola máx. 3, descartes, ventana de 20 s) |
+| `docker compose up --build` | **No ejecutado en esta revisión** | El daemon de Docker Desktop no estaba iniciado |
 | Prueba manual en navegador con micrófono físico y 2 dispositivos | **Pendiente de ejecución interactiva** | — |
 
 ---
 
 ## 10. Limitaciones actuales conocidas (transparencia técnica)
 
-Estas brechas están identificadas explícitamente entre el prototipo actual (`SPEC-006`) y los requerimientos del informe de avance; las tres specs en borrador (`SPEC-007` a `SPEC-009`) existen precisamente para cerrarlas:
+Estas brechas están identificadas explícitamente entre el prototipo actual (`SPEC-007`) y los requerimientos del informe de avance; las dos specs restantes en borrador (`SPEC-008` y `SPEC-009`) existen precisamente para cerrarlas:
 
 1. **Seguridad y control de acceso incompletos (cubre `SPEC-009`):**
    * Hoy `ws_sala` solo valida que el token sea válido y que el `cod_ramo` exista: un usuario autenticado no inscrito puede escuchar una sala o crear una clase en una sección inexistente; `GET /api/cursos/{id}/glosario` y `/data/videos_senas/*` no verifican inscripción/permiso.
@@ -366,13 +391,13 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
    * Las contraseñas usan SHA-256 con sal fija (`"puente_lsch_salt"`), el token expira en 1 hora (menor a una clase de 90 min), `CORS` usa `allow_origins=["*"]` y `JWT_SECRET` tiene un valor por defecto conocido.
 2. **Pausa solo local (cubre `SPEC-009`):**
    * Pausar detiene el envío desde el navegador, pero el servidor no cambia el estado de la sala, los oyentes no ven aviso de "Transmisión en pausa" y la discontinuidad no se registra en `evento_clase`.
-3. **Glosario, clips y matching preliminares (cubre `SPEC-007`):**
-   * El seed actual mezcla cursos y asigna términos de cálculo a `INF-221`, usa lemas ajustados a mano, carece de mecanismo de bloqueo ante usos ambiguos ("de memoria"), y los 12 MP4 actuales son archivos vacíos de 28 bytes.
-   * En el cliente, los clips se muestran en bucle por 4 segundos en vez de reproducirse completos en una cola acotada.
-4. **Sin mediciones cuantitativas formales todavía (cubre `SPEC-008`):**
-   * No hay aún WER medido sobre corpus grabado, latencia medida de servidor, precisión/recuperación del matching ni prueba de carga con 20 receptores.
+3. **Glosario provisional y límites de desambiguación (`OE1` / alcance PoC):**
+   * Aunque el glosario ya es coherente con `INF-221` y los clips son tarjetas MP4 reproducibles rotuladas como ensayo, siguen siendo recursos **sin validación lingüística ni participación de PIESDI**.
+   * El mecanismo de `bloqueos` resuelve usos ambiguos conocidos de antemano (ej. `"de memoria"`, `"pila de cuadernos"`, `"hacer cola"`), pero no realiza desambiguación semántica general ni reconoce compuestos discontinuos (*"la lista está enlazada"*).
+4. **Mediciones cuantitativas formales pendientes (cubre `SPEC-008`):**
+   * La partición de prueba (`66` frases) ya está congelada y protegida en `ml/datos/frases_anotadas.jsonl`, pero aún falta implementar `evaluar_asr.py`, `evaluar_matching.py` y `prueba_carga.py`, grabar los dos audios de voz del autor y consolidar resultados en `docs/resultados_poc.md`.
 5. **Alcance diferido a Proyecto de Título (2027) y PIESDI:**
-   * No existe validación lingüística de señas ni co-diseño con PIESDI (`OE1`); no hay reordenamiento sintáctico a glosas (`RF15`), recuperación de eventos perdidos tras corte de red (`RF20`), reconexión del emisor a la misma clase ni reconocimiento de señas por cámara (`signs_recognition/`).
+   * Co-diseño y banco real de 80–150 términos con PIESDI (`OE1`), reglas acotadas de ordenamiento de glosas (`RF15`), recuperación de eventos perdidos tras corte de red (`RF20`), reconexión del emisor a la misma clase, interfaz WCAG 2.2 AA (`RNF08`), administración desde la app (`RF24–RF27`) y reconocimiento de señas por cámara (`signs_recognition/`).
 
 ---
 
@@ -415,17 +440,23 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
     **No.** Tanto la propuesta como el informe de avance y el prototipo dejan explícito que no es un traductor integral ni sustituye al intérprete de LSCh: ofrece subtítulos en tiempo real y un **apoyo visual terminológico** mediante clips de conceptos técnicos del curso. Cuando no hay coincidencia, se mantiene el texto sin inventar señas (`RN08`).
 
 11. **¿Cuál es la situación con PIESDI y los videos de señas actuales?**
-    Solo se concretó la reunión inicial con la dirección de PIESDI; no se alcanzó a realizar el co-diseño con intérpretes ni la grabación de señas reales (`OE1`). Por integridad académica y ética lingüística (**las señas no se inventan**), el repositorio no incluye personas realizando señas sin validación: hoy contiene placeholders de 28 bytes, y `SPEC-007` define clips de ensayo generados por `ffmpeg` rotulados explícitamente como *"Clip de ensayo · sin validación lingüística"* para probar el pipeline técnico sin falsear el cumplimiento lingüístico.
+    Solo se concretó la reunión inicial con la dirección de PIESDI; no se alcanzó a realizar el co-diseño con intérpretes ni la grabación de señas reales (`OE1`). Por integridad académica y ética lingüística (**las señas no se inventan**, `RN08`), el repositorio no incluye personas realizando señas sin validación: los 15 clips en `backend/data/videos_senas/` son tarjetas generadas con `ffmpeg` (`generar_clips_ensayo.py`) y llevan el rótulo visible *"Clip de ensayo · sin validación lingüística"* tanto en vivo como en replay.
 
 12. **¿Cómo saben que los cambios provisionales de Whisper no disparan videos falsos ni duplican texto en el historial?**
     Por contrato en `main.py` (regla `RN10`): solo cuando `resultado.estable` es `True` se ejecuta `buscar_terminos()` y `guardar_evento()`. Los resultados con `estable=False` salen por WebSocket con `senas=[]` y en `SalaView.jsx` actualizan la misma entrada del DOM identificada por `segment_id`.
 
+13. **¿Cómo evitan falsos positivos en palabras comunes como "de memoria", "pila" o "cola", y cómo evitan sobrecargar la pantalla si hablan rápido?**
+    El motor (`glossary/indice.py` y `glossary/matching.py`) permite declarar `bloqueos` por término (que conservan preposiciones/artículos como `"de memoria"`, `"pila de cuadernos"`, `"hacer cola"`); cuando un bloqueo gana por longitud, consume sus palabras sin disparar clip y registra el caso en `evento_clase.abstenciones_json`. En el cliente, `useColaSenas` reproduce **un clip completo a la vez sin bucle**, acota la cola a **3 pendientes** (descartando el más antiguo y mostrando `"disponibles en el historial"`) y no re-encola un concepto repetido dentro de **20 s**, manteniendo el historial fiel completo en el servidor.
+
+14. **¿Cómo aseguran honestidad metodológica al evaluar la precisión del motor de NLP (`RNF04`)?**
+    Se redactó y congeló una **partición de prueba protegida** de 66 frases en `ml/datos/frases_anotadas.jsonl` (commit `04c6c7f`) **antes** de definir las formas admitidas y bloqueos de `SPEC-007`. Las reglas se ajustaron solo con criterio general y las 36 frases de `"ajuste"`, de modo que la evaluación de `SPEC-008` sobre `"prueba"` refleje desempeño real sin sobreajuste (*data leakage*).
+
 ### Seguridad, privacidad y operación
-13. **¿Se graba el audio de las clases? ¿Cómo abordan la privacidad de datos?**
+15. **¿Se graba el audio de las clases? ¿Cómo abordan la privacidad de datos?**
     No. El audio PCM solo existe en memoria transitoria durante el procesamiento del segmento y jamás se escribe a disco ni en la base de datos (`RNF11`). En SQLite se persiste únicamente el texto consolidado y los eventos de señas. En cuanto a contraseñas, JWT y acceso por inscripción, las brechas detectadas en el prototipo actual (SHA-256 fijo, autorización incompleta de salas/clips) están especificadas y acotadas en `SPEC-009` para su cierre antes de pruebas con participantes.
 
-14. **¿Por qué usan HTTPS y certificados propios si es un proyecto universitario local?**
+16. **¿Por qué usan HTTPS y certificados propios si es un proyecto universitario local?**
     Los navegadores modernos bloquean `navigator.mediaDevices.getUserMedia`, `AudioWorklet` y la instalación de PWA en cualquier origen que no sea `localhost` o `https://`. Para que un estudiante acceda desde su celular por Wi-Fi a la IP del computador servidor (`run.ps1`) o por internet (`run-cloudflare.ps1`), el contenedor `nginx` sirve TLS válido mediante una CA de desarrollo instalable o terminación HTTPS de Cloudflare.
 
-15. **¿Qué faltaría para pasar de este prototipo de Anteproyecto al sistema final de Proyecto de Título (2027)?**
-    En el corto plazo (cierre del Anteproyecto, `SPEC-007` a `SPEC-009`): glosario piloto coherente con clips de ensayo y bloqueos de ambigüedad, mediciones cuantitativas reproducibles (WER, latencia, F1 del matching, carga con 20 receptores) y cierre de autorización/seguridad. Para Proyecto de Título (semestre 2027): trabajo lingüístico con PIESDI y docente del curso (80–150 señas validadas), reglas acotadas de ordenamiento de glosas (`RF15`), reconexión con recuperación por secuencia (`RF20`), auditoría/conservación (`RF28–RF29`), interfaz accesible WCAG 2.2 AA (`RNF08`) y evaluación empírica con estudiantes sordos.
+17. **¿Qué faltaría para pasar de este prototipo de Anteproyecto al sistema final de Proyecto de Título (2027)?**
+    En el corto plazo (cierre del Anteproyecto, `SPEC-008` y `SPEC-009`): ejecutar las mediciones cuantitativas reproducibles (WER, latencia, precisión/recuperación del matching, carga con 20 receptores) y cerrar autorización por inscripción, permiso de captura, pausa compartida y seguridad (`scrypt`/CORS/JWT). Para Proyecto de Título (semestre 2027): trabajo lingüístico con PIESDI y docente del curso (80–150 señas validadas), reglas acotadas de ordenamiento de glosas (`RF15`), reconexión con recuperación por secuencia (`RF20`), auditoría/conservación (`RF28–RF29`), interfaz accesible WCAG 2.2 AA (`RNF08`) y evaluación empírica con estudiantes sordos.

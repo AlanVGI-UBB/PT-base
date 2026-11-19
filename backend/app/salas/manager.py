@@ -7,6 +7,7 @@ from weakref import WeakKeyDictionary
 
 from fastapi import WebSocket
 
+from app.glossary.indice import Indice
 
 logger = logging.getLogger("puente_lsch")
 
@@ -19,7 +20,7 @@ class RoomState:
     rut_emisor: str
     emitter_ws: WebSocket | None = None
     listeners: set[WebSocket] = field(default_factory=set)
-    glosario_por_lema: dict = field(default_factory=dict)
+    indice: Indice = field(default_factory=lambda: Indice(entradas={}, max_ngrama=0))
     timeline: list[dict] = field(default_factory=list)
     inicio_ms: int = 0
     clase_id: int | None = None
@@ -55,7 +56,7 @@ class RoomManager:
         seccion: str,
         rut_emisor: str,
         emitter_ws: WebSocket,
-        glosario: dict,
+        indice: Indice,
     ) -> RoomState:
         async with cls._get_lock():
             if room_id in cls._salas:
@@ -66,7 +67,7 @@ class RoomManager:
                 seccion=seccion,
                 rut_emisor=rut_emisor,
                 emitter_ws=emitter_ws,
-                glosario_por_lema=glosario,
+                indice=indice,
                 inicio_ms=int(datetime.now(timezone.utc).timestamp() * 1000),
             )
             cls._salas[room_id] = sala

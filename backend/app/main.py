@@ -16,8 +16,9 @@ from app.auth.routes import router as auth_router
 from app.core.auth import obtener_rut, verificar_token
 from app.core.config import get_settings
 from app.core.db import get_connection
+from app.glossary.indice import obtener_indice_curso
 from app.glossary.matching import buscar_terminos
-from app.glossary.repository import ensure_schema, get_glosario_por_lema, list_terminos
+from app.glossary.repository import ensure_schema, list_terminos
 from app.historial.repository import crear_clase, finalizar_clase, guardar_evento
 from app.historial.routes import router as historial_router
 from app.salas.manager import RoomManager
@@ -145,14 +146,17 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         settings = get_settings()
         max_trama_bytes = settings.ASR_MAX_TRAMA_BYTES
         flush_timeout_s = settings.ASR_FLUSH_TIMEOUT_MS / 1000.0
-        glosario = get_glosario_por_lema(curso_id)
+        indice = obtener_indice_curso(curso_id)
+        terminos_activos = [
+            t for t in list_terminos(curso_id) if t.get("estado", "ensayo") != "retirado"
+        ]
         contexto = (
-            [t["texto_visible"] for t in glosario.values()]
+            [t["texto_visible"] for t in terminos_activos]
             if settings.ASR_PROMPT_GLOSARIO
             else None
         )
 
-        sala = await RoomManager.crear(room_id, curso_id, seccion, rut, ws, glosario)
+        sala = await RoomManager.crear(room_id, curso_id, seccion, rut, ws, indice)
         inicio_iso = datetime.now(timezone.utc).isoformat()
         clase_id_db = crear_clase(room_id, curso_id, seccion, rut, inicio_iso)
         sala.clase_id = clase_id_db
@@ -223,14 +227,20 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                     continue
                 ts_ms = int(time.time() * 1000) - t_inicio
                 if resultado.estable:
-                    senas = buscar_terminos(resultado.texto, sala.glosario_por_lema)
+                    coincidencias = buscar_terminos(resultado.texto, sala.indice)
+                    senas = coincidencias.senas
                     senas_json = json.dumps(senas, ensure_ascii=False)
+                    abstenciones_json = json.dumps(
+                        coincidencias.abstenciones,
+                        ensure_ascii=False,
+                    )
                     guardar_evento(
                         clase_id_db,
                         ts_ms,
                         resultado.texto,
                         True,
                         senas_json,
+                        abstenciones_json,
                     )
                 else:
                     senas = []

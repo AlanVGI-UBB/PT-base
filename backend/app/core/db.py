@@ -21,6 +21,14 @@ def get_connection() -> sqlite3.Connection:
 def init_schema() -> None:
     conn = get_connection()
     schema_path = Path(__file__).resolve().parent.parent.parent / "data" / "schema.sql"
+
+    # Migracion: reemplazar tabla termino heredada sin formas_json
+    cursor = conn.execute("PRAGMA table_info(termino)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "formas_json" not in columns and len(columns) > 0:
+        conn.execute("DROP TABLE termino")
+        conn.commit()
+
     if schema_path.exists():
         conn.executescript(schema_path.read_text(encoding="utf-8"))
         conn.commit()
@@ -37,4 +45,11 @@ def init_schema() -> None:
     columns = [row[1] for row in cursor.fetchall()]
     if "titulo" not in columns and len(columns) > 0:
         conn.execute("ALTER TABLE clase ADD COLUMN titulo TEXT")
+        conn.commit()
+
+    # Migracion: agregar abstenciones_json si la tabla evento_clase no tiene la columna
+    cursor = conn.execute("PRAGMA table_info(evento_clase)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "abstenciones_json" not in columns and len(columns) > 0:
+        conn.execute("ALTER TABLE evento_clase ADD COLUMN abstenciones_json TEXT")
         conn.commit()

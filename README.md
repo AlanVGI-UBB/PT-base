@@ -98,3 +98,16 @@ para el WebSocket. La URL pública es la configurada en la ruta del túnel.
 ruff check backend
 pnpm --prefix frontend build
 ```
+
+## Glosario piloto provisional y clips de ensayo
+
+El curso piloto (`INF-221 — Estructuras de Datos`), sus 15 conceptos y los archivos MP4 en `backend/data/videos_senas/` son una **propuesta provisional del autor para la Prueba de Concepto (PoC)**, sin acuerdo con PIESDI ni con un docente de la asignatura. Los videos son tarjetas de ensayo generadas automáticamente con `backend/scripts/generar_clips_ensayo.py` (sin personas ni configuración manual) y no constituyen señas validadas en LSCh.
+
+Para regenerar los clips o resembrar la base local:
+
+```powershell
+cd backend
+.\venv\Scripts\activate
+python scripts\generar_clips_ensayo.py
+python scripts\seed_glosario.py
+```

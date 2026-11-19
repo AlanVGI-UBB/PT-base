@@ -6,16 +6,14 @@ from app.asr.base import ResultadoASR
 from app.core.config import get_settings
 
 FRASES = [
-    "hola a todos",
-    "bienvenidos a la clase",
-    "hoy vamos a ver derivadas",
-    "la función es continua",
-    "calculamos la raíz cuadrada",
-    "el teorema del valor medio",
-    "reemplazamos en la ecuación",
-    "el resultado es igual a cero",
-    "alguien tiene alguna duda",
-    "vamos con el siguiente ejercicio",
+    "hola a todos, hoy continuamos con estructuras de datos",
+    "un arreglo permite acceso directo en memoria contigua",
+    "las listas enlazadas conectan cada nodo con un puntero",
+    "hoy repasamos pila, cola y árbol binario",
+    "no se aprendan la fórmula de memoria sin entenderla",
+    "una tabla hash reduce la complejidad de búsqueda",
+    "el algoritmo de ordenamiento facilita la búsqueda binaria",
+    "la recursión y los grafos quedan para la próxima clase",
 ]
 
 

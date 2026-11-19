@@ -38,7 +38,9 @@ function highlight(texto, senasJson) {
   if (!texto || !senasJson) return texto
   let senas = []
   try { senas = JSON.parse(senasJson) } catch { return texto }
-  const surface = senas.map((t) => t.texto_visible).filter(Boolean)
+  const surface = Array.from(
+    new Set(senas.map((t) => t.texto_detectado || t.texto_visible).filter(Boolean))
+  ).sort((a, b) => b.length - a.length)
   if (surface.length === 0) return texto
   const pattern = new RegExp(
     `(${surface.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
@@ -65,6 +67,7 @@ export default function ClaseDetailView() {
   const [modo, setModo] = useState('apunte')
   const [tamFuente, setTamFuente] = useState(() => Number(localStorage.getItem(FUENTE_KEY)) || 18)
   const [replayPos, setReplayPos] = useState(0)
+  const [senaIdx, setSenaIdx] = useState(0)
   const [replayPlaying, setReplayPlaying] = useState(false)
   const [replayVelocidad, setReplayVelocidad] = useState(1)
   const claseId = window.location.hash.split('/').pop()
@@ -89,6 +92,11 @@ export default function ClaseDetailView() {
   const senasActuales = modo === 'replay' && estables[replayPos]
     ? parseSenas(estables[replayPos].senas)
     : []
+  const senaActual = senasActuales[senaIdx] || null
+
+  useEffect(() => {
+    setSenaIdx(0)
+  }, [replayPos, modo])
 
   useEffect(() => {
     clearTimeout(timeoutRef.current)
@@ -230,8 +238,16 @@ export default function ClaseDetailView() {
 
         <section className="sala-video">
           <div className="sala-video__player">
-            {modo === 'replay' && senasActuales.length > 0 ? (
-              <SenaPlayer senas={senasActuales} />
+            {modo === 'replay' && senaActual ? (
+              <SenaPlayer
+                sena={senaActual}
+                playId={`${replayPos}-${senaIdx}`}
+                onEnded={() => {
+                  if (senaIdx + 1 < senasActuales.length) {
+                    setSenaIdx((i) => i + 1)
+                  }
+                }}
+              />
             ) : (
               <div className="sala-video__placeholder">
                 <div className="sala-video__placeholder-icon">

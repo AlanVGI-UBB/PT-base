@@ -40,7 +40,8 @@ def client(tmp_path, monkeypatch):
     )
     conn.execute(
         "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json) "
-        "VALUES (1, 2000, 'derivada', 1, '[{\"lema\": \"derivado\"}]')"
+        "VALUES (1, 2000, 'lista enlazada', 1, "
+        "'[{\"termino_id\": 1, \"texto_visible\": \"lista enlazada\", \"estado\": \"ensayo\", \"texto_detectado\": \"lista enlazada\"}]')"
     )
     conn.commit()
 

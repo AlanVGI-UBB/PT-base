@@ -5,6 +5,7 @@ import FinalizarModal from '../components/FinalizarModal'
 import Feedback from '../components/Feedback'
 import EstadoConexion from '../components/EstadoConexion'
 import SenaPlayer from '../components/SenaPlayer'
+import { useColaSenas } from '../hooks/useColaSenas'
 import { useWebSocket } from '../hooks/useWebSocket'
 
 const WS_BASE = import.meta.env.VITE_WS_URL
@@ -47,7 +48,9 @@ const IconoStop = ({ size = 18 }) => (
 
 function highlightText(texto, terminos) {
   if (!texto || !terminos || terminos.length === 0) return texto
-  const surface = terminos.map((t) => t.texto_visible).filter(Boolean)
+  const surface = Array.from(
+    new Set(terminos.map((t) => t.texto_detectado || t.texto_visible).filter(Boolean))
+  ).sort((a, b) => b.length - a.length)
   if (surface.length === 0) return texto
   const pattern = new RegExp(
     `(${surface.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
@@ -72,7 +75,7 @@ export default function SalaView({ roomId, user, onVolver }) {
   const [rol, setRol] = useState(null)
   const [determinando, setDeterminando] = useState(true)
   const [subtitulos, setSubtitulos] = useState([])
-  const [sena, setSena] = useState(null)
+  const { actual: senaActual, pendientes: senasPendientes, omitidas: senasOmitidas, playId: senaPlayId, encolar, alTerminar } = useColaSenas()
   const [grabando, setGrabando] = useState(false)
   const [pausado, setPausado] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
@@ -88,7 +91,6 @@ export default function SalaView({ roomId, user, onVolver }) {
   const ultimoAudioRef = useRef(0)
   const subtitulosRef = useRef(null)
   const intervalRef = useRef(null)
-  const senaTimeoutRef = useRef(null)
   const volverTimeoutRef = useRef(null)
   const finalizarFallbackRef = useRef(null)
 
@@ -130,9 +132,7 @@ export default function SalaView({ roomId, user, onVolver }) {
         return [...prev, entrada]
       })
       if (data.final && data.senas && data.senas.length > 0) {
-        setSena(data.senas)
-        clearTimeout(senaTimeoutRef.current)
-        senaTimeoutRef.current = setTimeout(() => setSena(null), 4000)
+        encolar(data.senas)
       }
     } else if (data.type === 'clase_finalizada') {
       clearTimeout(finalizarFallbackRef.current)
@@ -147,7 +147,7 @@ export default function SalaView({ roomId, user, onVolver }) {
       setFeedback({ tipo: 'error', mensaje })
       if (/token/i.test(mensaje)) expulsarSesion()
     }
-  }, [])
+  }, [encolar])
 
   const { ws: wsRef, estado: estadoWs, intentos, enviar, reintentar } = useWebSocket(wsUrl, {
     onMessage: manejarMensaje,
@@ -164,7 +164,6 @@ export default function SalaView({ roomId, user, onVolver }) {
       capturaRef.current?.detener()
       capturaRef.current = null
       clearInterval(intervalRef.current)
-      clearTimeout(senaTimeoutRef.current)
       clearTimeout(volverTimeoutRef.current)
       clearTimeout(finalizarFallbackRef.current)
     }
@@ -378,8 +377,8 @@ export default function SalaView({ roomId, user, onVolver }) {
 
         <section className="sala-video">
           <div className="sala-video__player">
-            {sena ? (
-              <SenaPlayer senas={sena} />
+            {senaActual ? (
+              <SenaPlayer sena={senaActual} playId={senaPlayId} onEnded={alTerminar} />
             ) : (
               <div className="sala-video__placeholder">
                 <div className="sala-video__placeholder-icon">
@@ -394,6 +393,17 @@ export default function SalaView({ roomId, user, onVolver }) {
               </div>
             )}
           </div>
+          {(senasPendientes.length > 0 || senasOmitidas > 0) && (
+            <div className="cola-senas" role="status">
+              <span>En cola: {senasPendientes.length}</span>
+              {senasOmitidas > 0 && (
+                <span>
+                  {' · '}
+                  {senasOmitidas} {senasOmitidas === 1 ? 'omitida' : 'omitidas'} · disponibles en el historial
+                </span>
+              )}
+            </div>
+          )}
         </section>
       </div>
 

@@ -28,18 +28,25 @@ def client(tmp_path, monkeypatch):
     from app.salas.manager import RoomManager
     RoomManager.limpiar()
 
+    from app.glossary.indice import limpiar_cache_indices
+    limpiar_cache_indices()
+
     init_schema()
 
     conn = get_connection()
-    conn.execute("INSERT INTO curso (id, cod_ramo, nombre) VALUES (1, 'INF-221', 'Calculo I')")
+    conn.execute("INSERT INTO curso (id, cod_ramo, nombre) VALUES (1, 'INF-221', 'Estructuras de Datos')")
     conn.execute(
         "INSERT INTO usuario (rut, password_hash, nombre, apellido) VALUES (?, ?, ?, ?)",
         ("11111111-1", hash_password("test123"), "Juan", "Perez"),
     )
     conn.execute("INSERT INTO inscripcion (rut, curso_id, seccion) VALUES ('11111111-1', 1, 'SEC1')")
     conn.execute(
-        "INSERT INTO termino (curso_id, lema, texto_visible, video_url, n_palabras) "
-        "VALUES (1, 'derivado', 'derivada', '/v/derivada.mp4', 1)"
+        "INSERT INTO termino (curso_id, texto_visible, formas_json, bloqueos_json, video_url, estado) "
+        "VALUES (1, 'lista enlazada', '[\"lista enlazada\", \"listas enlazadas\"]', '[]', '/v/lista.mp4', 'ensayo')"
+    )
+    conn.execute(
+        "INSERT INTO termino (curso_id, texto_visible, formas_json, bloqueos_json, video_url, estado) "
+        "VALUES (1, 'memoria', '[\"memoria\"]', '[\"de memoria\"]', '/v/memoria.mp4', 'ensayo')"
     )
     conn.commit()
 
@@ -131,7 +138,7 @@ class _FakeProviderProvisionalYFinal:
             if len(self.tramas_recibidas) == 1:
                 yield ResultadoASR(
                     segmento_id=7,
-                    texto="hoy vemos derivada",
+                    texto="hoy vemos lista",
                     estable=False,
                     inicio_ms=0,
                     fin_ms=1000,
@@ -139,15 +146,15 @@ class _FakeProviderProvisionalYFinal:
             elif len(self.tramas_recibidas) == 2:
                 yield ResultadoASR(
                     segmento_id=7,
-                    texto="hoy vemos la derivada",
+                    texto="hoy vemos las listas enlazadas",
                     estable=True,
                     inicio_ms=0,
                     fin_ms=1600,
                 )
-        # Vaciado al finalizar (R13): emite un último segmento al cerrar audio_iter
+        # Vaciado al finalizar (R13): emite un último segmento con bloqueo al cerrar audio_iter
         yield ResultadoASR(
             segmento_id=8,
-            texto="última frase pendiente",
+            texto="no estudien de memoria",
             estable=True,
             inicio_ms=1600,
             fin_ms=2200,
@@ -175,7 +182,9 @@ def test_handler_provisional_no_persiste_ni_matchea_y_vaciado_final(client, monk
             assert ev_fin["segment_id"] == 7
             assert ev_fin["final"] is True
             assert len(ev_fin["senas"]) == 1
-            assert ev_fin["senas"][0]["texto_visible"] == "derivada"
+            assert ev_fin["senas"][0]["texto_visible"] == "lista enlazada"
+            assert ev_fin["senas"][0]["texto_detectado"] == "listas enlazadas"
+            assert ev_fin["senas"][0]["estado"] == "ensayo"
 
             em.send_text(json.dumps({"action": "finalizar", "titulo": "Con vaciado"}))
 
@@ -183,23 +192,29 @@ def test_handler_provisional_no_persiste_ni_matchea_y_vaciado_final(client, monk
             assert ev_flush["type"] == "segmento"
             assert ev_flush["segment_id"] == 8
             assert ev_flush["final"] is True
-            assert ev_flush["texto"] == "última frase pendiente"
+            assert ev_flush["texto"] == "no estudien de memoria"
+            assert ev_flush["senas"] == []
+            assert "abstenciones" not in ev_flush
 
             fin = lis.receive_json()
             assert fin["type"] == "clase_finalizada"
 
-    assert fake.contexto_recibido == ["derivada"]
+    assert fake.contexto_recibido == ["lista enlazada", "memoria"]
     assert len(fake.tramas_recibidas) == 2
 
     conn = get_connection()
     eventos = conn.execute(
-        "SELECT texto, estable FROM evento_clase WHERE clase_id = 1 ORDER BY id"
+        "SELECT texto, estable, abstenciones_json FROM evento_clase WHERE clase_id = 1 ORDER BY id"
     ).fetchall()
     assert len(eventos) == 2
-    assert eventos[0]["texto"] == "hoy vemos la derivada"
+    assert eventos[0]["texto"] == "hoy vemos las listas enlazadas"
     assert eventos[0]["estable"] == 1
-    assert eventos[1]["texto"] == "última frase pendiente"
+    assert json.loads(eventos[0]["abstenciones_json"]) == []
+    assert eventos[1]["texto"] == "no estudien de memoria"
     assert eventos[1]["estable"] == 1
+    assert json.loads(eventos[1]["abstenciones_json"]) == [
+        {"bloqueo": "de memoria", "texto_detectado": "de memoria"}
+    ]
 
 
 def test_rechazo_tramas_fuera_de_contrato(client, monkeypatch, caplog):

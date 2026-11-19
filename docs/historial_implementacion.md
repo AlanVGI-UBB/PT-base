@@ -881,7 +881,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-19 — Congelamiento de partición de prueba protegida (`ml/datos/`)
+## 2026-11-19 — `04c6c7f` — Congelamiento de partición de prueba protegida (`ml/datos/`)
 **Refs:** SPEC-008 `specs/SPEC-008-mediciones-poc.md` (R11–R12, previo a SPEC-007)
 
 **Resumen:** Se redactó y congeló la partición de prueba protegida (`66` frases) junto a la partición de ajuste (`36` frases) en `ml/datos/frases_anotadas.jsonl` antes de definir formas y bloqueos del glosario piloto en SPEC-007, evitando sesgo de evaluación (`RNF04`).
@@ -892,3 +892,36 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - Este archivo — hash `7c72e00` registrado en la entrada anterior.
 
 **Verificación:** validación JSONL por script (`{'prueba': 66, 'ajuste': 36}`, todos los conceptos pertenecen al inventario de 15 términos).
+
+---
+
+## 2026-11-19 — Glosario piloto provisional, clips de ensayo y motor de coincidencia
+**Refs:** SPEC-007 `specs/SPEC-007-glosario-piloto-clips-ensayo-matching.md` (Completada)
+
+**Resumen:** Se redefinió el glosario de la PoC en torno a un único curso piloto provisional (`INF-221`, 15 conceptos) más un curso de control sin términos (`MAT-101`), se generaron y versionaron 15 clips MP4 de ensayo sin personas, se reemplazaron los lemas manuales por un índice automático con doble clave (lemas + formas) y bloqueos con registro de abstenciones, y se incorporó una cola acotada en el cliente sin bucle ni truncamiento a 4 segundos.
+
+**Cambios:**
+- **Seed, esquema y clips (`backend/data/`, `backend/scripts/`, `.gitignore`):**
+  - `schema.sql`, `app/core/db.py` — `termino` reemplaza `lema`/`n_palabras` por `formas_json`, `bloqueos_json` y `estado` (`ensayo | publicado | retirado`); `evento_clase` añade `abstenciones_json` con migración automática.
+  - `seed_glosario.json`, `scripts/seed_glosario.py` — curso piloto provisional `INF-221` (*Estructuras de Datos*, 15 conceptos en `estado="ensayo"`) y curso de control `MAT-101` sin términos; nota de provisionalidad sin acuerdo con PIESDI; validación de índice sin claves ambiguas.
+  - `scripts/generar_clips_ensayo.py` — **nuevo**: genera MP4 H.264 640×360 de 3 s con `ffmpeg` (`"CLIP DE ENSAYO"` + concepto, sin personas, sin sobrescribir salvo `--forzar`).
+  - `.gitignore` — retirada `backend/data/videos_senas/` y versionados los 15 clips de ensayo (eliminados los 12 placeholders de 28 bytes).
+- **Motor NLP y sala (`backend/app/`):**
+  - `glossary/indice.py` — **nuevo**: `construir_indice()` (doble clave lema/forma, omite retirados, detecta claves ambiguas y colisiones de bloqueos) y `obtener_indice_curso()` con caché por `(DB_PATH, curso_id)`.
+  - `glossary/matching.py`, `glossary/repository.py` — `buscar_terminos()` con doble clave y n-gramas dinámicos, recuperación de `texto_detectado` original y `Coincidencias(senas, abstenciones)` (bloqueos conservan preposiciones/artículos como `"de memoria"`).
+  - `salas/manager.py`, `historial/repository.py`, `main.py`, `asr/stub.py` — `RoomState.indice`, persistencia de `abstenciones_json` sin difundirlas por WebSocket, filtro de retirados en prompt Whisper y frases de stub adaptadas a `INF-221`.
+- **Frontend (`frontend/src/`):**
+  - `hooks/useColaSenas.js` — **nuevo**: cola secuencial de hasta 3 pendientes (descarta la más antigua sumando `omitidas`) y supresión de menciones repetidas dentro de 20 s tras finalizar.
+  - `components/SenaPlayer.jsx` — reproducción única sin `loop`, avance por `onEnded` (con fallback si `onError`), y rótulo `"Clip de ensayo · sin validación lingüística"` para `estado="ensayo"`.
+  - `views/SalaView.jsx`, `views/ClaseDetailView.jsx`, `App.css` — integración de `useColaSenas`, contador visible `"disponibles en el historial"`, resaltado por `texto_detectado`, y replay secuencial único.
+- **Tests y documentación (`backend/tests/`, `README.md`, `docs/`):**
+  - `test_indice.py`, `test_seed.py` — **nuevos**; `test_matching.py` reescrito; `test_schema.py`, `test_sala.py` y `test_historial.py` actualizados.
+  - `README.md`, `specs/README.md`, `specs/SPEC-007-...md` — declaración explícita de provisionalidad y estado de la spec.
+  - `docs/documentacion_prototipo_defensa.md` — actualizada hasta `SPEC-007` y el congelamiento previo de la partición `"prueba"` (`04c6c7f`).
+
+**Verificación:**
+- `ruff check backend` → `All checks passed!`
+- `pytest backend/tests` → 54 passed, 1 skipped (`@pytest.mark.modelo`).
+- `pnpm --prefix frontend build` → OK (46 módulos, PWA generada).
+- Pruebas extra: `generar_clips_ensayo.py` (15 MP4 H.264 640×360 3 s validados con `ffprobe`), `seed_glosario.py`, y simulación en Node de `useColaSenas` (cola máx 3, descartes, ventana 20 s).
+- Pendiente por entorno: verificación en clon limpio con `docker compose build` (daemon Docker apagado) y prueba manual interactiva en navegador.

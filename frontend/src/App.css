@@ -569,8 +569,10 @@ input[type="text"], input[type="password"], select {
 /* ===== VIDEO ===== */
 .sala-video {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.75rem;
   background: var(--bg);
   position: relative;
   padding: 2rem;
@@ -1291,6 +1293,32 @@ input[type="text"], input[type="password"], select {
   color: var(--muted);
   font-size: 0.9rem;
   text-align: center;
+}
+
+.sena-ensayo {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 2;
+  background: rgba(13, 17, 23, 0.85);
+  border: 1px solid rgba(210, 153, 34, 0.45);
+  color: #e3b341;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cola-senas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--panel-border-soft);
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 /* ===== ESTADO EN VIVO (DASHBOARD) ===== */

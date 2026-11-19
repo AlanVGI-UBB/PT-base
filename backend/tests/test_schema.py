@@ -31,13 +31,15 @@ def test_insert_curso(conn):
 
 def test_insert_termino(conn):
     conn.execute(
-        "INSERT INTO termino (curso_id, lema, texto_visible, video_url, n_palabras) "
-        "VALUES (1, 'derivada', 'derivada', '/v/derivada.mp4', 1)"
+        "INSERT INTO termino (curso_id, texto_visible, formas_json, bloqueos_json, video_url, estado) "
+        "VALUES (1, 'lista enlazada', '[\"lista enlazada\"]', '[]', '/v/lista_enlazada.mp4', 'ensayo')"
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM termino WHERE lema = 'derivada'").fetchone()
-    assert row["texto_visible"] == "derivada"
-    assert row["n_palabras"] == 1
+    row = conn.execute(
+        "SELECT * FROM termino WHERE texto_visible = 'lista enlazada'"
+    ).fetchone()
+    assert row["texto_visible"] == "lista enlazada"
+    assert row["estado"] == "ensayo"
 
 
 def test_schema_idempotent(db_path):
@@ -72,8 +74,8 @@ def test_nuevas_tablas(db_path):
         "VALUES ('INF-221-SEC1', 1, 'SEC1', '11-1', '2026-01-01')"
     )
     conn.execute(
-        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json) "
-        "VALUES (1, 0, 'test', 1, '[]')"
+        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json, abstenciones_json) "
+        "VALUES (1, 0, 'test', 1, '[]', '[]')"
     )
     conn.commit()
     row = conn.execute("SELECT * FROM usuario").fetchone()

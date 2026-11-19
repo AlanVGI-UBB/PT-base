@@ -33,12 +33,13 @@ def guardar_evento(
     texto: str,
     estable: bool,
     senas_json: str,
+    abstenciones_json: str = "[]",
 ) -> None:
     conn = get_connection()
     conn.execute(
-        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (clase_id, timestamp_ms, texto, 1 if estable else 0, senas_json),
+        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json, abstenciones_json) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (clase_id, timestamp_ms, texto, 1 if estable else 0, senas_json, abstenciones_json),
     )
     conn.commit()
 

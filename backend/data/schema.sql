@@ -7,10 +7,11 @@ CREATE TABLE IF NOT EXISTS curso (
 CREATE TABLE IF NOT EXISTS termino (
     id INTEGER PRIMARY KEY,
     curso_id INTEGER NOT NULL REFERENCES curso(id),
-    lema TEXT NOT NULL,
     texto_visible TEXT NOT NULL,
+    formas_json TEXT NOT NULL,
+    bloqueos_json TEXT NOT NULL DEFAULT '[]',
     video_url TEXT NOT NULL,
-    n_palabras INTEGER DEFAULT 1
+    estado TEXT NOT NULL DEFAULT 'ensayo' CHECK (estado IN ('ensayo', 'publicado', 'retirado'))
 );
 
 CREATE TABLE IF NOT EXISTS sesion (
@@ -62,5 +63,6 @@ CREATE TABLE IF NOT EXISTS evento_clase (
     timestamp_ms INTEGER NOT NULL,
     texto TEXT,
     estable INTEGER DEFAULT 0,
-    senas_json TEXT
+    senas_json TEXT,
+    abstenciones_json TEXT
 );

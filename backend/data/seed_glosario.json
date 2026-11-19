@@ -1,9 +1,8 @@
 {
+    "nota": "Curso piloto y glosario PROVISIONALES para la PoC. Sin acuerdo con PIESDI ni validación lingüística.",
     "cursos": [
         {"id": 1, "cod_ramo": "INF-221", "nombre": "Estructuras de Datos"},
-        {"id": 2, "cod_ramo": "MAT-101", "nombre": "Álgebra Lineal"},
-        {"id": 3, "cod_ramo": "FIS-110", "nombre": "Física General"},
-        {"id": 4, "cod_ramo": "HUM-105", "nombre": "Ética Profesional"}
+        {"id": 2, "cod_ramo": "MAT-101", "nombre": "Álgebra Lineal"}
     ],
     "usuarios": [
         {"rut": "12345678-5", "password": "test123", "nombre": "Juan", "apellido": "Pérez"},
@@ -12,42 +11,129 @@
     "inscripciones": [
         {"rut": "12345678-5", "curso_id": 1, "seccion": "1"},
         {"rut": "12345678-5", "curso_id": 2, "seccion": "3"},
-        {"rut": "12345678-5", "curso_id": 3, "seccion": "2"},
-        {"rut": "12345678-5", "curso_id": 4, "seccion": "1"},
         {"rut": "9876543-3", "curso_id": 1, "seccion": "1"},
-        {"rut": "9876543-3", "curso_id": 2, "seccion": "3"},
-        {"rut": "9876543-3", "curso_id": 3, "seccion": "2"},
-        {"rut": "9876543-3", "curso_id": 4, "seccion": "1"}
+        {"rut": "9876543-3", "curso_id": 2, "seccion": "3"}
     ],
     "terminos": [
-        {"curso_id": 1, "lema": "derivado", "texto_visible": "derivada", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "integral", "texto_visible": "integral", "video_url": "/data/videos_senas/integral.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "raíz cuadrado", "texto_visible": "raíz cuadrada", "video_url": "/data/videos_senas/raiz_cuadrada.mp4", "n_palabras": 2},
-        {"curso_id": 1, "lema": "límite", "texto_visible": "límite", "video_url": "/data/videos_senas/limite.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "teorema valor medio", "texto_visible": "teorema del valor medio", "video_url": "/data/videos_senas/teorema_vm.mp4", "n_palabras": 3},
-        {"curso_id": 1, "lema": "función continuo", "texto_visible": "función continua", "video_url": "/data/videos_senas/funcion_continua.mp4", "n_palabras": 2},
-        {"curso_id": 1, "lema": "ecuación", "texto_visible": "ecuación", "video_url": "/data/videos_senas/ecuacion.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "hablar", "texto_visible": "hablar", "video_url": "/data/videos_senas/hablar.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "resultado", "texto_visible": "resultado", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
-        {"curso_id": 1, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
-        {"curso_id": 2, "lema": "vector", "texto_visible": "vector", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
-        {"curso_id": 2, "lema": "matriz", "texto_visible": "matriz", "video_url": "/data/videos_senas/integral.mp4", "n_palabras": 1},
-        {"curso_id": 2, "lema": "ecuación", "texto_visible": "ecuación", "video_url": "/data/videos_senas/ecuacion.mp4", "n_palabras": 1},
-        {"curso_id": 2, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
-        {"curso_id": 2, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
-        {"curso_id": 2, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
-        {"curso_id": 3, "lema": "fuerza", "texto_visible": "fuerza", "video_url": "/data/videos_senas/derivada.mp4", "n_palabras": 1},
-        {"curso_id": 3, "lema": "velocidad", "texto_visible": "velocidad", "video_url": "/data/videos_senas/integral.mp4", "n_palabras": 1},
-        {"curso_id": 3, "lema": "energía", "texto_visible": "energía", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
-        {"curso_id": 3, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
-        {"curso_id": 3, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1},
-        {"curso_id": 3, "lema": "resultado", "texto_visible": "resultado", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
-        {"curso_id": 4, "lema": "ética", "texto_visible": "ética", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
-        {"curso_id": 4, "lema": "valor", "texto_visible": "valor", "video_url": "/data/videos_senas/resultado.mp4", "n_palabras": 1},
-        {"curso_id": 4, "lema": "duda", "texto_visible": "duda", "video_url": "/data/videos_senas/duda.mp4", "n_palabras": 1},
-        {"curso_id": 4, "lema": "clase", "texto_visible": "clase", "video_url": "/data/videos_senas/clase.mp4", "n_palabras": 1},
-        {"curso_id": 4, "lema": "ejercicio", "texto_visible": "ejercicio", "video_url": "/data/videos_senas/ejercicio.mp4", "n_palabras": 1}
+        {
+            "curso_id": 1,
+            "concepto": "arreglo",
+            "formas": ["arreglo", "arreglos"],
+            "bloqueos": ["llegar a un arreglo"],
+            "video": "arreglo.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "lista enlazada",
+            "formas": ["lista enlazada", "listas enlazadas", "lista ligada", "listas ligadas"],
+            "bloqueos": [],
+            "video": "lista_enlazada.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "pila",
+            "formas": ["pila", "pilas"],
+            "bloqueos": ["pila de cuadernos", "pila de libros", "pila de hojas", "pila del control"],
+            "video": "pila.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "cola",
+            "formas": ["cola", "colas"],
+            "bloqueos": ["cola de estudiantes", "cola para entrar", "hacer cola"],
+            "video": "cola.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "árbol binario",
+            "formas": ["árbol binario", "árboles binarios"],
+            "bloqueos": [],
+            "video": "arbol_binario.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "nodo",
+            "formas": ["nodo", "nodos"],
+            "bloqueos": [],
+            "video": "nodo.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "puntero",
+            "formas": ["puntero", "punteros"],
+            "bloqueos": [],
+            "video": "puntero.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "grafo",
+            "formas": ["grafo", "grafos"],
+            "bloqueos": [],
+            "video": "grafo.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "tabla hash",
+            "formas": ["tabla hash", "tablas hash"],
+            "bloqueos": [],
+            "video": "tabla_hash.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "recursión",
+            "formas": ["recursión", "recursivo", "recursiva", "recursivos", "recursivas"],
+            "bloqueos": [],
+            "video": "recursion.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "algoritmo",
+            "formas": ["algoritmo", "algoritmos"],
+            "bloqueos": [],
+            "video": "algoritmo.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "complejidad",
+            "formas": ["complejidad"],
+            "bloqueos": [],
+            "video": "complejidad.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "ordenamiento",
+            "formas": ["ordenamiento", "ordenar"],
+            "bloqueos": [],
+            "video": "ordenamiento.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "búsqueda binaria",
+            "formas": ["búsqueda binaria", "búsquedas binarias"],
+            "bloqueos": [],
+            "video": "busqueda_binaria.mp4",
+            "estado": "ensayo"
+        },
+        {
+            "curso_id": 1,
+            "concepto": "memoria",
+            "formas": ["memoria"],
+            "bloqueos": ["de memoria", "mala memoria", "en memoria de"],
+            "video": "memoria.mp4",
+            "estado": "ensayo"
+        }
     ]
 }

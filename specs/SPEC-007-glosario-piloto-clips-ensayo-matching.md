@@ -1,7 +1,7 @@
 # SPEC-007 — Glosario del curso piloto provisional, clips de ensayo y motor de coincidencia
 
 **Etapa del plan:** Semestre 1 · Etapa 2 (glosario y esquema) y Etapa 3 (PoC con 10–15 términos) de `docs/plan_desarrollo_tecnico.md`. Propuesta: actividad AP Obj. 3 Act. 1 ("Pruebas preliminares del pipeline NLP con spaCy para validación PoC"). Informe: RF13, RF14, RF17, RF18, RN05–RN08, RN10, RN12, §2.2.2, §4.1.4 y §4.2.2.
-**Estado:** Borrador
+**Estado:** Completada — verificado (`ruff check backend`, `pytest backend/tests` 54 passed + 1 skipped, `pnpm --prefix frontend build` OK, 15 clips generados y seed sembrado; pendiente prueba con Docker daemon y prueba manual en navegador)
 **Depende de:** SPEC-006 (el matching se ejecuta solo sobre texto final)
 
 ---
