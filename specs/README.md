@@ -61,7 +61,7 @@ Comandos/procedimientos para validar la implementación.
 | SPEC-003 | PWA: vistas profesor y alumno + captura de audio + reproducción de señas | Completada |
 | SPEC-004 | Perfil único centrado en el estudiante + sesiones en vivo con fan-out + historial con replay | Completada |
 | SPEC-005 | Mejoras de UX: feedback de conexión, reproducción de señas y errores visibles | Completada |
-| SPEC-006 | Transcripción real: captura PCM en el navegador + faster-whisper local | Borrador |
+| SPEC-006 | Transcripción real: captura PCM en el navegador + faster-whisper local | Completada |
 | SPEC-007 | Glosario del curso piloto provisional, clips de ensayo y motor de coincidencia | Borrador |
 | SPEC-008 | Mediciones de la prueba de concepto: transcripción, coincidencia y distribución | Borrador |
 | SPEC-009 | Acceso por inscripción, permiso de captura, estado de sesión y saneamiento | Borrador |

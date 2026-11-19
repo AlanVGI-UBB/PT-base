@@ -8,7 +8,11 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
-      - ASR_PROVIDER=stub
+      - ASR_PROVIDER=${ASR_PROVIDER:-stub}
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - WHISPER_DEVICE=${WHISPER_DEVICE:-cpu}
+    volumes:
+      - whisper_cache:/root/.cache/huggingface
     restart: unless-stopped
 
   frontend:
@@ -24,6 +28,7 @@ services:
       - "80:80"
     environment:
       - CERT_HOST=${CERT_HOST:-localhost}
+      - BACKEND_UPSTREAM=${BACKEND_UPSTREAM:-backend:8000}
     depends_on:
       - backend
     restart: unless-stopped
@@ -42,3 +47,6 @@ services:
         condition: service_started
       frontend:
         condition: service_started
+
+volumes:
+  whisper_cache:

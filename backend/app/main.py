@@ -11,7 +11,7 @@ from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.asr.base import get_asr_provider
+from app.asr.base import AsrConfigError, get_asr_provider
 from app.auth.routes import router as auth_router
 from app.core.auth import obtener_rut, verificar_token
 from app.core.config import get_settings
@@ -32,7 +32,12 @@ DATA_DIR = BASE_DIR / "data"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ensure_schema()
-    yield
+    if get_settings().ASR_PROVIDER == "whisper":
+        get_asr_provider()
+    try:
+        yield
+    finally:
+        RoomManager.limpiar()
 
 
 app = FastAPI(title="Puente LSCh API", version="0.3.0", lifespan=lifespan)
@@ -130,7 +135,23 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
             await ws.close()
             return
 
+        try:
+            provider = get_asr_provider()
+        except AsrConfigError as exc:
+            await ws.send_json({"type": "error", "mensaje": str(exc)})
+            await ws.close()
+            return
+
+        settings = get_settings()
+        max_trama_bytes = settings.ASR_MAX_TRAMA_BYTES
+        flush_timeout_s = settings.ASR_FLUSH_TIMEOUT_MS / 1000.0
         glosario = get_glosario_por_lema(curso_id)
+        contexto = (
+            [t["texto_visible"] for t in glosario.values()]
+            if settings.ASR_PROMPT_GLOSARIO
+            else None
+        )
+
         sala = await RoomManager.crear(room_id, curso_id, seccion, rut, ws, glosario)
         inicio_iso = datetime.now(timezone.utc).isoformat()
         clase_id_db = crear_clase(room_id, curso_id, seccion, rut, inicio_iso)
@@ -138,54 +159,85 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
 
         logger.info("Sala %s creada por %s (clase %d)", room_id, rut, clase_id_db)
 
-        provider = get_asr_provider()
         t_inicio = int(time.time() * 1000)
-        segmento_idx = 0
-        audio_queue: asyncio.Queue = asyncio.Queue()
+        audio_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
         stop_event = asyncio.Event()
-        session_state: dict = {"titulo": None, "finalizar": False, "disconectado": False}
+        session_state: dict = {
+            "titulo": None,
+            "finalizar": False,
+            "disconectado": False,
+            "trama_invalida_registrada": False,
+        }
 
         async def _receiver():
-            while True:
-                msg = await ws.receive()
-                if msg["type"] == "websocket.disconnect":
-                    session_state["disconectado"] = True
-                    stop_event.set()
-                    return
-                if "bytes" in msg:
-                    await audio_queue.put(msg["bytes"])
-                elif "text" in msg:
-                    try:
-                        data = json.loads(msg["text"])
-                        if data.get("action") == "finalizar":
-                            session_state["titulo"] = data.get("titulo")
-                            session_state["finalizar"] = True
-                            stop_event.set()
-                            return
-                    except (json.JSONDecodeError, TypeError):
-                        pass
+            try:
+                while True:
+                    msg = await ws.receive()
+                    if msg["type"] == "websocket.disconnect":
+                        session_state["disconectado"] = True
+                        stop_event.set()
+                        return
+                    trama = msg.get("bytes")
+                    if trama is not None:
+                        if len(trama) % 2 != 0 or len(trama) > max_trama_bytes:
+                            if not session_state["trama_invalida_registrada"]:
+                                logger.warning(
+                                    "Sala %s: trama de audio inválida (%d bytes); descartando",
+                                    room_id,
+                                    len(trama),
+                                )
+                                session_state["trama_invalida_registrada"] = True
+                            continue
+                        if len(trama) == 0:
+                            continue
+                        await audio_queue.put(trama)
+                    elif msg.get("text") is not None:
+                        try:
+                            data = json.loads(msg["text"])
+                            if data.get("action") == "finalizar":
+                                session_state["titulo"] = data.get("titulo")
+                                session_state["finalizar"] = True
+                                await audio_queue.put(None)
+                                return
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+            except (WebSocketDisconnect, RuntimeError):
+                session_state["disconectado"] = True
+                stop_event.set()
 
         async def _audio_gen():
             while True:
                 chunk = await audio_queue.get()
+                if chunk is None:
+                    return
                 yield chunk
 
         async def _transcribir():
-            nonlocal segmento_idx
-            async for resultado in provider.transcribe_stream(_audio_gen()):
+            async for resultado in provider.transcribe_stream(
+                _audio_gen(),
+                contexto=contexto,
+            ):
                 if stop_event.is_set():
                     break
                 if not resultado.texto.strip():
                     continue
-                segmento_idx += 1
                 ts_ms = int(time.time() * 1000) - t_inicio
-                senas = buscar_terminos(resultado.texto, sala.glosario_por_lema)
-                senas_json = json.dumps(senas, ensure_ascii=False)
-                guardar_evento(clase_id_db, ts_ms, resultado.texto, resultado.estable, senas_json)
+                if resultado.estable:
+                    senas = buscar_terminos(resultado.texto, sala.glosario_por_lema)
+                    senas_json = json.dumps(senas, ensure_ascii=False)
+                    guardar_evento(
+                        clase_id_db,
+                        ts_ms,
+                        resultado.texto,
+                        True,
+                        senas_json,
+                    )
+                else:
+                    senas = []
 
                 evento = {
                     "type": "segmento",
-                    "segment_id": segmento_idx,
+                    "segment_id": resultado.segmento_id,
                     "texto": resultado.texto,
                     "final": resultado.estable,
                     "senas": senas,
@@ -213,6 +265,17 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 {receiver_task, transcribe_task},
                 return_when=asyncio.FIRST_COMPLETED,
             )
+            if session_state["finalizar"] and not transcribe_task.done():
+                try:
+                    await asyncio.wait_for(transcribe_task, timeout=flush_timeout_s)
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Sala %s: vaciado final superó %d ms; abandonando transcripción pendiente",
+                        room_id,
+                        settings.ASR_FLUSH_TIMEOUT_MS,
+                    )
+                except Exception as exc:
+                    logger.error("Error en vaciado de sala %s: %s", room_id, exc)
             if transcribe_task.done() and not transcribe_task.cancelled():
                 exc = transcribe_task.exception()
                 if exc:
@@ -220,44 +283,43 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         except BaseException:
             pass
         finally:
-            stop_event.set()
-            for t in (transcribe_task, receiver_task):
-                if not t.done():
-                    t.cancel()
-            for t in (transcribe_task, receiver_task):
-                with contextlib.suppress(BaseException):
-                    await t
-
-            if session_state["disconectado"] and not session_state["finalizar"]:
-                timeout_ms = get_settings().SALA_TIMEOUT_MS
-                logger.info(
-                    "Sala %s: emisor desconectado sin finalizar; cierre en %d ms",
-                    room_id,
-                    timeout_ms,
-                )
-                await RoomManager.broadcast(
-                    room_id,
-                    {
-                        "type": "emisor_desconectado",
-                        "mensaje": "El emisor se desconectó. La clase se guardará automáticamente.",
-                    },
-                )
-                await asyncio.sleep(timeout_ms / 1000)
-
-            fin_iso = datetime.now(timezone.utc).isoformat()
-            duracion = int(time.time() * 1000) - t_inicio
-            titulo = session_state["titulo"]
-            if titulo is not None:
-                titulo = titulo.strip() or None
-            finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
-            await _cerrar_listeners({"type": "clase_finalizada", "clase_id": clase_id_db})
-            logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
-
-            await RoomManager.eliminar(room_id)
             try:
-                await ws.close()
-            except Exception:
-                pass
+                stop_event.set()
+                for t in (transcribe_task, receiver_task):
+                    if not t.done():
+                        t.cancel()
+                for t in (transcribe_task, receiver_task):
+                    with contextlib.suppress(BaseException):
+                        await t
+
+                if session_state["disconectado"] and not session_state["finalizar"]:
+                    timeout_ms = settings.SALA_TIMEOUT_MS
+                    logger.info(
+                        "Sala %s: emisor desconectado sin finalizar; cierre en %d ms",
+                        room_id,
+                        timeout_ms,
+                    )
+                    await RoomManager.broadcast(
+                        room_id,
+                        {
+                            "type": "emisor_desconectado",
+                            "mensaje": "El emisor se desconectó. La clase se guardará automáticamente.",
+                        },
+                    )
+                    await asyncio.sleep(timeout_ms / 1000)
+
+                fin_iso = datetime.now(timezone.utc).isoformat()
+                duracion = int(time.time() * 1000) - t_inicio
+                titulo = session_state["titulo"]
+                if titulo is not None:
+                    titulo = titulo.strip() or None
+                finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
+                await _cerrar_listeners({"type": "clase_finalizada", "clase_id": clase_id_db})
+                logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
+            finally:
+                await RoomManager.eliminar(room_id)
+                with contextlib.suppress(Exception):
+                    await ws.close()
 
     elif rol == "listener":
         if not await RoomManager.existe(room_id):

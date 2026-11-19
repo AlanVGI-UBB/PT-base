@@ -3,6 +3,10 @@ set -e
 
 HOST=${CERT_HOST:-localhost}
 CERT_DIR=/etc/nginx/certs
+UPSTREAM=${BACKEND_UPSTREAM:-backend:8000}
+
+mkdir -p /etc/nginx/conf.d
+sed "s|\${BACKEND_UPSTREAM}|$UPSTREAM|g" /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
 if [ ! -f "$CERT_DIR/cert.pem" ]; then
     mkdir -p "$CERT_DIR"

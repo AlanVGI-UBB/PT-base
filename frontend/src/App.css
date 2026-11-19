@@ -1327,3 +1327,23 @@ input[type="text"], input[type="password"], select {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* ===== NIVEL DE AUDIO ===== */
+.nivel-audio {
+  display: inline-block;
+  width: 72px;
+  height: 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--panel-border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.nivel-audio__barra {
+  display: block;
+  height: 100%;
+  background: var(--success);
+  border-radius: 999px;
+  transition: width 80ms linear;
+}

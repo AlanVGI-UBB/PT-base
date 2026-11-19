@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchSalaEstado, expulsarSesion, getToken } from '../api/cliente'
+import { iniciar as iniciarCapturaPcm } from '../audio/capturaPcm'
 import FinalizarModal from '../components/FinalizarModal'
 import Feedback from '../components/Feedback'
 import EstadoConexion from '../components/EstadoConexion'
@@ -12,6 +13,8 @@ const WS_ORIGIN = typeof window !== 'undefined'
   : 'ws://localhost:8000'
 const WS_URL = WS_BASE === undefined ? 'ws://localhost:8000' : (WS_BASE || WS_ORIGIN)
 const FUENTE_KEY = 'puente_lsch_font_size'
+const UMBRAL_SILENCIO = 0.004
+const SILENCIO_AVISO_MS = 10000
 
 const IconoMicrofono = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -72,18 +75,22 @@ export default function SalaView({ roomId, user, onVolver }) {
   const [sena, setSena] = useState(null)
   const [grabando, setGrabando] = useState(false)
   const [pausado, setPausado] = useState(false)
+  const [finalizando, setFinalizando] = useState(false)
+  const [nivelAudio, setNivelAudio] = useState(0)
+  const [sinAudio, setSinAudio] = useState(false)
   const [sesionIniciada, setSesionIniciada] = useState(false)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [tiempo, setTiempo] = useState(0)
   const [tamFuente, setTamFuente] = useState(() => Number(localStorage.getItem(FUENTE_KEY)) || 18)
 
-  const recorderRef = useRef(null)
-  const streamRef = useRef(null)
+  const capturaRef = useRef(null)
+  const ultimoAudioRef = useRef(0)
   const subtitulosRef = useRef(null)
   const intervalRef = useRef(null)
   const senaTimeoutRef = useRef(null)
   const volverTimeoutRef = useRef(null)
+  const finalizarFallbackRef = useRef(null)
 
   useEffect(() => {
     if (!roomId || !user) return
@@ -107,31 +114,32 @@ export default function SalaView({ roomId, user, onVolver }) {
 
   const manejarMensaje = useCallback((data) => {
     if (data.type === 'segmento') {
-      if (data.final) {
-        setSubtitulos((prev) => [
-          ...prev,
-          { id: data.segment_id, texto: data.texto, final: true, terminos: data.senas || [] },
-        ])
-        if (data.senas && data.senas.length > 0) {
-          setSena(data.senas)
-          clearTimeout(senaTimeoutRef.current)
-          senaTimeoutRef.current = setTimeout(() => setSena(null), 4000)
+      setSubtitulos((prev) => {
+        const entrada = {
+          id: data.segment_id,
+          texto: data.texto,
+          final: Boolean(data.final),
+          terminos: data.final ? (data.senas || []) : [],
         }
-      } else {
-        setSubtitulos((prev) => {
+        const idx = prev.findIndex((s) => s.id === data.segment_id)
+        if (idx !== -1) {
           const copia = [...prev]
-          const last = copia[copia.length - 1]
-          if (last && !last.final) {
-            copia[copia.length - 1] = { ...last, texto: data.texto }
-          } else {
-            copia.push({ id: data.segment_id, texto: data.texto, final: false, terminos: [] })
-          }
+          copia[idx] = entrada
           return copia
-        })
+        }
+        return [...prev, entrada]
+      })
+      if (data.final && data.senas && data.senas.length > 0) {
+        setSena(data.senas)
+        clearTimeout(senaTimeoutRef.current)
+        senaTimeoutRef.current = setTimeout(() => setSena(null), 4000)
       }
     } else if (data.type === 'clase_finalizada') {
+      clearTimeout(finalizarFallbackRef.current)
+      setFinalizando(false)
+      setSesionIniciada(false)
       setFeedback({ tipo: 'info', mensaje: 'La clase terminó y se guardó en tu historial' })
-      volverTimeoutRef.current = setTimeout(() => { window.location.hash = '#/dashboard' }, 3000)
+      volverTimeoutRef.current = setTimeout(() => { window.location.hash = '#/dashboard' }, 2500)
     } else if (data.type === 'emisor_desconectado') {
       setFeedback({ tipo: 'warning', mensaje: data.mensaje || 'El emisor se desconectó. La clase se guardará automáticamente.' })
     } else if (data.type === 'error') {
@@ -153,27 +161,37 @@ export default function SalaView({ roomId, user, onVolver }) {
 
   useEffect(() => {
     return () => {
+      capturaRef.current?.detener()
+      capturaRef.current = null
       clearInterval(intervalRef.current)
       clearTimeout(senaTimeoutRef.current)
       clearTimeout(volverTimeoutRef.current)
+      clearTimeout(finalizarFallbackRef.current)
     }
   }, [])
 
   const iniciar = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      streamRef.current = stream
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : ''
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {})
-      recorderRef.current = recorder
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(e.data)
-        }
-      }
-      recorder.start(250)
+      ultimoAudioRef.current = Date.now()
+      setSinAudio(false)
+      setNivelAudio(0)
+      const captura = await iniciarCapturaPcm({
+        onTrama: (buffer) => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(buffer)
+          }
+        },
+        onNivel: (rms) => {
+          setNivelAudio(rms)
+          if (rms >= UMBRAL_SILENCIO) {
+            ultimoAudioRef.current = Date.now()
+            setSinAudio(false)
+          } else if (Date.now() - ultimoAudioRef.current >= SILENCIO_AVISO_MS) {
+            setSinAudio(true)
+          }
+        },
+      })
+      capturaRef.current = captura
       setGrabando(true)
       setPausado(false)
       setTiempo(0)
@@ -182,18 +200,22 @@ export default function SalaView({ roomId, user, onVolver }) {
     } catch {
       setFeedback({
         tipo: 'error',
-        mensaje: 'Permiso de micrófono denegado. Actívalo en la configuración del navegador e inténtalo de nuevo.',
+        mensaje: 'Permiso de micrófono denegado o dispositivo no disponible. Actívalo en el navegador e inténtalo de nuevo.',
       })
     }
   }, [wsRef])
 
   const pausar = useCallback(() => {
-    recorderRef.current?.pause()
+    capturaRef.current?.pausar()
     setPausado(true)
+    setNivelAudio(0)
+    setSinAudio(false)
   }, [])
 
   const reanudar = useCallback(() => {
-    recorderRef.current?.resume()
+    ultimoAudioRef.current = Date.now()
+    setSinAudio(false)
+    capturaRef.current?.reanudar()
     setPausado(false)
   }, [])
 
@@ -202,21 +224,34 @@ export default function SalaView({ roomId, user, onVolver }) {
 
   const confirmarFinalizar = useCallback((titulo) => {
     clearInterval(intervalRef.current)
-    recorderRef.current?.stop()
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    enviar(JSON.stringify({ action: 'finalizar', titulo: titulo || null }))
+    capturaRef.current?.detener()
+    capturaRef.current = null
+    setNivelAudio(0)
+    setSinAudio(false)
     setGrabando(false)
     setPausado(false)
     setModalAbierto(false)
-    setSesionIniciada(false)
-    setTimeout(() => { window.location.hash = '#/dashboard' }, 200)
-  }, [enviar])
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      setFinalizando(true)
+      enviar(JSON.stringify({ action: 'finalizar', titulo: titulo || null }))
+      finalizarFallbackRef.current = setTimeout(() => {
+        setFinalizando(false)
+        setSesionIniciada(false)
+        window.location.hash = '#/dashboard'
+      }, 6000)
+    } else {
+      setSesionIniciada(false)
+      setTimeout(() => { window.location.hash = '#/dashboard' }, 200)
+    }
+  }, [enviar, wsRef])
 
   const cambiarTam = (delta) => setTamFuente((s) => {
     const nuevo = Math.min(32, Math.max(12, s + delta))
     localStorage.setItem(FUENTE_KEY, String(nuevo))
     return nuevo
   })
+
+  const nivelPorcentaje = Math.min(100, Math.round(Math.sqrt(nivelAudio) * 180))
 
   if (determinando) {
     return (
@@ -278,6 +313,12 @@ export default function SalaView({ roomId, user, onVolver }) {
         </div>
       )}
 
+      {sinAudio && (
+        <div style={{ flexShrink: 0 }}>
+          <Feedback tipo="warning" mensaje="No se detecta audio en el micrófono" />
+        </div>
+      )}
+
       <div className="sala-grid">
         <section className="sala-subtitulos">
           <div className="sala-subtitulos__header">
@@ -309,9 +350,29 @@ export default function SalaView({ roomId, user, onVolver }) {
           </div>
 
           <div className="sala-subtitulos__status">
-            {grabando && !pausado && <span><IconoMicrofono size={14} /> Escuchando al profesor...</span>}
+            {grabando && !pausado && (
+              <>
+                <IconoMicrofono size={14} />
+                <span>Escuchando al profesor...</span>
+                <span
+                  className="nivel-audio"
+                  role="meter"
+                  aria-label="Nivel de entrada del micrófono"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={nivelPorcentaje}
+                >
+                  <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
+                </span>
+              </>
+            )}
             {grabando && pausado && <span style={{ color: 'var(--warning)' }}>Pausado</span>}
-            {!grabando && <span style={{ color: 'var(--muted)' }}>{rol === 'listener' ? 'Conectado como oyente' : 'Listo para iniciar'}</span>}
+            {finalizando && <span style={{ color: 'var(--muted)' }}>Finalizando y guardando...</span>}
+            {!grabando && !finalizando && (
+              <span style={{ color: 'var(--muted)' }}>
+                {rol === 'listener' ? 'Conectado como oyente' : 'Listo para iniciar'}
+              </span>
+            )}
           </div>
         </section>
 
@@ -341,17 +402,24 @@ export default function SalaView({ roomId, user, onVolver }) {
           <div className="sala-estado">
             <div className="sala-estado__label">Estado del Sistema</div>
             <div className="sala-estado__sub">
-              {grabando ? (
-                <span>Transmitiendo · {formatearTiempo(tiempo)}</span>
-              ) : (
-                <span>Listo para iniciar</span>
+              {grabando && (
+                <>
+                  <span>Transmitiendo · {formatearTiempo(tiempo)}</span>
+                  {!pausado && (
+                    <span className="nivel-audio" aria-hidden="true">
+                      <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
+                    </span>
+                  )}
+                </>
               )}
+              {finalizando && <span>Finalizando y guardando...</span>}
+              {!grabando && !finalizando && <span>Listo para iniciar</span>}
             </div>
           </div>
           <div className="sala-controles">
             {!grabando ? (
-              <button className="btn btn--ghost-pause" onClick={iniciar}>
-                <IconoMicrofono size={18} /> Iniciar Transmisión
+              <button className="btn btn--ghost-pause" onClick={iniciar} disabled={finalizando}>
+                <IconoMicrofono size={18} /> {finalizando ? 'Guardando...' : 'Iniciar Transmisión'}
               </button>
             ) : (
               <>

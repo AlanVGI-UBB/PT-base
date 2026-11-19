@@ -16,7 +16,7 @@ Plataforma de apoyo a la inclusión de estudiantes sordos en aula mediante Lengu
 
 ## Requisitos previos
 
-- Python 3.11+ (probado con 3.11; cualquier 3.11/3.12/3.13 funciona para desarrollo)
+- Python 3.11+ (probado con 3.11 y 3.14 con `faster-whisper`)
 - Node.js 20+ y **pnpm** (`npm i -g pnpm` o vía corepack)
 - Docker y Docker Compose (opcional, para despliegue)
 
@@ -31,6 +31,17 @@ python -m venv venv
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
+
+Para transcripción real en local con `faster-whisper` (en GPU CUDA si está disponible, o CPU en caso contrario):
+
+```powershell
+$env:ASR_PROVIDER = "whisper"
+$env:WHISPER_MODEL = "small"
+$env:WHISPER_DEVICE = "auto"
+uvicorn app.main:app --port 8000
+```
+
+Si solo levantas el frontend en Docker y quieres apuntar nginx a este backend nativo con GPU, define `BACKEND_UPSTREAM=host.docker.internal:8000` (por defecto `backend:8000`).
 
 Health: `http://localhost:8000/health`
 WebSocket de eco: `ws://localhost:8000/ws/echo`

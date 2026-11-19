@@ -809,7 +809,7 @@ un túnel de Cloudflare y RUT de prueba con dígito verificador válido.
 - `pnpm --prefix frontend build` → build OK.
 - No se verificó el túnel de Cloudflare.
 
-## 2026-11-16 — Specs de cierre del anteproyecto (SPEC-006 a SPEC-009)
+## 2026-11-16 — `905d5ad` — Specs de cierre del anteproyecto (SPEC-006 a SPEC-009)
 **Refs:** `specs/SPEC-006` a `specs/SPEC-009` (Borrador)
 
 **Resumen:** Se redactan cuatro specs a partir de la revisión del prototipo contra la
@@ -825,3 +825,40 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - Este archivo — hash `7e0e796` registrado en la entrada anterior.
 
 **Verificación:** n/a (commit documental).
+
+---
+
+## 2026-11-17 — Transcripción real: captura PCM con AudioWorklet + faster-whisper local
+**Refs:** SPEC-006 `specs/SPEC-006-asr-real-captura-pcm.md` (Completada)
+
+**Resumen:** Se reemplazó la captura WebM/Opus (`MediaRecorder`) por captura PCM s16le mono a 16 kHz mediante `AudioWorklet`, se incorporó el segmentador por energía y el proveedor local `FasterWhisperProvider` con carga única por proceso, se corrigió el handler de sala para procesar matching y persistencia solo sobre segmentos finales y vaciar el búfer al finalizar, y se retiró el proveedor roto de Google Cloud Speech.
+
+**Cambios:**
+- **Backend — ASR y configuración:**
+  - `app/asr/base.py` — `ResultadoASR` ahora incluye `segmento_id`; `StreamingASRProvider` acepta `contexto` opcional (`lang="es"`); eliminada rama `google` (errores listan `whisper | stub`).
+  - `app/asr/google_streaming.py` — **eliminado** junto a `google-cloud-speech` en `requirements.txt` y `GOOGLE_APPLICATION_CREDENTIALS` en `config.py`/`.env.example`.
+  - `app/asr/segmentador.py` — **nuevo**: `Segmentador` determinista por RMS sobre subtramas de 30 ms (con pre-roll de 240 ms) y `Ventana`.
+  - `app/asr/whisper_local.py` — **nuevo**: `FasterWhisperProvider` con `WhisperModel` cacheado por proceso, lock de concurrencia entre salas, fallback `auto` GPU→CPU con `logger.warning`, salto de provisionales ante atraso (> `ASR_PARCIAL_MS`), cierre por falta de tramas (`ASR_SILENCIO_MS`), `vad_filter=True`, `condition_on_previous_text=False`, y `initial_prompt` configurable con `ASR_PROMPT_GLOSARIO`.
+  - `app/asr/stub.py` — adopta `segmento_id`, `inicio_ms`, `fin_ms`, parámetro `contexto` y termina limpiamente al cerrarse `audio_iter`.
+  - `app/core/config.py`, `backend/.env.example` — añadidas variables `WHISPER_MODEL`, `WHISPER_DEVICE`, `WHISPER_COMPUTE_TYPE`, `ASR_SILENCIO_MS`, `ASR_MAX_SEGMENTO_MS`, `ASR_PARCIAL_MS`, `ASR_FLUSH_TIMEOUT_MS`, `ASR_MAX_TRAMA_BYTES`, `ASR_PROMPT_GLOSARIO`.
+  - `app/salas/manager.py`, `app/main.py` — carga inicial del modelo en `lifespan` si `ASR_PROVIDER=whisper`, validación de tramas (longitud par y `<= ASR_MAX_TRAMA_BYTES`, 1 warning/sesión), centinela `None` al recibir `finalizar` con espera de vaciado hasta `ASR_FLUSH_TIMEOUT_MS`, matching y persistencia solo en `estable=True`, y limpieza garantizada de sala y lock por event loop.
+- **Backend — Tests (`backend/tests/`):**
+  - `conftest.py` — registra `@pytest.mark.modelo` (omitido por defecto).
+  - `test_segmentador.py` — **nuevo**: pruebas de `Segmentador` (silencio 30 s, provisional/final, duración máxima, `cerrar`, trama impar), `FasterWhisperProvider` con modelo falso (prompt, descarte de vacíos, timeout sin tramas, omisión de provisionales por atraso, exclusión mutua entre salas, fallback CPU, errores de configuración en español) y prueba de humo `@pytest.mark.modelo`.
+  - `test_sala.py` — pruebas de provisional/final sin duplicación ni matching provisional, vaciado al finalizar, rechazo de tramas fuera de contrato y `ASR_PROMPT_GLOSARIO=false`.
+- **Frontend — Captura PCM e interfaz:**
+  - `frontend/src/audio/pcm-worklet.js` — **nuevo**: `AudioWorkletProcessor` que remuestrea por interpolación lineal a 16 kHz cuando `sampleRate !== 16000`, empaqueta tramas de 1600 muestras (3200 bytes s16le) y calcula RMS.
+  - `frontend/src/audio/capturaPcm.js` — **nuevo**: ciclo `iniciar`/`pausar`/`reanudar`/`detener` con limpieza de pistas y `AudioContext`.
+  - `frontend/src/views/SalaView.jsx`, `frontend/src/App.css` — reemplazo de `MediaRecorder` por `capturaPcm`, medidor visual de nivel de audio, aviso `"No se detecta audio en el micrófono"` tras 10 s bajo umbral (sin detener sesión y desapareciendo al volver señal), reemplazo de subtítulos por `segment_id`, y espera de `clase_finalizada` antes de cerrar el WebSocket al finalizar.
+- **Docker / Nginx / Documentación:**
+  - `backend/requirements.txt`, `backend/Dockerfile`, `docker-compose.yml` — `faster-whisper==1.2.*`, `numpy>=1.26,<3`, `libgomp1`, variables `ASR_PROVIDER`/`WHISPER_MODEL`/`WHISPER_DEVICE` y volumen `whisper_cache`.
+  - `frontend/nginx.conf`, `frontend/Dockerfile`, `frontend/docker-entrypoint.sh` — `BACKEND_UPSTREAM` configurable (por defecto `backend:8000`).
+  - `README.md`, `specs/README.md`, `specs/SPEC-006-asr-real-captura-pcm.md` — compatibilidad verificada en Python 3.14 y estado actualizado.
+
+**Verificación:**
+- `ruff check backend` → `All checks passed!`
+- `pytest backend/tests` → 45 passed, 1 skipped (`@pytest.mark.modelo`).
+- `pytest backend/tests -m modelo` → 1 passed (carga real de `WhisperModel('tiny')` en CUDA).
+- `pnpm --prefix frontend build` → OK (45 módulos, PWA generada).
+- Prueba adicional: síntesis de voz en español (`Microsoft Helena Desktop`) pasada por `FasterWhisperProvider` (`small`, CUDA) generó provisional + final correctos; prueba en Node de `pcm-worklet.js` a 48 kHz y 44.1 kHz emitió tramas s16le de 3200 bytes con RMS esperado.
+- Pendiente por entorno: `docker compose up --build` (daemon Docker apagado) y prueba manual en navegador con micrófono físico.

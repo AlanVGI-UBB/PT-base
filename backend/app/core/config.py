@@ -9,7 +9,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 class Settings(BaseSettings):
     PORT: int = 8000
     ASR_PROVIDER: str = "stub"
-    GOOGLE_APPLICATION_CREDENTIALS: str = ""
+    WHISPER_MODEL: str = "small"
+    WHISPER_DEVICE: str = "auto"
+    WHISPER_COMPUTE_TYPE: str = "auto"
+    ASR_SILENCIO_MS: int = 600
+    ASR_MAX_SEGMENTO_MS: int = 15000
+    ASR_PARCIAL_MS: int = 1000
+    ASR_FLUSH_TIMEOUT_MS: int = 5000
+    ASR_MAX_TRAMA_BYTES: int = 64000
+    ASR_PROMPT_GLOSARIO: bool = True
     SPACY_MODEL: str = "es_core_news_md"
     DB_PATH: str = str(BASE_DIR / "data" / "glosario.db")
     STUB_INTERVAL_MS: int = 1500

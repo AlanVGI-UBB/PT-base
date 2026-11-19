@@ -1,7 +1,7 @@
 # SPEC-006 — Transcripción real: captura PCM en el navegador + faster-whisper local
 
 **Etapa del plan:** Semestre 1 · Etapa 3 (prueba de concepto) y adelanto de Semestre 2 · Etapa 4 (backend robusto) de `docs/plan_desarrollo_tecnico.md`. Propuesta: actividad AP Obj. 2 Act. 1 ("Diseño preliminar del módulo de captura y streaming de audio (PoC)"). Informe: RF06, RF07, RF10, RF12, RN10, RNF11, RNF15, §2.5.1 y Tabla 4.1.
-**Estado:** Borrador
+**Estado:** Completada — verificado (`ruff check backend`, `pytest backend/tests` 45 passed + 1 skipped, `pytest backend/tests -m modelo` 1 passed, `pnpm --prefix frontend build` OK; pendiente verificación manual en navegador con micrófono real y `docker compose build`)
 **Depende de:** SPEC-004, SPEC-005
 
 ---

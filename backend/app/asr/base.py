@@ -6,6 +6,7 @@ from typing import AsyncIterator, Protocol
 
 @dataclass
 class ResultadoASR:
+    segmento_id: int
     texto: str
     estable: bool
     inicio_ms: int
@@ -13,10 +14,11 @@ class ResultadoASR:
 
 
 class StreamingASRProvider(Protocol):
-    async def transcribe_stream(
+    def transcribe_stream(
         self,
         audio_iter: AsyncIterator[bytes],
-        lang: str = "es-CL",
+        lang: str = "es",
+        contexto: list[str] | None = None,
     ) -> AsyncIterator[ResultadoASR]: ...
 
 
@@ -29,10 +31,10 @@ def get_asr_provider(provider: str | None = None) -> StreamingASRProvider:
 
     name = provider or get_settings().ASR_PROVIDER
 
-    if name == "google":
-        from app.asr.google_streaming import GoogleStreamingProvider
+    if name == "whisper":
+        from app.asr.whisper_local import FasterWhisperProvider
 
-        return GoogleStreamingProvider()
+        return FasterWhisperProvider()
     if name == "stub":
         from app.asr.stub import StubAsrProvider
 
@@ -40,5 +42,5 @@ def get_asr_provider(provider: str | None = None) -> StreamingASRProvider:
 
     raise AsrConfigError(
         f"ASR_PROVIDER desconocido: {name!r}. "
-        "Opciones válidas: google | stub | webspeech | faster_whisper"
+        "Opciones válidas: whisper | stub"
     )

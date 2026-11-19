@@ -3,6 +3,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from weakref import WeakKeyDictionary
 
 from fastapi import WebSocket
 
@@ -26,11 +27,24 @@ class RoomState:
 
 class RoomManager:
     _salas: dict[str, RoomState] = {}
-    _lock = asyncio.Lock()
+    _locks: WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Lock] = WeakKeyDictionary()
+
+    @classmethod
+    def _get_lock(cls) -> asyncio.Lock:
+        loop = asyncio.get_running_loop()
+        lock = cls._locks.get(loop)
+        if lock is None:
+            lock = asyncio.Lock()
+            cls._locks[loop] = lock
+        return lock
+
+    @classmethod
+    def limpiar(cls) -> None:
+        cls._salas.clear()
 
     @classmethod
     async def existe(cls, room_id: str) -> bool:
-        async with cls._lock:
+        async with cls._get_lock():
             return room_id in cls._salas
 
     @classmethod
@@ -43,7 +57,7 @@ class RoomManager:
         emitter_ws: WebSocket,
         glosario: dict,
     ) -> RoomState:
-        async with cls._lock:
+        async with cls._get_lock():
             if room_id in cls._salas:
                 raise ValueError(f"La sala {room_id} ya existe")
             sala = RoomState(
@@ -60,12 +74,12 @@ class RoomManager:
 
     @classmethod
     async def obtener(cls, room_id: str) -> RoomState | None:
-        async with cls._lock:
+        async with cls._get_lock():
             return cls._salas.get(room_id)
 
     @classmethod
     async def agregar_listener(cls, room_id: str, ws: WebSocket) -> bool:
-        async with cls._lock:
+        async with cls._get_lock():
             sala = cls._salas.get(room_id)
             if not sala:
                 return False
@@ -74,23 +88,22 @@ class RoomManager:
 
     @classmethod
     async def quitar_listener(cls, room_id: str, ws: WebSocket) -> None:
-        async with cls._lock:
+        async with cls._get_lock():
             sala = cls._salas.get(room_id)
             if sala and ws in sala.listeners:
                 sala.listeners.discard(ws)
 
     @classmethod
     async def broadcast(cls, room_id: str, evento: dict) -> None:
-        async with cls._lock:
+        async with cls._get_lock():
             sala = cls._salas.get(room_id)
             if not sala:
                 return
-        text = json.dumps(evento, ensure_ascii=False)
-        targets: list[WebSocket] = []
-        async with cls._lock:
+            targets: list[WebSocket] = []
             if sala.emitter_ws:
                 targets.append(sala.emitter_ws)
             targets.extend(sala.listeners)
+        text = json.dumps(evento, ensure_ascii=False)
         for ws in targets:
             try:
                 await ws.send_text(text)
@@ -99,5 +112,5 @@ class RoomManager:
 
     @classmethod
     async def eliminar(cls, room_id: str) -> RoomState | None:
-        async with cls._lock:
+        async with cls._get_lock():
             return cls._salas.pop(room_id, None)
