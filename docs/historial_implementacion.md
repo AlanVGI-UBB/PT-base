@@ -865,7 +865,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-19 — Documentación formal del anteproyecto y guía de defensa del prototipo
+## 2026-11-19 — `7c72e00` — Documentación formal del anteproyecto y guía de defensa del prototipo
 **Refs:** `docs/` (commit documental)
 
 **Resumen:** Se incorporaron al repositorio los documentos formales del Anteproyecto (propuesta aprobada e informe de avance hasta el capítulo 4, reemplazando el borrador `.docx`) junto con una guía técnica completa de referencia y defensa para el estado actual del prototipo.
@@ -878,3 +878,17 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - Este archivo — hash `c5106cb` registrado en la entrada de SPEC-006.
 
 **Verificación:** n/a (commit documental; contenido contrastado directamente contra el código vigente tras `c5106cb`).
+
+---
+
+## 2026-11-19 — Congelamiento de partición de prueba protegida (`ml/datos/`)
+**Refs:** SPEC-008 `specs/SPEC-008-mediciones-poc.md` (R11–R12, previo a SPEC-007)
+
+**Resumen:** Se redactó y congeló la partición de prueba protegida (`66` frases) junto a la partición de ajuste (`36` frases) en `ml/datos/frases_anotadas.jsonl` antes de definir formas y bloqueos del glosario piloto en SPEC-007, evitando sesgo de evaluación (`RNF04`).
+
+**Cambios:**
+- `ml/datos/frases_anotadas.jsonl` — **nuevo**: 102 frases anotadas (66 `prueba`, 36 `ajuste`) para los 15 conceptos propuestos de `INF-221`.
+- `ml/datos/README.md` — **nuevo**: origen, criterio y separación temporal de las particiones.
+- Este archivo — hash `7c72e00` registrado en la entrada anterior.
+
+**Verificación:** validación JSONL por script (`{'prueba': 66, 'ajuste': 36}`, todos los conceptos pertenecen al inventario de 15 términos).

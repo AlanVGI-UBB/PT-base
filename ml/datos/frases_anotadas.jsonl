@@ -1,0 +1,102 @@
+{"texto": "buenos días a todos, hoy comenzamos la unidad dos", "conceptos": [], "particion": "prueba"}
+{"texto": "la próxima semana tendremos el primer control en laboratorio", "conceptos": [], "particion": "prueba"}
+{"texto": "revisen el aula virtual antes del viernes por la tarde", "conceptos": [], "particion": "prueba"}
+{"texto": "alguien tiene dudas sobre el enunciado de la tarea", "conceptos": [], "particion": "prueba"}
+{"texto": "cuidado con el cable del proyector al pasar por ahí", "conceptos": [], "particion": "prueba"}
+{"texto": "la ayudantía de este jueves se cambia de sala", "conceptos": [], "particion": "prueba"}
+{"texto": "no hace falta aprenderse las definiciones de memoria", "conceptos": [], "particion": "prueba"}
+{"texto": "tengo mala memoria para los nombres de los autores", "conceptos": [], "particion": "prueba"}
+{"texto": "había una cola larga afuera de la oficina de docencia", "conceptos": [], "particion": "prueba"}
+{"texto": "dejé una pila de pruebas corregidas sobre el mesón", "conceptos": [], "particion": "prueba"}
+{"texto": "se descargó la pila del micrófono así que hablaré más fuerte", "conceptos": [], "particion": "prueba"}
+{"texto": "llegamos a un arreglo con los delegados para correr la entrega", "conceptos": [], "particion": "prueba"}
+{"texto": "anoten los resultados en la tabla de notas del curso", "conceptos": [], "particion": "prueba"}
+{"texto": "recuerden revisar las fechas de entrega en el calendario", "conceptos": [], "particion": "prueba"}
+{"texto": "un arreglo almacena elementos del mismo tipo en posiciones contiguas", "conceptos": ["arreglo"], "particion": "prueba"}
+{"texto": "accedemos en tiempo constante a cualquier celda de los arreglos", "conceptos": ["arreglo"], "particion": "prueba"}
+{"texto": "en una lista enlazada cada elemento apunta al siguiente", "conceptos": ["lista enlazada"], "particion": "prueba"}
+{"texto": "las listas enlazadas permiten insertar sin mover todo el bloque", "conceptos": ["lista enlazada"], "particion": "prueba"}
+{"texto": "la pila sigue una política de último en entrar primero en salir", "conceptos": ["pila"], "particion": "prueba"}
+{"texto": "usamos dos pilas para evaluar expresiones en notación posfija", "conceptos": ["pila"], "particion": "prueba"}
+{"texto": "en una cola los elementos salen en el mismo orden en que llegaron", "conceptos": ["cola"], "particion": "prueba"}
+{"texto": "las colas de impresión atienden trabajos por orden de llegada", "conceptos": ["cola"], "particion": "prueba"}
+{"texto": "un árbol binario tiene a lo más dos hijos por cada vértice", "conceptos": ["árbol binario"], "particion": "prueba"}
+{"texto": "recorrimos varios árboles binarios en preorden e inorden", "conceptos": ["árbol binario"], "particion": "prueba"}
+{"texto": "creamos un nodo nuevo con el dato leído desde teclado", "conceptos": ["nodo"], "particion": "prueba"}
+{"texto": "eliminamos todos los nodos hojas que quedaron sin hijos", "conceptos": ["nodo"], "particion": "prueba"}
+{"texto": "el puntero guarda la dirección donde vive la variable", "conceptos": ["puntero"], "particion": "prueba"}
+{"texto": "cuidado con dejar punteros colgantes después de liberar espacio", "conceptos": ["puntero"], "particion": "prueba"}
+{"texto": "modelamos la red de metro como un grafo dirigido con pesos", "conceptos": ["grafo"], "particion": "prueba"}
+{"texto": "los grafos conexos permiten llegar entre cualquier par de vértices", "conceptos": ["grafo"], "particion": "prueba"}
+{"texto": "una tabla hash distribuye las llaves mediante una función de dispersión", "conceptos": ["tabla hash"], "particion": "prueba"}
+{"texto": "cuando hay colisiones en las tablas hash se encadenan entradas", "conceptos": ["tabla hash"], "particion": "prueba"}
+{"texto": "la recursión necesita siempre un caso base para detenerse", "conceptos": ["recursión"], "particion": "prueba"}
+{"texto": "una llamada recursiva mal acotada agota el espacio disponible", "conceptos": ["recursión"], "particion": "prueba"}
+{"texto": "diseñamos un algoritmo que resuelve el problema en una sola pasada", "conceptos": ["algoritmo"], "particion": "prueba"}
+{"texto": "comparamos dos algoritmos distintos sobre el mismo conjunto de datos", "conceptos": ["algoritmo"], "particion": "prueba"}
+{"texto": "la complejidad temporal crece de forma cuadrática con la entrada", "conceptos": ["complejidad"], "particion": "prueba"}
+{"texto": "calculamos la complejidad asintótica usando notación O grande", "conceptos": ["complejidad"], "particion": "prueba"}
+{"texto": "el ordenamiento por mezcla divide la secuencia en dos mitades", "conceptos": ["ordenamiento"], "particion": "prueba"}
+{"texto": "necesitamos ordenar los registros antes de aplicar la consulta", "conceptos": ["ordenamiento"], "particion": "prueba"}
+{"texto": "la búsqueda binaria descarta la mitad del arreglo en cada paso", "conceptos": ["búsqueda binaria", "arreglo"], "particion": "prueba"}
+{"texto": "sin orden previo no funciona la búsqueda binaria", "conceptos": ["búsqueda binaria"], "particion": "prueba"}
+{"texto": "reservamos memoria dinámica para el nuevo bloque del programa", "conceptos": ["memoria"], "particion": "prueba"}
+{"texto": "una fuga de memoria ocurre cuando olvidamos liberar lo asignado", "conceptos": ["memoria"], "particion": "prueba"}
+{"texto": "insertamos un nodo al final de la lista enlazada", "conceptos": ["nodo", "lista enlazada"], "particion": "prueba"}
+{"texto": "cada nodo del árbol binario mantiene dos punteros a sus hijos", "conceptos": ["nodo", "árbol binario", "puntero"], "particion": "prueba"}
+{"texto": "el recorrido por niveles de un grafo utiliza una cola auxiliar", "conceptos": ["grafo", "cola"], "particion": "prueba"}
+{"texto": "el recorrido en profundidad puede implementarse con pila o con recursión", "conceptos": ["pila", "recursión"], "particion": "prueba"}
+{"texto": "la recursión consume espacio adicional en la pila de llamadas de la memoria", "conceptos": ["recursión", "pila", "memoria"], "particion": "prueba"}
+{"texto": "el arreglo ofrece acceso directo pero la lista enlazada facilita insertar", "conceptos": ["arreglo", "lista enlazada"], "particion": "prueba"}
+{"texto": "al ampliar la tabla hash reservamos más memoria y reubicamos claves", "conceptos": ["tabla hash", "memoria"], "particion": "prueba"}
+{"texto": "este algoritmo de ordenamiento tiene complejidad logarítmica por elemento", "conceptos": ["algoritmo", "ordenamiento", "complejidad"], "particion": "prueba"}
+{"texto": "sobre un arreglo ordenado la búsqueda binaria logra complejidad logarítmica", "conceptos": ["arreglo", "búsqueda binaria", "complejidad"], "particion": "prueba"}
+{"texto": "un puntero nulo marca el término de la lista enlazada", "conceptos": ["puntero", "lista enlazada"], "particion": "prueba"}
+{"texto": "si el nodo raíz es nulo entonces el árbol binario está vacío", "conceptos": ["nodo", "árbol binario"], "particion": "prueba"}
+{"texto": "podemos representar un grafo disperso con arreglos de listas enlazadas", "conceptos": ["grafo", "arreglo", "lista enlazada"], "particion": "prueba"}
+{"texto": "analizamos la complejidad espacial del algoritmo antes de programarlo", "conceptos": ["complejidad", "algoritmo"], "particion": "prueba"}
+{"texto": "al desapilar un nodo recuperamos el puntero guardado previamente", "conceptos": ["nodo", "puntero"], "particion": "prueba"}
+{"texto": "para buscar rápido en millones de claves conviene una tabla hash", "conceptos": ["tabla hash"], "particion": "prueba"}
+{"texto": "cuando ordenamos primero la entrada habilitamos la búsqueda binaria", "conceptos": ["ordenamiento", "búsqueda binaria"], "particion": "prueba"}
+{"texto": "el algoritmo recursivo visita cada nodo del árbol binario una sola vez", "conceptos": ["algoritmo", "recursión", "nodo", "árbol binario"], "particion": "prueba"}
+{"texto": "liberar la memoria de una lista enlazada requiere recorrer todos sus nodos", "conceptos": ["memoria", "lista enlazada", "nodo"], "particion": "prueba"}
+{"texto": "si falla la asignación de memoria el puntero queda inválido", "conceptos": ["memoria", "puntero"], "particion": "prueba"}
+{"texto": "en una pila implementada con arreglo el tope es un índice entero", "conceptos": ["pila", "arreglo"], "particion": "prueba"}
+{"texto": "en una cola circular el arreglo reutiliza las celdas desocupadas", "conceptos": ["cola", "arreglo"], "particion": "prueba"}
+{"texto": "las búsquedas binarias evitan revisar secuencialmente toda la colección", "conceptos": ["búsqueda binaria"], "particion": "prueba"}
+{"texto": "bienvenidos a la sesión de hoy, abran su editor de código", "conceptos": [], "particion": "ajuste"}
+{"texto": "recuerden enviar el informe antes de medianoche", "conceptos": [], "particion": "ajuste"}
+{"texto": "no estudien las respuestas de memoria sin entender el problema", "conceptos": [], "particion": "ajuste"}
+{"texto": "afuera del edificio hay una cola de estudiantes esperando atención", "conceptos": [], "particion": "ajuste"}
+{"texto": "el escritorio quedó cubierto con una pila de cuadernos antiguos", "conceptos": [], "particion": "ajuste"}
+{"texto": "definimos un arreglo de diez enteros inicializados en cero", "conceptos": ["arreglo"], "particion": "ajuste"}
+{"texto": "recorremos los arreglos usando un índice desde cero hasta el tamaño menos uno", "conceptos": ["arreglo"], "particion": "ajuste"}
+{"texto": "implementamos una lista enlazada simple con inserción al inicio", "conceptos": ["lista enlazada"], "particion": "ajuste"}
+{"texto": "las listas enlazadas no requieren bloques contiguos", "conceptos": ["lista enlazada"], "particion": "ajuste"}
+{"texto": "en una pila solo podemos insertar y retirar por el tope", "conceptos": ["pila"], "particion": "ajuste"}
+{"texto": "apilamos las operaciones pendientes dentro de dos pilas auxiliares", "conceptos": ["pila"], "particion": "ajuste"}
+{"texto": "una cola permite encolar por el final y desencolar por el frente", "conceptos": ["cola"], "particion": "ajuste"}
+{"texto": "usamos colas para simular turnos de atención en la clínica", "conceptos": ["cola"], "particion": "ajuste"}
+{"texto": "un árbol binario de búsqueda mantiene menores a la izquierda y mayores a la derecha", "conceptos": ["árbol binario"], "particion": "ajuste"}
+{"texto": "equilibrar árboles binarios evita que degeneren en una cadena lineal", "conceptos": ["árbol binario"], "particion": "ajuste"}
+{"texto": "cada nodo almacena el valor y la referencia al siguiente elemento", "conceptos": ["nodo"], "particion": "ajuste"}
+{"texto": "conectamos los nodos mediante enlaces bidireccionales", "conceptos": ["nodo"], "particion": "ajuste"}
+{"texto": "un puntero apunta directamente a la dirección de un objeto", "conceptos": ["puntero"], "particion": "ajuste"}
+{"texto": "actualizamos los punteros antes de borrar el elemento intermedio", "conceptos": ["puntero"], "particion": "ajuste"}
+{"texto": "representamos las rutas entre ciudades mediante un grafo no dirigido", "conceptos": ["grafo"], "particion": "ajuste"}
+{"texto": "existen grafos ponderados donde cada arista tiene un costo", "conceptos": ["grafo"], "particion": "ajuste"}
+{"texto": "una tabla hash ofrece acceso promedio en tiempo constante", "conceptos": ["tabla hash"], "particion": "ajuste"}
+{"texto": "en las tablas hash el factor de carga mide qué tan llena está la estructura", "conceptos": ["tabla hash"], "particion": "ajuste"}
+{"texto": "conviene escribir el caso base primero al plantear una recursión", "conceptos": ["recursión"], "particion": "ajuste"}
+{"texto": "esta solución recursiva divide la entrada en subproblemas idénticos", "conceptos": ["recursión"], "particion": "ajuste"}
+{"texto": "todo algoritmo debe terminar en un número finito de pasos", "conceptos": ["algoritmo"], "particion": "ajuste"}
+{"texto": "analizamos algoritmos clásicos de grafos y árboles", "conceptos": ["algoritmo", "grafo"], "particion": "ajuste"}
+{"texto": "la complejidad del método se expresa en función del tamaño de entrada", "conceptos": ["complejidad"], "particion": "ajuste"}
+{"texto": "elegimos un método de ordenamiento estable para conservar empates", "conceptos": ["ordenamiento"], "particion": "ajuste"}
+{"texto": "ordenar la lista facilita eliminar elementos repetidos", "conceptos": ["ordenamiento"], "particion": "ajuste"}
+{"texto": "la búsqueda binaria compara el elemento buscado con el punto medio", "conceptos": ["búsqueda binaria"], "particion": "ajuste"}
+{"texto": "aplicamos búsquedas binarias sobre arreglos ordenados de claves", "conceptos": ["búsqueda binaria", "arreglo"], "particion": "ajuste"}
+{"texto": "el sistema asigna memoria en el montón cuando solicitamos espacio dinámico", "conceptos": ["memoria"], "particion": "ajuste"}
+{"texto": "cada nodo de la lista enlazada ocupa memoria dinámica y usa un puntero", "conceptos": ["nodo", "lista enlazada", "memoria", "puntero"], "particion": "ajuste"}
+{"texto": "la pila y la cola restringen los extremos de acceso a los nodos", "conceptos": ["pila", "cola", "nodo"], "particion": "ajuste"}
+{"texto": "un algoritmo de ordenamiento eficiente reduce la complejidad total", "conceptos": ["algoritmo", "ordenamiento", "complejidad"], "particion": "ajuste"}
