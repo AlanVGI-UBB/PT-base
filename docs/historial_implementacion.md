@@ -828,7 +828,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-17 — Transcripción real: captura PCM con AudioWorklet + faster-whisper local
+## 2026-11-17 — `c5106cb` — Transcripción real: captura PCM con AudioWorklet + faster-whisper local
 **Refs:** SPEC-006 `specs/SPEC-006-asr-real-captura-pcm.md` (Completada)
 
 **Resumen:** Se reemplazó la captura WebM/Opus (`MediaRecorder`) por captura PCM s16le mono a 16 kHz mediante `AudioWorklet`, se incorporó el segmentador por energía y el proveedor local `FasterWhisperProvider` con carga única por proceso, se corrigió el handler de sala para procesar matching y persistencia solo sobre segmentos finales y vaciar el búfer al finalizar, y se retiró el proveedor roto de Google Cloud Speech.
@@ -862,3 +862,19 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - `pnpm --prefix frontend build` → OK (45 módulos, PWA generada).
 - Prueba adicional: síntesis de voz en español (`Microsoft Helena Desktop`) pasada por `FasterWhisperProvider` (`small`, CUDA) generó provisional + final correctos; prueba en Node de `pcm-worklet.js` a 48 kHz y 44.1 kHz emitió tramas s16le de 3200 bytes con RMS esperado.
 - Pendiente por entorno: `docker compose up --build` (daemon Docker apagado) y prueba manual en navegador con micrófono físico.
+
+---
+
+## 2026-11-19 — Documentación formal del anteproyecto y guía de defensa del prototipo
+**Refs:** `docs/` (commit documental)
+
+**Resumen:** Se incorporaron al repositorio los documentos formales del Anteproyecto (propuesta aprobada e informe de avance hasta el capítulo 4, reemplazando el borrador `.docx`) junto con una guía técnica completa de referencia y defensa para el estado actual del prototipo.
+
+**Cambios:**
+- `docs/2026_2_PROP_CINF_AP_ESPI___A_Gutierrez.pdf` — **agregado**: propuesta formal aprobada del proyecto de título (cronograma AP y PT).
+- `docs/ICINF-AP-Avance-Espinoza-Gutierrez.pdf` — **agregado**: informe de avance hasta el capítulo 4 (requerimientos RF/RNF/RN/CA y factibilidad).
+- `docs/Propuesta_Proyecto_Titulo.docx` — **eliminado** (reemplazado por la versión PDF aprobada).
+- `docs/documentacion_prototipo_defensa.md` — **nuevo**: documentación técnica detallada de arquitectura, decisiones, módulos, contratos API/WebSocket, despliegue, verificación, limitaciones y banco de preguntas frecuentes de defensa.
+- Este archivo — hash `c5106cb` registrado en la entrada de SPEC-006.
+
+**Verificación:** n/a (commit documental; contenido contrastado directamente contra el código vigente tras `c5106cb`).
