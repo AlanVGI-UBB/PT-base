@@ -92,12 +92,28 @@ CLOUDFLARE_TUNNEL_TOKEN=pega_aqui_el_token_nuevo
 Cloudflare termina HTTPS públicamente y la PWA usa automáticamente `wss://`
 para el WebSocket. La URL pública es la configurada en la ruta del túnel.
 
-## Verificación rápida (lint + build)
+## Verificación rápida (lint + build + tests)
 
 ```powershell
-ruff check backend
+ruff check backend ml
+pytest backend/tests
+pytest ml/tests
 pnpm --prefix frontend build
 ```
+
+## Mediciones de la PoC (`ml/` y `docs/resultados_poc.md`)
+
+Las dependencias de medición están separadas en `ml/requirements.txt` (`jiwer`, `psutil`, `websockets`) para no engrosar la imagen del backend:
+
+```powershell
+pip install -r ml\requirements.txt
+python ml\evaluar_matching.py --datos ml\datos\frases_anotadas.jsonl --particion prueba
+python ml\evaluar_asr.py --audio ml\datos\audio\clase_01_cerca.wav --referencia ml\datos\referencias\clase_01.txt --modelo small --device cuda --prompt-glosario
+# Carga contra backend nativo en otra terminal con ASR_PROVIDER=stub:
+python ml\prueba_carga.py --escenario A --minutos 5
+```
+
+Resultados consolidados, trazabilidad y limitaciones en [`docs/resultados_poc.md`](docs/resultados_poc.md).
 
 ## Glosario piloto provisional y clips de ensayo
 

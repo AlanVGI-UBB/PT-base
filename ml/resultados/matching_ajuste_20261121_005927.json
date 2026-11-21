@@ -1,0 +1,233 @@
+{
+  "tipo": "evaluacion_matching",
+  "configuracion": {
+    "datos": "ml/datos/frases_anotadas.jsonl",
+    "datos_sha256": "c715e74190c30b2fe04cb8d9700265ad8c9f9dcaaa9da971840f48122cd7b741",
+    "particion": "ajuste",
+    "glosario": "D:/Proyectos/Proyecto de titulo/backend/data/seed_glosario.json",
+    "glosario_sha256": "76ecdb575ed6f555d055571a0e06f93c327c18190401c6383442d352dabff529",
+    "curso_id": 1
+  },
+  "metadatos": {
+    "fecha_utc": "2026-11-21T00:59:27.821556+00:00",
+    "git_commit": "0a8209cb99f059b55b21fccdea1bed89ce27f3fe",
+    "git_dirty": false,
+    "hardware": {
+      "plataforma": "Windows-11-10.0.26300-SP0",
+      "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+      "python": "3.14.0",
+      "cpu_nucleos_logicos": 12,
+      "cpu_nucleos_fisicos": 8,
+      "ram_total_mb": 7967.9,
+      "gpu": {
+        "nombre": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_total_mb": 6144,
+        "vram_usada_mb": 552,
+        "driver": "610.47"
+      }
+    },
+    "versiones": {
+      "spacy": "3.8.13",
+      "es_core_news_md": "3.8.0",
+      "numpy": "2.5.1",
+      "psutil": "7.2.2"
+    }
+  },
+  "resultados": {
+    "total_frases": 36,
+    "total_errores": 0,
+    "global": {
+      "tp": 40,
+      "fp": 0,
+      "fn": 0,
+      "soporte": 40,
+      "precision": 1.0,
+      "recuperacion": 1.0,
+      "f1": 1.0
+    },
+    "compuestos": {
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "soporte": 9,
+      "precision": 1.0,
+      "recuperacion": 1.0,
+      "f1": 1.0
+    },
+    "simples": {
+      "tp": 31,
+      "fp": 0,
+      "fn": 0,
+      "soporte": 31,
+      "precision": 1.0,
+      "recuperacion": 1.0,
+      "f1": 1.0
+    },
+    "por_concepto": {
+      "algoritmo": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "arreglo": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "búsqueda binaria": {
+        "es_compuesto": true,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 2,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "cola": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "complejidad": {
+        "es_compuesto": false,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 2,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "grafo": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "lista enlazada": {
+        "es_compuesto": true,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "memoria": {
+        "es_compuesto": false,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 2,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "nodo": {
+        "es_compuesto": false,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 4,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "ordenamiento": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "pila": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "puntero": {
+        "es_compuesto": false,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 3,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "recursión": {
+        "es_compuesto": false,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 2,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "tabla hash": {
+        "es_compuesto": true,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 2,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "árbol binario": {
+        "es_compuesto": true,
+        "tp": 2,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 2,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      }
+    },
+    "cobertura": {
+      "menciones_totales": 40,
+      "menciones_cubiertas": 40,
+      "menciones_fuera_glosario": 0,
+      "tasa_cobertura": 1.0,
+      "conceptos_fuera_glosario": {}
+    },
+    "meta_rnf04": {
+      "precision_min": 0.9,
+      "recuperacion_min": 0.85,
+      "cumple_precision": true,
+      "cumple_recuperacion": true
+    },
+    "errores": []
+  }
+}

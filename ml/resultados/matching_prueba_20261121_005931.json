@@ -1,0 +1,347 @@
+{
+  "tipo": "evaluacion_matching",
+  "configuracion": {
+    "datos": "ml/datos/frases_anotadas.jsonl",
+    "datos_sha256": "c715e74190c30b2fe04cb8d9700265ad8c9f9dcaaa9da971840f48122cd7b741",
+    "particion": "prueba",
+    "glosario": "D:/Proyectos/Proyecto de titulo/backend/data/seed_glosario.json",
+    "glosario_sha256": "76ecdb575ed6f555d055571a0e06f93c327c18190401c6383442d352dabff529",
+    "curso_id": 1
+  },
+  "metadatos": {
+    "fecha_utc": "2026-11-21T00:59:31.266826+00:00",
+    "git_commit": "0a8209cb99f059b55b21fccdea1bed89ce27f3fe",
+    "git_dirty": true,
+    "hardware": {
+      "plataforma": "Windows-11-10.0.26300-SP0",
+      "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+      "python": "3.14.0",
+      "cpu_nucleos_logicos": 12,
+      "cpu_nucleos_fisicos": 8,
+      "ram_total_mb": 7967.9,
+      "gpu": {
+        "nombre": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_total_mb": 6144,
+        "vram_usada_mb": 549,
+        "driver": "610.47"
+      }
+    },
+    "versiones": {
+      "spacy": "3.8.13",
+      "es_core_news_md": "3.8.0",
+      "numpy": "2.5.1",
+      "psutil": "7.2.2"
+    }
+  },
+  "resultados": {
+    "total_frases": 66,
+    "total_errores": 5,
+    "global": {
+      "tp": 79,
+      "fp": 3,
+      "fn": 2,
+      "soporte": 81,
+      "precision": 0.9634,
+      "recuperacion": 0.9753,
+      "f1": 0.9693
+    },
+    "compuestos": {
+      "tp": 21,
+      "fp": 0,
+      "fn": 0,
+      "soporte": 21,
+      "precision": 1.0,
+      "recuperacion": 1.0,
+      "f1": 1.0
+    },
+    "simples": {
+      "tp": 58,
+      "fp": 3,
+      "fn": 2,
+      "soporte": 60,
+      "precision": 0.9508,
+      "recuperacion": 0.9667,
+      "f1": 0.9587
+    },
+    "por_concepto": {
+      "algoritmo": {
+        "es_compuesto": false,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 5,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "arreglo": {
+        "es_compuesto": false,
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 8,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "búsqueda binaria": {
+        "es_compuesto": true,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 5,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "cola": {
+        "es_compuesto": false,
+        "tp": 4,
+        "fp": 1,
+        "fn": 0,
+        "soporte": 4,
+        "precision": 0.8,
+        "recuperacion": 1.0,
+        "f1": 0.8889
+      },
+      "complejidad": {
+        "es_compuesto": false,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 5,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "grafo": {
+        "es_compuesto": false,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 4,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "lista enlazada": {
+        "es_compuesto": true,
+        "tp": 7,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 7,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "memoria": {
+        "es_compuesto": false,
+        "tp": 4,
+        "fp": 0,
+        "fn": 2,
+        "soporte": 6,
+        "precision": 1.0,
+        "recuperacion": 0.6667,
+        "f1": 0.8
+      },
+      "nodo": {
+        "es_compuesto": false,
+        "tp": 8,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 8,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "ordenamiento": {
+        "es_compuesto": false,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 4,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "pila": {
+        "es_compuesto": false,
+        "tp": 5,
+        "fp": 2,
+        "fn": 0,
+        "soporte": 5,
+        "precision": 0.7143,
+        "recuperacion": 1.0,
+        "f1": 0.8333
+      },
+      "puntero": {
+        "es_compuesto": false,
+        "tp": 6,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 6,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "recursión": {
+        "es_compuesto": false,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 5,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "tabla hash": {
+        "es_compuesto": true,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 4,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      },
+      "árbol binario": {
+        "es_compuesto": true,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "soporte": 5,
+        "precision": 1.0,
+        "recuperacion": 1.0,
+        "f1": 1.0
+      }
+    },
+    "cobertura": {
+      "menciones_totales": 81,
+      "menciones_cubiertas": 81,
+      "menciones_fuera_glosario": 0,
+      "tasa_cobertura": 1.0,
+      "conceptos_fuera_glosario": {}
+    },
+    "meta_rnf04": {
+      "precision_min": 0.9,
+      "recuperacion_min": 0.85,
+      "cumple_precision": true,
+      "cumple_recuperacion": true
+    },
+    "errores": [
+      {
+        "linea": 9,
+        "particion": "prueba",
+        "texto": "había una cola larga afuera de la oficina de docencia",
+        "esperados_cubiertos": [],
+        "esperados_fuera_glosario": [],
+        "detectados": [
+          "cola"
+        ],
+        "detalles_senas": [
+          {
+            "concepto": "cola",
+            "texto_detectado": "cola"
+          }
+        ],
+        "abstenciones": [],
+        "falsos_positivos": [
+          "cola"
+        ],
+        "falsos_negativos": []
+      },
+      {
+        "linea": 10,
+        "particion": "prueba",
+        "texto": "dejé una pila de pruebas corregidas sobre el mesón",
+        "esperados_cubiertos": [],
+        "esperados_fuera_glosario": [],
+        "detectados": [
+          "pila"
+        ],
+        "detalles_senas": [
+          {
+            "concepto": "pila",
+            "texto_detectado": "pila"
+          }
+        ],
+        "abstenciones": [],
+        "falsos_positivos": [
+          "pila"
+        ],
+        "falsos_negativos": []
+      },
+      {
+        "linea": 11,
+        "particion": "prueba",
+        "texto": "se descargó la pila del micrófono así que hablaré más fuerte",
+        "esperados_cubiertos": [],
+        "esperados_fuera_glosario": [],
+        "detectados": [
+          "pila"
+        ],
+        "detalles_senas": [
+          {
+            "concepto": "pila",
+            "texto_detectado": "pila"
+          }
+        ],
+        "abstenciones": [],
+        "falsos_positivos": [
+          "pila"
+        ],
+        "falsos_negativos": []
+      },
+      {
+        "linea": 44,
+        "particion": "prueba",
+        "texto": "una fuga de memoria ocurre cuando olvidamos liberar lo asignado",
+        "esperados_cubiertos": [
+          "memoria"
+        ],
+        "esperados_fuera_glosario": [],
+        "detectados": [],
+        "detalles_senas": [],
+        "abstenciones": [
+          {
+            "bloqueo": "de memoria",
+            "texto_detectado": "de memoria"
+          }
+        ],
+        "falsos_positivos": [],
+        "falsos_negativos": [
+          "memoria"
+        ]
+      },
+      {
+        "linea": 63,
+        "particion": "prueba",
+        "texto": "si falla la asignación de memoria el puntero queda inválido",
+        "esperados_cubiertos": [
+          "memoria",
+          "puntero"
+        ],
+        "esperados_fuera_glosario": [],
+        "detectados": [
+          "puntero"
+        ],
+        "detalles_senas": [
+          {
+            "concepto": "puntero",
+            "texto_detectado": "puntero"
+          }
+        ],
+        "abstenciones": [
+          {
+            "bloqueo": "de memoria",
+            "texto_detectado": "de memoria"
+          }
+        ],
+        "falsos_positivos": [],
+        "falsos_negativos": [
+          "memoria"
+        ]
+      }
+    ]
+  }
+}

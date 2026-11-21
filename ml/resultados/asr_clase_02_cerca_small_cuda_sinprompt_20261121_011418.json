@@ -1,0 +1,777 @@
+{
+  "tipo": "evaluacion_asr",
+  "configuracion": {
+    "audio": "ml/datos/audio/clase_02_cerca.wav",
+    "audio_sha256": "4e8808aacb4985eec874bb251814eee39a8d50c0695d13cb2719691ef8a919c9",
+    "referencia": "ml/datos/referencias/clase_02.txt",
+    "referencia_sha256": "b55a7c69d2e06baca34e6f3528fc073f3162c0e820ac322e8f1049a47b48f779",
+    "glosario": "D:/Proyectos/Proyecto de titulo/backend/data/seed_glosario.json",
+    "glosario_sha256": "76ecdb575ed6f555d055571a0e06f93c327c18190401c6383442d352dabff529",
+    "curso_id": 1,
+    "modelo": "small",
+    "device": "cuda",
+    "compute_type": "auto",
+    "prompt_glosario": false,
+    "lang": "es",
+    "trama_ms": 100,
+    "asr_silencio_ms": 600,
+    "asr_max_segmento_ms": 15000,
+    "asr_parcial_ms": 1000
+  },
+  "metadatos": {
+    "fecha_utc": "2026-11-21T01:14:18.374350+00:00",
+    "git_commit": "0a8209cb99f059b55b21fccdea1bed89ce27f3fe",
+    "git_dirty": true,
+    "hardware": {
+      "plataforma": "Windows-11-10.0.26300-SP0",
+      "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+      "python": "3.14.0",
+      "cpu_nucleos_logicos": 12,
+      "cpu_nucleos_fisicos": 8,
+      "ram_total_mb": 7967.9,
+      "gpu": {
+        "nombre": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_total_mb": 6144,
+        "vram_usada_mb": 1271,
+        "driver": "610.47"
+      }
+    },
+    "versiones": {
+      "faster-whisper": "1.2.1",
+      "ctranslate2": "4.9.0",
+      "onnxruntime": "1.32.0",
+      "spacy": "3.8.13",
+      "es_core_news_md": "3.8.0",
+      "jiwer": "4.0.0",
+      "psutil": "7.2.2",
+      "websockets": "16.1.1",
+      "fastapi": "0.111.1",
+      "uvicorn": "0.30.6",
+      "numpy": "2.5.1"
+    }
+  },
+  "resultados": {
+    "audio_duracion_ms": 414208,
+    "wall_clock_ms": 23043,
+    "modo_rapido": true,
+    "segmentos_finales": 54,
+    "segmentos_provisionales": 0,
+    "asr_total_ms": 17186,
+    "asr_finales_ms": 17186,
+    "factor_tiempo_real": 0.0415,
+    "factor_tiempo_real_finales": 0.0415,
+    "wer": {
+      "wer": 0.0501,
+      "sustituciones": 36,
+      "eliminaciones": 0,
+      "inserciones": 9,
+      "aciertos": 863,
+      "palabras_referencia": 899,
+      "referencia_normalizada": "en esta segunda parte del repaso vamos a pasar desde las secuencias lineales hacia estructuras jerárquicas redes generales tablas de acceso directo y estrategias clásicas de procesamiento de datos el objetivo sigue siendo comprender cómo se relacionan la organización lógica de la información el uso de memoria y el rendimiento real de cada algoritmo cuando el volumen de entrada aumenta comencemos revisando el concepto de árbol binario a diferencia de una lista enlazada lineal donde cada nodo conoce a lo más un sucesor en un árbol binario cada nodo puede apuntar como máximo a dos hijos llamados usualmente hijo izquierdo e hijo derecho el nodo superior desde donde parte toda la estructura se denomina raíz y los nodos que no tienen descendientes se llaman hojas esta ramificación hace que muchos problemas se resuelvan naturalmente mediante recursión cuando escribimos una función recursiva para recorrer un árbol binario procesamos el nodo actual y delegamos exactamente el mismo procedimiento sobre el subárbol izquierdo y el subárbol derecho hasta alcanzar una referencia nula que actúa como caso base sin una condición de término clara la recursión consumirá toda la memoria destinada a la pila de llamadas y detendría el programa de forma abrupta un caso especial muy utilizado en árboles binarios permite mantener elementos ordenados y realizar consultas rápidas sin recorrer la colección completa sin embargo si queremos encontrar un valor dentro de un arreglo previamente ordenado de manera mucho más directa utilizamos búsqueda binaria la búsqueda binaria divide el rango de análisis por la mitad en cada comparación primero revisamos el elemento ubicado justo al centro del arreglo si el valor buscado es menor que el central descartamos toda la mitad derecha en un solo paso si es mayor descartamos por completo la mitad izquierda al reducir el espacio a la mitad en cada iteración la complejidad crece apenas de manera logarítmica lo que marca una diferencia enorme frente a una exploración secuencial en arreglos con millones de registros naturalmente la búsqueda binaria exige como requisito previo que los datos estén ordenados por eso estudiamos distintos algoritmos de ordenamiento y comparamos sus compromisos entre velocidad uso adicional de memoria y estabilidad algunos métodos de ordenamiento elementales comparan parejas vecinas y realizan intercambios repetidos con complejidad cuadrática en el peor caso en cambio estrategias basadas en dividir y conquistar construidas frecuentemente con recursión sobre subarreglos logran ordenar grandes colecciones en tiempo proporcional a ene log ene entender cómo evoluciona la complejidad según la distribución inicial de los datos resulta mucho más valioso que repetir definiciones de memoria antes de una evaluación escrita ahora bien existen escenarios donde incluso ordenar y buscar en tiempo logarítmico resulta más lento de lo necesario cuando solo queremos verificar si una clave existe o recuperar un registro asociado para esos casos empleamos una tabla hash una tabla hash utiliza una función matemática que transforma la clave de entrada en un índice entero dentro de un arreglo subyacente de cubetas cuando dos claves distintas producen el mismo índice ocurre una colisión que podemos resolver encadenando una pequeña lista enlazada en esa posición o buscando la siguiente celda libre con una buena función de dispersión y un factor de carga controlado las tablas hash alcanzan tiempos promedio cercanos a constante tanto al insertar como al consultar elementos conviene notar la diferencia frente a expresiones cotidianas del aula como cuando revisamos una tabla de calificaciones o una lista de asistencia al inicio de la jornada allí solo organizamos texto para lectura humana mientras que una tabla hash está diseñada para resolver consultas automatizadas con mínima complejidad esperada finalmente cuando los vínculos entre unidades ya no siguen una jerarquía estricta de padre e hijo necesitamos una representación más general el grafo un grafo consta de un conjunto de vértices o nodos unidos por aristas que modelan relaciones arbitrarias como rutas entre ciudades dependencias entre tareas o enlaces en una red de computadores a diferencia de un árbol binario los grafos pueden contener ciclos múltiples caminos entre dos puntos e incluso componentes desconectados para recorrer un grafo sin quedar atrapados dando vueltas indefinidamente en un ciclo debemos marcar qué nodos ya visitamos utilizando un arreglo auxiliar o una tabla hash de seguimiento según el problema que estemos modelando podemos almacenar un grafo mediante una matriz de adyacencia basada en arreglos bidimensionales o mediante listas de adyacencia donde cada vértice mantiene una lista enlazada con sus vecinos directos logrando un equilibrio adecuado entre consumo de memoria y rapidez de exploración de hecho resulta muy ilustrativo observar cómo los recorridos clásicos de grafos combinan casi todo lo visto hasta aquí el recorrido en amplitud explora los vecinos capa por capa apoyándose en una cola para decidir qué nodo visitar después mientras que el recorrido en profundidad avanza tan lejos como pueda siguiendo cada rama gracias a una pila explícita o mediante recursión directa asimismo en algoritmos de caminos más cortos o detección de dependencias de ramos universitarios aparecen las mismas ideas fundamentales de ordenamiento topológico y análisis de complejidad sobre nodos y aristas al reunir arreglos listas ligadas punteros pilas colas árboles binarios tablas hash algoritmos de ordenamiento y grafos bajo un análisis serio de complejidad completamos el mapa fundamental de esta asignatura recuerden ejercitar estos conceptos implementándolos paso a paso en laboratorio y verificando siempre cada caso borde antes de entregar sus soluciones muchas gracias a todos nos vemos en la próxima sesión práctica",
+      "hipotesis_normalizada": "en esta segunda parte del repaso vamos a pasar desde las secuencias lineales hacia estructuras jerárquicas redes generales tablas de acceso directo y estrategias clásicas de procesamiento de datos el objetivo sigue siendo comprender cómo se relacionan la organización lógica de la información el uso de memoria y el rendimiento real de cada algoritmo cuando el volumen de entrada aumenta comencemos revisando el concepto de arbol binario a diferencia de una lista lazada lineal donde cada uno conoce a lo más un sucesor en un árbol binario cada nodo puede apuntar como máximo a dos hijos llamados usualmente hijo izquierdo e hijo derecho el nodo superior desde donde parte toda la estructura se denomina raíz y los nodos que no tienen descendientes se llaman hojas esta ramificación hace que muchos problemas se resuelvan naturalmente mediante recursión cuando escribimos una función recursiva para recorrer un árbol binario procesamos el nodo actual y delegamos exactamente el mismo procedimiento sobre el sub árbol izquierdo y el sub árbol derecho hasta alcanzar una referencia nula que actúa como caso base sin una condición de término clara la recursión consumirá toda la memoria destinada a la pila de llamadas y detendría el programa de forma abrupta un caso especial muy utilizado en árboles binarios permite mantener elementos ordenados y realizar consultas rápidas sin recorrer la colección completa sin embargo si queremos encontrar un valor dentro de un arreglo previamente ordenado de manera mucho más directa utilizamos búsqueda binaria la búsqueda binaria divide el rango de análisis por la mitad en cada comparación primero revisamos el elemento ubicado justo al centro del arreglo si el valor buscado es menor que el central descartamos toda la mitad derecha en un solo paso si es mayor descartamos por completo la mitad izquierda al reducir el espacio a la mitad en cada iteración la complicidad crece apenas de manera logarítmica lo que marca una diferencia enorme frente a una exploración secuencial en arreglos con millones de registros naturalmente la búsqueda binaria exige como requisito previo que los datos estén ordenados por eso estudiamos distintos algoritmos de ordenamiento y comparamos sus compromisos entre velocidad uso adicional de memoria y estabilidad algunos métodos de ordenamiento elementales comparan parejas vecinas y realizan intercambios repetidos con complejidad cuadrática en el peor caso en cambio estrategias basadas en dividir y conquistar construidas frecuentemente con recursión sobre sus barreglos logra ordenar grandes colecciones en tiempo proporcional a n log n entender cómo evoluciona la complejidad según la distribución inicial de los datos resulta mucho más palioso que repetir definiciones de memoria antes de una evaluación escrita ahora bien existe un escenario donde incluso ordenar y buscar en tiempo logarítmico resulta más lento de lo necesario cuando solo queremos verificar si una clave existe o recuperar un registro asociado para esos casos empleamos una tabla hash una tabla hash utiliza una función matemática que transforma la clave de entrada en un índice entero dentro de un arreglo subyacente de cubetas cuando dos claves distintas producen el mismo índice ocurre una colisión que podemos resolver cadenando una pequeña lista enlazada en esa posición buscando en la siguiente celda libre con una buena función de dispersión y un factor de carga controlado las tablas hatch alcanzan tiempos promedio cercanos a constante tanto al insertar como al consultar elementos conviene notar la diferencia frente a expresiones cotidianas de la ula como cuando revisamos una tabla de calificaciones o una lista de asistencia al inicio de la jornada allí solo organizamos texto para lectura humana mientras que una tabla hatch está diseñada para resolver consultas automatizadas con mínima complejidad esperada finalmente cuando los vínculos entre unidades ya no siguen una jerarquía estricta de padre e hijo necesitamos una representación más general el grafo un grafo consta de un conjunto de vértices o nuevos unidos por aristas que modelan relaciones arbitrarias como rutas entre ciudades dependencias entre tareas o enlaces en una red de computadoras a diferencia de un árbol binario los grafos pueden contener ciclos múltiples caminos entre dos puntos e incluso componentes de conectados para recorrer un grafo sin quedar atrapados dando vueltas indefinidamente en un ciclo debemos marcar que en o2 ya visitamos utilizando un arreglo auxiliar o una tabla hatch de seguimiento según el problema que estemos modelando podemos almacenar un grafo mediante una matriz de adyacencia basada en arreglos bidimensionales o mediante listas de adyacencia donde cada vértice mantiene una lista lazada con sus vecinos directos logrando un equilibrio adecuado entre consumo de memoria y rapidez de exploración de hecho resulta muy ilustrativo observar como los recorridos clásicos de grafos combinan casi todo lo visto hasta aquí el recorrido en amplitud explora los vecinos capa por capa apoyándose en una cola para decidir qué no dos visitar después mientras que el recorrido en profundidad avanza tan lejos como pueda siguiendo cada rama gracias a una pila explícita o mediante recursión directa asimismo en algoritmos de caminos más cortos o detección de dependencias de ramos universitarios aparecen las mismas ideas fundamentales de ordenamiento etopológico y análisis de complejidad sobre nodos y aristas al reunir arreglos listas ligadas ponderos pilas coelas árboles binarios tablas hatch algoritmos de ordenamiento y grafos bajo una análisis serio de complejidad completamos el mapa fundamental de esta asignatura recuerden ejercitar estos conceptos implementando los paso a paso el laboratorio y verificando siempre cada caso borde antes de entregar sus soluciones muchas gracias a todos nos vemos en la próxima sesión práctica"
+    },
+    "terminos_tecnicos": {
+      "menciones_referencia": 70,
+      "menciones_transcripcion": 56,
+      "menciones_recuperadas": 56,
+      "fraccion_recuperada": 0.8,
+      "detalle_por_concepto": {
+        "algoritmo": {
+          "referencia": 4,
+          "transcripcion": 4,
+          "recuperadas": 4
+        },
+        "arreglo": {
+          "referencia": 7,
+          "transcripcion": 7,
+          "recuperadas": 7
+        },
+        "búsqueda binaria": {
+          "referencia": 3,
+          "transcripcion": 3,
+          "recuperadas": 3
+        },
+        "cola": {
+          "referencia": 2,
+          "transcripcion": 1,
+          "recuperadas": 1
+        },
+        "complejidad": {
+          "referencia": 6,
+          "transcripcion": 5,
+          "recuperadas": 5
+        },
+        "grafo": {
+          "referencia": 7,
+          "transcripcion": 7,
+          "recuperadas": 7
+        },
+        "lista enlazada": {
+          "referencia": 4,
+          "transcripcion": 2,
+          "recuperadas": 2
+        },
+        "memoria": {
+          "referencia": 1,
+          "transcripcion": 1,
+          "recuperadas": 1
+        },
+        "nodo": {
+          "referencia": 9,
+          "transcripcion": 5,
+          "recuperadas": 5
+        },
+        "ordenamiento": {
+          "referencia": 6,
+          "transcripcion": 6,
+          "recuperadas": 6
+        },
+        "pila": {
+          "referencia": 3,
+          "transcripcion": 3,
+          "recuperadas": 3
+        },
+        "puntero": {
+          "referencia": 1,
+          "transcripcion": 0,
+          "recuperadas": 0
+        },
+        "recursión": {
+          "referencia": 5,
+          "transcripcion": 5,
+          "recuperadas": 5
+        },
+        "tabla hash": {
+          "referencia": 6,
+          "transcripcion": 2,
+          "recuperadas": 2
+        },
+        "árbol binario": {
+          "referencia": 6,
+          "transcripcion": 5,
+          "recuperadas": 5
+        }
+      }
+    },
+    "latencia_servidor_ms": {
+      "n": 54,
+      "min": 1075.0,
+      "mediana": 11753.0,
+      "p95": 22017.7,
+      "max": 23023.0,
+      "promedio": 11920.59,
+      "nota": "No válida para RNF01: ejecutado con --rapido (sin pacing en tiempo real)."
+    },
+    "memoria_proceso_max_mb": 1186.95,
+    "memoria_gpu": {
+      "proceso_mb": null,
+      "gpu_usada_antes_mb": 1189,
+      "gpu_usada_max_mb": 1271,
+      "delta_gpu_mb": 82,
+      "vram_total_mb": 6144
+    },
+    "meta_rnf": {
+      "rnf03_wer_max": 0.25,
+      "cumple_rnf03": true,
+      "rnf01_p95_max_ms": 5000,
+      "cumple_rnf01_servidor": null
+    },
+    "transcripcion": "En esta segunda parte del repaso, vamos a pasar desde las secuencias lineales hacia estructuras jerárquicas, redes generales, tablas de acceso directo y estrategias clásicas de procesamiento de datos. El objetivo sigue siendo comprender cómo se relacionan la organización lógica de la información, el uso de memoria y el rendimiento real de cada algoritmo cuando el volumen de entrada aumenta. comencemos revisando el concepto de arbol binario a diferencia de una lista lazada lineal donde cada uno conoce a lo más un sucesor En un árbol binario, cada nodo puede apuntar como máximo a dos hijos. llamados, usualmente, hijo izquierdo e hijo derecho. El nodo superior desde donde parte toda la estructura se denomina raíz y los nodos que no tienen descendientes se llaman hojas. Esta ramificación hace que muchos problemas se resuelvan naturalmente mediante recursión. Cuando escribimos una función recursiva para recorrer un árbol binario procesamos el nodo actual y delegamos exactamente el mismo procedimiento sobre el sub árbol izquierdo y el sub árbol derecho hasta alcanzar una referencia nula que actúa como caso base. Sin una condición de término clara, la recursión consumirá toda la memoria destinada a la pila de llamadas y detendría el programa de forma abrupta. Un caso especial muy utilizado en árboles binarios permite mantener elementos ordenados y realizar consultas rápidas sin recorrer la colección completa. Sin embargo, si queremos encontrar un valor dentro de un arreglo previamente ordenado, de manera mucho más directa. Utilizamos búsqueda binaria. La búsqueda binaria divide el rango de análisis por la mitad en cada comparación. Primero revisamos el elemento ubicado justo al centro del arreglo. si el valor buscado es menor que el central descartamos toda la mitad derecha en un solo paso. Si es mayor descartamos por completo la mitad izquierda. Al reducir el espacio a la mitad en cada iteración, la complicidad crece apenas de manera logarítmica. lo que marca una diferencia enorme frente a una exploración secuencial en arreglos con millones de registros. Naturalmente la búsqueda binaria exige como requisito previo que los datos estén ordenados. Por eso estudiamos distintos algoritmos de ordenamiento y comparamos sus compromisos. entre velocidad, uso adicional de memoria y estabilidad. Algunos métodos de ordenamiento elementales comparan parejas vecinas y realizan intercambios repetidos con complejidad cuadrática en el peor caso. En cambio, estrategias basadas en dividir y conquistar construidas frecuentemente con recursión sobre sus barreglos. logra ordenar grandes colecciones en tiempo proporcional a N Log N. Entender cómo evoluciona la complejidad según la distribución inicial de los datos resulta mucho más palioso que repetir definiciones de memoria antes de una evaluación escrita. Ahora bien, existe un escenario donde incluso ordenar y buscar en tiempo logarítmico resulta más lento de lo necesario, cuando solo queremos verificar si una clave existe o recuperar un registro asociado. Para esos casos, empleamos una tabla hash. Una tabla hash utiliza una función matemática que transforma la clave de entrada en un índice entero dentro de un arreglo subyacente de cubetas. Cuando dos claves distintas producen el mismo índice, ocurre una colisión que podemos resolver cadenando una pequeña lista enlazada en esa posición, buscando en la siguiente celda libre. con una buena función de dispersión y un factor de carga controlado. Las tablas Hatch alcanzan tiempos promedio cercanos a constante, tanto al insertar como al consultar elementos. Conviene notar la diferencia frente a expresiones cotidianas de la ULA. como cuando revisamos una tabla de calificaciones o una lista de asistencia al inicio de la jornada Allí solo organizamos texto para lectura humana mientras que una tabla Hatch está diseñada para resolver consultas automatizadas con mínima complejidad esperada. Finalmente, cuando los vínculos entre unidades ya no siguen una jerarquía estricta de padre e hijo, necesitamos una representación más general, el grafo. un grafo consta de un conjunto de vértices o nuevos unidos por aristas que modelan relaciones arbitrarias como rutas entre ciudades, dependencias entre tareas o enlaces en una red de computadoras. A diferencia de un árbol binario, los grafos pueden contener ciclos múltiples caminos entre dos puntos e incluso componentes de conectados. para recorrer un grafo sin quedar atrapados dando vueltas indefinidamente en un ciclo debemos marcar que en O2 ya visitamos, utilizando un arreglo auxiliar o una tabla Hatch de seguimiento Según el problema que estemos modelando Podemos almacenar un grafo mediante una matriz de adyacencia basada en arreglos bidimensionales o mediante listas de adyacencia donde cada vértice mantiene una lista lazada con sus vecinos directos. logrando un equilibrio adecuado entre consumo de memoria y rapidez de exploración. de hecho resulta muy ilustrativo observar como los recorridos clásicos de grafos combinan casi todo lo visto hasta aquí El recorrido en amplitud explora los vecinos capa por capa, apoyándose en una cola para decidir ¿Qué no dos visitar después? mientras que el recorrido en profundidad avanza tan lejos como pueda, siguiendo cada rama gracias a una pila explícita o mediante recursión directa Asimismo, en algoritmos de caminos más cortos o detección de dependencias de ramos universitarios aparecen las mismas ideas fundamentales de ordenamiento etopológico y análisis de complejidad sobre nodos y aristas. al reunir arreglos, listas ligadas, ponderos, pilas, coelas, árboles, binarios, tablas, hatch algoritmos de ordenamiento y grafos bajo una análisis serio de complejidad completamos el mapa fundamental de esta asignatura. Recuerden ejercitar estos conceptos implementando los paso a paso el laboratorio y verificando siempre cada caso borde antes de entregar sus soluciones. Muchas gracias a todos, nos vemos en la próxima sesión práctica.",
+    "segmentos": [
+      {
+        "segmento_id": 1,
+        "inicio_ms": 360,
+        "fin_ms": 12870,
+        "llegada_fin_ms": 0,
+        "asr_ms": 819,
+        "nlp_ms": 13,
+        "emitido_ms": 1075,
+        "latencia_servidor_ms": 1075,
+        "texto": "En esta segunda parte del repaso, vamos a pasar desde las secuencias lineales hacia estructuras jerárquicas, redes generales, tablas de acceso directo y estrategias clásicas de procesamiento de datos."
+      },
+      {
+        "segmento_id": 2,
+        "inicio_ms": 13290,
+        "fin_ms": 25500,
+        "llegada_fin_ms": 0,
+        "asr_ms": 428,
+        "nlp_ms": 9,
+        "emitido_ms": 1614,
+        "latencia_servidor_ms": 1614,
+        "texto": "El objetivo sigue siendo comprender cómo se relacionan la organización lógica de la información, el uso de memoria y el rendimiento real de cada algoritmo cuando el volumen de entrada aumenta."
+      },
+      {
+        "segmento_id": 3,
+        "inicio_ms": 25740,
+        "fin_ms": 29280,
+        "llegada_fin_ms": 0,
+        "asr_ms": 217,
+        "nlp_ms": 5,
+        "emitido_ms": 1943,
+        "latencia_servidor_ms": 1943,
+        "texto": "comencemos revisando el concepto de arbol binario"
+      },
+      {
+        "segmento_id": 4,
+        "inicio_ms": 29280,
+        "fin_ms": 35340,
+        "llegada_fin_ms": 0,
+        "asr_ms": 275,
+        "nlp_ms": 6,
+        "emitido_ms": 2337,
+        "latencia_servidor_ms": 2337,
+        "texto": "a diferencia de una lista lazada lineal donde cada uno conoce a lo más un sucesor"
+      },
+      {
+        "segmento_id": 5,
+        "inicio_ms": 35490,
+        "fin_ms": 40350,
+        "llegada_fin_ms": 0,
+        "asr_ms": 235,
+        "nlp_ms": 4,
+        "emitido_ms": 2660,
+        "latencia_servidor_ms": 2660,
+        "texto": "En un árbol binario, cada nodo puede apuntar como máximo a dos hijos."
+      },
+      {
+        "segmento_id": 6,
+        "inicio_ms": 40350,
+        "fin_ms": 44160,
+        "llegada_fin_ms": 0,
+        "asr_ms": 207,
+        "nlp_ms": 4,
+        "emitido_ms": 2976,
+        "latencia_servidor_ms": 2976,
+        "texto": "llamados, usualmente, hijo izquierdo e hijo derecho."
+      },
+      {
+        "segmento_id": 7,
+        "inicio_ms": 44610,
+        "fin_ms": 53880,
+        "llegada_fin_ms": 0,
+        "asr_ms": 341,
+        "nlp_ms": 6,
+        "emitido_ms": 3422,
+        "latencia_servidor_ms": 3422,
+        "texto": "El nodo superior desde donde parte toda la estructura se denomina raíz y los nodos que no tienen descendientes se llaman hojas."
+      },
+      {
+        "segmento_id": 8,
+        "inicio_ms": 53940,
+        "fin_ms": 59520,
+        "llegada_fin_ms": 0,
+        "asr_ms": 239,
+        "nlp_ms": 5,
+        "emitido_ms": 3754,
+        "latencia_servidor_ms": 3754,
+        "texto": "Esta ramificación hace que muchos problemas se resuelvan naturalmente mediante recursión."
+      },
+      {
+        "segmento_id": 9,
+        "inicio_ms": 59580,
+        "fin_ms": 74580,
+        "llegada_fin_ms": 1,
+        "asr_ms": 528,
+        "nlp_ms": 6,
+        "emitido_ms": 4423,
+        "latencia_servidor_ms": 4422,
+        "texto": "Cuando escribimos una función recursiva para recorrer un árbol binario procesamos el nodo actual y delegamos exactamente el mismo procedimiento sobre el sub árbol izquierdo y el sub árbol derecho hasta alcanzar una referencia nula"
+      },
+      {
+        "segmento_id": 10,
+        "inicio_ms": 74910,
+        "fin_ms": 77010,
+        "llegada_fin_ms": 1,
+        "asr_ms": 170,
+        "nlp_ms": 3,
+        "emitido_ms": 4694,
+        "latencia_servidor_ms": 4693,
+        "texto": "que actúa como caso base."
+      },
+      {
+        "segmento_id": 11,
+        "inicio_ms": 77250,
+        "fin_ms": 87510,
+        "llegada_fin_ms": 1,
+        "asr_ms": 403,
+        "nlp_ms": 7,
+        "emitido_ms": 5200,
+        "latencia_servidor_ms": 5199,
+        "texto": "Sin una condición de término clara, la recursión consumirá toda la memoria destinada a la pila de llamadas y detendría el programa de forma abrupta."
+      },
+      {
+        "segmento_id": 12,
+        "inicio_ms": 87510,
+        "fin_ms": 96180,
+        "llegada_fin_ms": 2,
+        "asr_ms": 315,
+        "nlp_ms": 5,
+        "emitido_ms": 5602,
+        "latencia_servidor_ms": 5600,
+        "texto": "Un caso especial muy utilizado en árboles binarios permite mantener elementos ordenados y realizar consultas rápidas sin recorrer la colección completa."
+      },
+      {
+        "segmento_id": 13,
+        "inicio_ms": 96330,
+        "fin_ms": 102660,
+        "llegada_fin_ms": 2,
+        "asr_ms": 312,
+        "nlp_ms": 4,
+        "emitido_ms": 6012,
+        "latencia_servidor_ms": 6010,
+        "texto": "Sin embargo, si queremos encontrar un valor dentro de un arreglo previamente ordenado, de manera mucho más directa."
+      },
+      {
+        "segmento_id": 14,
+        "inicio_ms": 102660,
+        "fin_ms": 104760,
+        "llegada_fin_ms": 2,
+        "asr_ms": 189,
+        "nlp_ms": 3,
+        "emitido_ms": 6313,
+        "latencia_servidor_ms": 6311,
+        "texto": "Utilizamos búsqueda binaria."
+      },
+      {
+        "segmento_id": 15,
+        "inicio_ms": 104940,
+        "fin_ms": 110250,
+        "llegada_fin_ms": 2,
+        "asr_ms": 249,
+        "nlp_ms": 7,
+        "emitido_ms": 6666,
+        "latencia_servidor_ms": 6664,
+        "texto": "La búsqueda binaria divide el rango de análisis por la mitad en cada comparación."
+      },
+      {
+        "segmento_id": 16,
+        "inicio_ms": 110670,
+        "fin_ms": 114870,
+        "llegada_fin_ms": 2,
+        "asr_ms": 226,
+        "nlp_ms": 4,
+        "emitido_ms": 7001,
+        "latencia_servidor_ms": 6999,
+        "texto": "Primero revisamos el elemento ubicado justo al centro del arreglo."
+      },
+      {
+        "segmento_id": 17,
+        "inicio_ms": 114960,
+        "fin_ms": 118530,
+        "llegada_fin_ms": 2,
+        "asr_ms": 204,
+        "nlp_ms": 6,
+        "emitido_ms": 7317,
+        "latencia_servidor_ms": 7315,
+        "texto": "si el valor buscado es menor que el central"
+      },
+      {
+        "segmento_id": 18,
+        "inicio_ms": 118530,
+        "fin_ms": 121830,
+        "llegada_fin_ms": 2,
+        "asr_ms": 215,
+        "nlp_ms": 5,
+        "emitido_ms": 7644,
+        "latencia_servidor_ms": 7642,
+        "texto": "descartamos toda la mitad derecha en un solo paso."
+      },
+      {
+        "segmento_id": 19,
+        "inicio_ms": 122070,
+        "fin_ms": 125970,
+        "llegada_fin_ms": 2,
+        "asr_ms": 214,
+        "nlp_ms": 5,
+        "emitido_ms": 7963,
+        "latencia_servidor_ms": 7961,
+        "texto": "Si es mayor descartamos por completo la mitad izquierda."
+      },
+      {
+        "segmento_id": 20,
+        "inicio_ms": 126360,
+        "fin_ms": 133800,
+        "llegada_fin_ms": 2,
+        "asr_ms": 299,
+        "nlp_ms": 5,
+        "emitido_ms": 8375,
+        "latencia_servidor_ms": 8373,
+        "texto": "Al reducir el espacio a la mitad en cada iteración, la complicidad crece apenas de manera logarítmica."
+      },
+      {
+        "segmento_id": 21,
+        "inicio_ms": 133920,
+        "fin_ms": 147300,
+        "llegada_fin_ms": 2,
+        "asr_ms": 495,
+        "nlp_ms": 7,
+        "emitido_ms": 8986,
+        "latencia_servidor_ms": 8984,
+        "texto": "lo que marca una diferencia enorme frente a una exploración secuencial en arreglos con millones de registros. Naturalmente la búsqueda binaria exige como requisito previo que los datos estén ordenados."
+      },
+      {
+        "segmento_id": 22,
+        "inicio_ms": 147300,
+        "fin_ms": 152760,
+        "llegada_fin_ms": 2,
+        "asr_ms": 258,
+        "nlp_ms": 4,
+        "emitido_ms": 9345,
+        "latencia_servidor_ms": 9343,
+        "texto": "Por eso estudiamos distintos algoritmos de ordenamiento y comparamos sus compromisos."
+      },
+      {
+        "segmento_id": 23,
+        "inicio_ms": 152850,
+        "fin_ms": 157650,
+        "llegada_fin_ms": 2,
+        "asr_ms": 226,
+        "nlp_ms": 3,
+        "emitido_ms": 9674,
+        "latencia_servidor_ms": 9672,
+        "texto": "entre velocidad, uso adicional de memoria y estabilidad."
+      },
+      {
+        "segmento_id": 24,
+        "inicio_ms": 158010,
+        "fin_ms": 167640,
+        "llegada_fin_ms": 3,
+        "asr_ms": 392,
+        "nlp_ms": 6,
+        "emitido_ms": 10171,
+        "latencia_servidor_ms": 10168,
+        "texto": "Algunos métodos de ordenamiento elementales comparan parejas vecinas y realizan intercambios repetidos con complejidad cuadrática en el peor caso."
+      },
+      {
+        "segmento_id": 25,
+        "inicio_ms": 168030,
+        "fin_ms": 176100,
+        "llegada_fin_ms": 3,
+        "asr_ms": 336,
+        "nlp_ms": 5,
+        "emitido_ms": 10614,
+        "latencia_servidor_ms": 10611,
+        "texto": "En cambio, estrategias basadas en dividir y conquistar construidas frecuentemente con recursión sobre sus barreglos."
+      },
+      {
+        "segmento_id": 26,
+        "inicio_ms": 176100,
+        "fin_ms": 181860,
+        "llegada_fin_ms": 3,
+        "asr_ms": 248,
+        "nlp_ms": 4,
+        "emitido_ms": 10951,
+        "latencia_servidor_ms": 10948,
+        "texto": "logra ordenar grandes colecciones en tiempo proporcional a N Log N."
+      },
+      {
+        "segmento_id": 27,
+        "inicio_ms": 182010,
+        "fin_ms": 197010,
+        "llegada_fin_ms": 3,
+        "asr_ms": 475,
+        "nlp_ms": 6,
+        "emitido_ms": 11525,
+        "latencia_servidor_ms": 11522,
+        "texto": "Entender cómo evoluciona la complejidad según la distribución inicial de los datos resulta mucho más palioso que repetir definiciones de memoria antes de una evaluación escrita. Ahora bien, existe un escenario donde incluso ordenar"
+      },
+      {
+        "segmento_id": 28,
+        "inicio_ms": 197010,
+        "fin_ms": 206280,
+        "llegada_fin_ms": 3,
+        "asr_ms": 375,
+        "nlp_ms": 5,
+        "emitido_ms": 11987,
+        "latencia_servidor_ms": 11984,
+        "texto": "y buscar en tiempo logarítmico resulta más lento de lo necesario, cuando solo queremos verificar si una clave existe o recuperar un registro asociado."
+      },
+      {
+        "segmento_id": 29,
+        "inicio_ms": 206520,
+        "fin_ms": 209880,
+        "llegada_fin_ms": 3,
+        "asr_ms": 195,
+        "nlp_ms": 8,
+        "emitido_ms": 12297,
+        "latencia_servidor_ms": 12294,
+        "texto": "Para esos casos, empleamos una tabla hash."
+      },
+      {
+        "segmento_id": 30,
+        "inicio_ms": 209880,
+        "fin_ms": 220530,
+        "llegada_fin_ms": 4,
+        "asr_ms": 407,
+        "nlp_ms": 8,
+        "emitido_ms": 12821,
+        "latencia_servidor_ms": 12817,
+        "texto": "Una tabla hash utiliza una función matemática que transforma la clave de entrada en un índice entero dentro de un arreglo subyacente de cubetas."
+      },
+      {
+        "segmento_id": 31,
+        "inicio_ms": 220560,
+        "fin_ms": 232140,
+        "llegada_fin_ms": 4,
+        "asr_ms": 435,
+        "nlp_ms": 12,
+        "emitido_ms": 13379,
+        "latencia_servidor_ms": 13375,
+        "texto": "Cuando dos claves distintas producen el mismo índice, ocurre una colisión que podemos resolver cadenando una pequeña lista enlazada en esa posición, buscando en la siguiente celda libre."
+      },
+      {
+        "segmento_id": 32,
+        "inicio_ms": 232230,
+        "fin_ms": 236940,
+        "llegada_fin_ms": 4,
+        "asr_ms": 234,
+        "nlp_ms": 4,
+        "emitido_ms": 13714,
+        "latencia_servidor_ms": 13710,
+        "texto": "con una buena función de dispersión y un factor de carga controlado."
+      },
+      {
+        "segmento_id": 33,
+        "inicio_ms": 236940,
+        "fin_ms": 249540,
+        "llegada_fin_ms": 4,
+        "asr_ms": 418,
+        "nlp_ms": 7,
+        "emitido_ms": 14249,
+        "latencia_servidor_ms": 14245,
+        "texto": "Las tablas Hatch alcanzan tiempos promedio cercanos a constante, tanto al insertar como al consultar elementos. Conviene notar la diferencia frente a expresiones cotidianas de la ULA."
+      },
+      {
+        "segmento_id": 34,
+        "inicio_ms": 249540,
+        "fin_ms": 258510,
+        "llegada_fin_ms": 4,
+        "asr_ms": 336,
+        "nlp_ms": 6,
+        "emitido_ms": 14690,
+        "latencia_servidor_ms": 14686,
+        "texto": "como cuando revisamos una tabla de calificaciones o una lista de asistencia al inicio de la jornada Allí solo organizamos texto para lectura humana"
+      },
+      {
+        "segmento_id": 35,
+        "inicio_ms": 258510,
+        "fin_ms": 265380,
+        "llegada_fin_ms": 4,
+        "asr_ms": 259,
+        "nlp_ms": 5,
+        "emitido_ms": 15046,
+        "latencia_servidor_ms": 15042,
+        "texto": "mientras que una tabla Hatch está diseñada para resolver consultas automatizadas con mínima complejidad esperada."
+      },
+      {
+        "segmento_id": 36,
+        "inicio_ms": 265380,
+        "fin_ms": 275610,
+        "llegada_fin_ms": 5,
+        "asr_ms": 400,
+        "nlp_ms": 6,
+        "emitido_ms": 15551,
+        "latencia_servidor_ms": 15546,
+        "texto": "Finalmente, cuando los vínculos entre unidades ya no siguen una jerarquía estricta de padre e hijo, necesitamos una representación más general, el grafo."
+      },
+      {
+        "segmento_id": 37,
+        "inicio_ms": 275610,
+        "fin_ms": 283380,
+        "llegada_fin_ms": 5,
+        "asr_ms": 303,
+        "nlp_ms": 6,
+        "emitido_ms": 15972,
+        "latencia_servidor_ms": 15967,
+        "texto": "un grafo consta de un conjunto de vértices o nuevos unidos por aristas que modelan relaciones arbitrarias"
+      },
+      {
+        "segmento_id": 38,
+        "inicio_ms": 283380,
+        "fin_ms": 298380,
+        "llegada_fin_ms": 5,
+        "asr_ms": 513,
+        "nlp_ms": 7,
+        "emitido_ms": 16578,
+        "latencia_servidor_ms": 16573,
+        "texto": "como rutas entre ciudades, dependencias entre tareas o enlaces en una red de computadoras. A diferencia de un árbol binario, los grafos pueden contener ciclos múltiples caminos entre dos puntos e incluso componentes"
+      },
+      {
+        "segmento_id": 39,
+        "inicio_ms": 298380,
+        "fin_ms": 299880,
+        "llegada_fin_ms": 5,
+        "asr_ms": 145,
+        "nlp_ms": 3,
+        "emitido_ms": 16825,
+        "latencia_servidor_ms": 16820,
+        "texto": "de conectados."
+      },
+      {
+        "segmento_id": 40,
+        "inicio_ms": 300030,
+        "fin_ms": 306300,
+        "llegada_fin_ms": 5,
+        "asr_ms": 266,
+        "nlp_ms": 4,
+        "emitido_ms": 17187,
+        "latencia_servidor_ms": 17182,
+        "texto": "para recorrer un grafo sin quedar atrapados dando vueltas indefinidamente en un ciclo"
+      },
+      {
+        "segmento_id": 41,
+        "inicio_ms": 306300,
+        "fin_ms": 313950,
+        "llegada_fin_ms": 5,
+        "asr_ms": 308,
+        "nlp_ms": 4,
+        "emitido_ms": 17583,
+        "latencia_servidor_ms": 17578,
+        "texto": "debemos marcar que en O2 ya visitamos, utilizando un arreglo auxiliar o una tabla Hatch de seguimiento"
+      },
+      {
+        "segmento_id": 42,
+        "inicio_ms": 314130,
+        "fin_ms": 317130,
+        "llegada_fin_ms": 5,
+        "asr_ms": 182,
+        "nlp_ms": 5,
+        "emitido_ms": 17872,
+        "latencia_servidor_ms": 17867,
+        "texto": "Según el problema que estemos modelando"
+      },
+      {
+        "segmento_id": 43,
+        "inicio_ms": 317130,
+        "fin_ms": 331110,
+        "llegada_fin_ms": 6,
+        "asr_ms": 511,
+        "nlp_ms": 8,
+        "emitido_ms": 18503,
+        "latencia_servidor_ms": 18497,
+        "texto": "Podemos almacenar un grafo mediante una matriz de adyacencia basada en arreglos bidimensionales o mediante listas de adyacencia donde cada vértice mantiene una lista lazada con sus vecinos directos."
+      },
+      {
+        "segmento_id": 44,
+        "inicio_ms": 331110,
+        "fin_ms": 336900,
+        "llegada_fin_ms": 6,
+        "asr_ms": 256,
+        "nlp_ms": 5,
+        "emitido_ms": 18870,
+        "latencia_servidor_ms": 18864,
+        "texto": "logrando un equilibrio adecuado entre consumo de memoria y rapidez de exploración."
+      },
+      {
+        "segmento_id": 45,
+        "inicio_ms": 336900,
+        "fin_ms": 343890,
+        "llegada_fin_ms": 6,
+        "asr_ms": 321,
+        "nlp_ms": 5,
+        "emitido_ms": 19299,
+        "latencia_servidor_ms": 19293,
+        "texto": "de hecho resulta muy ilustrativo observar como los recorridos clásicos de grafos combinan casi todo lo visto hasta aquí"
+      },
+      {
+        "segmento_id": 46,
+        "inicio_ms": 343980,
+        "fin_ms": 352740,
+        "llegada_fin_ms": 6,
+        "asr_ms": 351,
+        "nlp_ms": 5,
+        "emitido_ms": 19743,
+        "latencia_servidor_ms": 19737,
+        "texto": "El recorrido en amplitud explora los vecinos capa por capa, apoyándose en una cola para decidir ¿Qué no dos visitar después?"
+      },
+      {
+        "segmento_id": 47,
+        "inicio_ms": 352740,
+        "fin_ms": 362700,
+        "llegada_fin_ms": 6,
+        "asr_ms": 382,
+        "nlp_ms": 5,
+        "emitido_ms": 20230,
+        "latencia_servidor_ms": 20224,
+        "texto": "mientras que el recorrido en profundidad avanza tan lejos como pueda, siguiendo cada rama gracias a una pila explícita o mediante recursión directa"
+      },
+      {
+        "segmento_id": 48,
+        "inicio_ms": 362700,
+        "fin_ms": 372600,
+        "llegada_fin_ms": 6,
+        "asr_ms": 356,
+        "nlp_ms": 6,
+        "emitido_ms": 20713,
+        "latencia_servidor_ms": 20707,
+        "texto": "Asimismo, en algoritmos de caminos más cortos o detección de dependencias de ramos universitarios aparecen las mismas ideas fundamentales"
+      },
+      {
+        "segmento_id": 49,
+        "inicio_ms": 372600,
+        "fin_ms": 378090,
+        "llegada_fin_ms": 7,
+        "asr_ms": 264,
+        "nlp_ms": 4,
+        "emitido_ms": 21079,
+        "latencia_servidor_ms": 21072,
+        "texto": "de ordenamiento etopológico y análisis de complejidad sobre nodos y aristas."
+      },
+      {
+        "segmento_id": 50,
+        "inicio_ms": 378090,
+        "fin_ms": 387210,
+        "llegada_fin_ms": 7,
+        "asr_ms": 371,
+        "nlp_ms": 5,
+        "emitido_ms": 21551,
+        "latencia_servidor_ms": 21544,
+        "texto": "al reunir arreglos, listas ligadas, ponderos, pilas, coelas, árboles, binarios, tablas, hatch"
+      },
+      {
+        "segmento_id": 51,
+        "inicio_ms": 387330,
+        "fin_ms": 393750,
+        "llegada_fin_ms": 7,
+        "asr_ms": 264,
+        "nlp_ms": 5,
+        "emitido_ms": 21919,
+        "latencia_servidor_ms": 21912,
+        "texto": "algoritmos de ordenamiento y grafos bajo una análisis serio de complejidad"
+      },
+      {
+        "segmento_id": 52,
+        "inicio_ms": 393750,
+        "fin_ms": 397620,
+        "llegada_fin_ms": 7,
+        "asr_ms": 206,
+        "nlp_ms": 3,
+        "emitido_ms": 22221,
+        "latencia_servidor_ms": 22214,
+        "texto": "completamos el mapa fundamental de esta asignatura."
+      },
+      {
+        "segmento_id": 53,
+        "inicio_ms": 397620,
+        "fin_ms": 409500,
+        "llegada_fin_ms": 7,
+        "asr_ms": 397,
+        "nlp_ms": 6,
+        "emitido_ms": 22728,
+        "latencia_servidor_ms": 22721,
+        "texto": "Recuerden ejercitar estos conceptos implementando los paso a paso el laboratorio y verificando siempre cada caso borde antes de entregar sus soluciones."
+      },
+      {
+        "segmento_id": 54,
+        "inicio_ms": 409500,
+        "fin_ms": 414208,
+        "llegada_fin_ms": 8,
+        "asr_ms": 216,
+        "nlp_ms": 4,
+        "emitido_ms": 23031,
+        "latencia_servidor_ms": 23023,
+        "texto": "Muchas gracias a todos, nos vemos en la próxima sesión práctica."
+      }
+    ]
+  }
+}

@@ -928,7 +928,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-20 — SPEC-008 (1/2): instrumentación de métricas, scripts de medición y corpus propio
+## 2026-11-20 — `0a8209c` — SPEC-008 (1/2): instrumentación de métricas, scripts de medición y corpus propio
 **Refs:** SPEC-008 `specs/SPEC-008-mediciones-poc.md` (R1–R16, R18–R19; parcial)
 
 **Resumen:** Se implementó la instrumentación de latencias por segmento en el servidor, se retiraron `evaluation/logging.py` y las tablas heredadas `sesion`/`segmento`, se crearon los scripts reproducibles de evaluación (`normalizacion.py`, `evaluar_asr.py`, `evaluar_matching.py`, `prueba_carga.py`) con sus pruebas y dependencias separadas en `ml/`, y se ensamblaron y revisaron los dos audios propios del autor (`clase_01_cerca.wav` y `clase_02_cerca.wav`) junto a sus guiones y referencias.
@@ -958,3 +958,30 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 **Notas:**
 - Próximo paso (2/2): ejecutar la matriz de `ml/evaluar_asr.py` a ritmo real sobre ambos audios ensamblados, actualizar `matching` sobre commit limpio y consolidar `docs/resultados_poc.md`.
+
+---
+
+## 2026-11-21 — SPEC-008 (2/2): resultados medidos de PoC, informe técnico y documentación sincronizada
+**Refs:** SPEC-008 `specs/SPEC-008-mediciones-poc.md` (Completada con brecha acústica R9 declarada)
+
+**Resumen:** Se ejecutó la batería completa de evaluación de matching y transcripción ASR a ritmo real sobre las dos grabaciones del autor bajo el commit `0a8209c`, se consolidaron las cifras trazables y sus limitaciones en `docs/resultados_poc.md`, y se actualizó la documentación del prototipo y las especificaciones.
+
+**Cambios:**
+- **`ml/resultados/` — Evidencia JSON trazable al commit `0a8209c`:**
+  - `matching_ajuste_20261121_005927.json` (`36` frases: `TP=40, FP=0, FN=0`) y `matching_prueba_20261121_005931.json` (`66` frases protegidas: `TP=79, FP=3, FN=2`, Precisión `96.34 %`, Recuperación `97.53 %`, compuestos `100 %`).
+  - `asr_clase_01_cerca_small_cuda_prompt_20261121_010621.json` y `asr_clase_02_cerca_small_cuda_prompt_20261121_011321.json` (`1x` ritmo real en GPU RTX 3050: WER `3.16 %` y `3.56 %`, glosario `100 %` y `95.71 %`, `RTF total 0.2841–0.3069`, latencia servidor p95 `804.55 ms` y `821.05 ms`).
+  - `asr_clase_01_cerca_small_cuda_sinprompt_20261121_011350.json` y `asr_clase_02_cerca_small_cuda_sinprompt_20261121_011418.json` (`--rapido`: ablación sin prompt — WER `3.97 %` y `5.01 %`, glosario `94.74 %` y `80.00 %`).
+  - `asr_clase_01_cerca_base_cpu_prompt_20261121_012108.json` y `asr_clase_02_cerca_base_cpu_prompt_20261121_012807.json` (`1x` ritmo real en CPU: WER `8.25 %` y `9.45 %`, glosario `96.49 %` y `87.14 %`, `RTF total 0.7040–0.7091`, p95 `1908.35 ms` y `2250.70 ms`).
+- **Documentación y specs:**
+  - `docs/resultados_poc.md` — **nuevo**: condiciones de medición, tablas frente a `RNF01`, `RNF03`, `RNF04` y `RNF06`, trazabilidad JSON/commit, desglose de errores, limitaciones (voz única leída, sin evaluación con usuarios y brecha pendiente de audio con ruido/distancia) y configuración recomendada.
+  - `docs/documentacion_prototipo_defensa.md`, `README.md`, `specs/SPEC-008-mediciones-poc.md`, `specs/README.md` — actualización de módulos, esquema (`metrica_segmento`), contrato WS (`servidor_ms`), resultados y estado de `SPEC-008`.
+
+**Verificación:**
+- `ruff check backend ml` → `All checks passed!`
+- `pytest backend/tests` → `59 passed, 1 skipped` (`@pytest.mark.modelo`).
+- `pytest ml/tests` → `11 passed`.
+- `pnpm --prefix frontend build` → OK (46 módulos).
+- `git status --short ml/datos/audio` → vacío (sin audios versionados).
+
+**Notas:**
+- Próxima spec recomendada para cerrar el Anteproyecto: `SPEC-009` (`specs/SPEC-009-acceso-sesion-saneamiento.md`).

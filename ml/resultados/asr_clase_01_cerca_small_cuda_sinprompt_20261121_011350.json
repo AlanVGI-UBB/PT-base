@@ -1,0 +1,796 @@
+{
+  "tipo": "evaluacion_asr",
+  "configuracion": {
+    "audio": "ml/datos/audio/clase_01_cerca.wav",
+    "audio_sha256": "1609272ae54ac0336fa77f552202ff744b0f9fe8fc440c87aab73f1e50b289b7",
+    "referencia": "ml/datos/referencias/clase_01.txt",
+    "referencia_sha256": "88c541684bfe6a491df7315c9ae83fa397d3d5a24f9c2384d5f97c3b443c3fd7",
+    "glosario": "D:/Proyectos/Proyecto de titulo/backend/data/seed_glosario.json",
+    "glosario_sha256": "76ecdb575ed6f555d055571a0e06f93c327c18190401c6383442d352dabff529",
+    "curso_id": 1,
+    "modelo": "small",
+    "device": "cuda",
+    "compute_type": "auto",
+    "prompt_glosario": false,
+    "lang": "es",
+    "trama_ms": 100,
+    "asr_silencio_ms": 600,
+    "asr_max_segmento_ms": 15000,
+    "asr_parcial_ms": 1000
+  },
+  "metadatos": {
+    "fecha_utc": "2026-11-21T01:13:50.756676+00:00",
+    "git_commit": "0a8209cb99f059b55b21fccdea1bed89ce27f3fe",
+    "git_dirty": true,
+    "hardware": {
+      "plataforma": "Windows-11-10.0.26300-SP0",
+      "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+      "python": "3.14.0",
+      "cpu_nucleos_logicos": 12,
+      "cpu_nucleos_fisicos": 8,
+      "ram_total_mb": 7967.9,
+      "gpu": {
+        "nombre": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_total_mb": 6144,
+        "vram_usada_mb": 1271,
+        "driver": "610.47"
+      }
+    },
+    "versiones": {
+      "faster-whisper": "1.2.1",
+      "ctranslate2": "4.9.0",
+      "onnxruntime": "1.32.0",
+      "spacy": "3.8.13",
+      "es_core_news_md": "3.8.0",
+      "jiwer": "4.0.0",
+      "psutil": "7.2.2",
+      "websockets": "16.1.1",
+      "fastapi": "0.111.1",
+      "uvicorn": "0.30.6",
+      "numpy": "2.5.1"
+    }
+  },
+  "resultados": {
+    "audio_duracion_ms": 404651,
+    "wall_clock_ms": 23877,
+    "modo_rapido": true,
+    "segmentos_finales": 58,
+    "segmentos_provisionales": 0,
+    "asr_total_ms": 17650,
+    "asr_finales_ms": 17650,
+    "factor_tiempo_real": 0.0436,
+    "factor_tiempo_real_finales": 0.0436,
+    "wer": {
+      "wer": 0.0397,
+      "sustituciones": 27,
+      "eliminaciones": 2,
+      "inserciones": 10,
+      "aciertos": 953,
+      "palabras_referencia": 982,
+      "referencia_normalizada": "buenas tardes a todos y todas hoy vamos a comenzar la primera sesión de repaso de estructuras de datos enfocada en cómo organizamos la información dentro del computador y por qué la elección de cada estructura cambia por completo el desempeño de un programa antes de partir con código necesito que pongamos atención en la intuición detrás de la memoria principal y en las estructuras lineales más básicas que usamos durante el semestre cuando declaramos un arreglo en memoria el sistema operativo reserva un bloque contiguo de direcciones consecutivas gracias a esa disposición contigua calcular la posición de cualquier elemento tarda tiempo constante porque basta tomar la dirección base y sumar el desplazamiento multiplicado por el tamaño del dato sin embargo esa misma ventaja genera una rigidez importante si el arreglo se llena y necesitamos almacenar más elementos no podemos simplemente estirarlo sobre el espacio vecino porque esa zona puede estar ocupada por otra variable en muchos programas reales los ingenieros tienen que llegar a un arreglo práctico entre reservar demasiado espacio desde el inicio o copiar todos los datos a un bloque nuevo más grande cada vez que falta capacidad para evitar esas copias masivas surgieron las listas enlazadas a diferencia de los arreglos contiguos una lista enlazada no exige que sus piezas estén pegadas una al lado de la otra en memoria cada unidad se llama nodo y almacena dos partes fundamentales por un lado el valor útil que queremos guardar y por otro lado un puntero que guarda la dirección del siguiente nodo en la secuencia cuando recorremos una lista ligada desde la cabeza hasta el final vamos saltando de puntero en puntero siguiendo las referencias almacenadas en cada nodo insertar un elemento nuevo al principio resulta muy barato porque solo creamos un nodo y ajustamos dos punteros sin mover el resto de los datos en cambio si queremos acceder directamente al centésimo elemento ya no existe una fórmula aritmética inmediata y debemos caminar nodo por nodo desde el comienzo durante las ayudantías suele aparecer una duda muy común sobre dos estructuras que se parecen en el papel pero representan comportamientos opuestos la pila y la cola en una pila todas las inserciones y extracciones ocurren por el mismo extremo al que llamamos tope el último elemento que entra es siempre el primero en salir piensen en cuando dejan una pila de cuadernos encima del escritorio si quieren sacar el que quedó abajo sin desarmar todo primero deben retirar los que están arriba en informática usamos pilas todo el tiempo para gestionar llamadas entre funciones evaluar expresiones aritméticas o deshacer acciones en un editor de texto también conviene recordar que cuando hablamos de pila de libros sobre la mesa usamos la palabra en un sentido cotidiano mientras que dentro del curso nos referimos a esta disciplina de acceso restringido por un solo extremo la cola funciona justamente al revés el primer elemento que llega es el primero en ser atendido cuando modelamos una fila de impresión los trabajos entran por el final de la cola y salen por el frente en estricto orden de llegada en la vida diaria vemos esto mismo cuando se forma una cola para entrar al casino o al auditorio en la mañana en términos computacionales implementar una cola eficiente sobre listas enlazadas requiere mantener un puntero al primer nodo y otro puntero adicional al último nodo de modo que tanto encolar como desencolar tomen tiempo constante sin recorrer toda la estructura en cada operación un punto que siempre genera errores en los controles es el manejo descuidado de los punteros cuando se trabaja cerca de la memoria física no sirve memorizar las líneas de código de memoria sin dibujar antes qué apunta a qué cada vez que eliminamos un nodo en medio de una lista enlazada debemos conectar primero su predecesor con su sucesor antes de liberar la memoria ocupada si invertimos ese orden y liberamos antes de actualizar el enlace perdemos la dirección del resto de la lista y dejamos punteros colgantes que producen fallas graves difíciles de depurar en ejecución veamos también otro detalle práctico sobre la administración de memoria cuando implementamos arreglos dinámicos frente a listas enlazadas en un arreglo tradicional los elementos quedan guardados de manera compacta uno tras otro lo cual aprovecha mucho mejor la memoria caché del procesador porque leer un elemento trae consigo a los vecinos más cercanos en cambio en una lista ligada cada nodo puede quedar asignado en cualquier región disponible del montón y cada puntero adicional consume espacio extra de memoria que no almacena datos de negocio por eso aunque ambos permiten representar colecciones secuenciales elegir entre arreglos y listas depende tanto de la frecuencia de inserciones y eliminaciones como del patrón de recorrido que hará el algoritmo principal para cerrar esta primera parte quiero conectar estas estructuras lineales con la idea general de algoritmo y complejidad un algoritmo no es simplemente una receta arbitraria de pasos sino un procedimiento finito y bien definido que transforma entradas válidas en una salida esperada cuando comparamos un algoritmo sobre arreglos frente a uno equivalente sobre listas ligadas medimos cuántos pasos elementales consume a medida que crece el tamaño de los datos a esa relación de crecimiento la llamamos complejidad temporal y es el criterio que nos permite decidir con fundamento técnico qué estructuras conviene usar antes de escribir una sola línea en producción de igual modo analizamos la complejidad espacial para anticipar cuánta memoria adicional necesitará una solución cuando procese miles o millones de elementos en paralelo en la próxima parte avanzaremos hacia estructuras no lineales tablas de dispersión y métodos clásicos de búsqueda y ordenamiento tómense un minuto para repasar sus apuntes antes de pasar al bloque siguiente y recuerden probar pequeños ejemplos paso a paso con papel y lápiz para consolidar cómo cambian los punteros en cada operación básica muchas gracias por su atención",
+      "hipotesis_normalizada": "buenas tardes a todos y a todas hoy vamos a comenzar la primera sesión de repasos de estructuras de datos enfocada en cómo organizamos la información dentro del computador y por qué la elección de cada estructura cambio por completo en el desempeño de un programa antes de partir con codigo necesito que pongamos atención en la instrucción detrás de la memoria principal en las estructuras lineales más básicas que usamos durante el semestre cuando declaramos un arreglo en memoria el sistema operativo reserva un bloque contiguo de direcciones consecutivas gracias a esa disposición contigua calcular la posición de cualquier elemento tarda tiempo constante porque basta tomar la dirección base y sumar el desplazamiento identificado por el tamaño del dato sin embargo esa misma ventaja a quien era una rigidez importante si la regla se llena y necesitamos almacenar más elementos no podemos simplemente estirarlos sobre el espacio vecino porque esa zona puede estar ocupada por otra variable en muchos programas reales los ingenieros tienen que llegar a un arreglo práctico entre reservar demasiado espacio desde el inicio o copiar todos los datos a un blog que es nuevo más grande cada vez que falta capacidad para evitar esas copias masivas surgieron las listas enlazadas a diferencia de los arreglos contiguos una lista enlazada no exige que sus piezas estén pegadas una al lado de la otra en memoria cada unidad se llama nodo y almacena dos partes fundamentales por un lado el valor útil que queremos guardar y por otro lado un puntero que guarda la dirección del siguiente nodo en la secuencia cuando recorremos una lista ligada desde la cabeza hasta el final vamos saltando de puntero en puntero siguiendo las referencias almacenadas en cada nodo insertar un elemento nuevo al principio resulta muy barato porque sólo creamos un nodo y ajustamos 2 punteros sin mover el resto de los datos en cambio si queremos acceder directamente al centésimo elemento ya no existe una fórmula aritmética inmediata y debemos caminar nodo por nodo desde el comienzo durante las ayudan tías suele aparecer una duda muy común sobre dos estructuras que se parecen en el papel pero representan comportamientos opuestos la pila y la cola en una pila todas las inserciones y extracciones ocurren por el mismo extremo al que llamamos tope el último elemento que entra es siempre el primero en salir piensen en cuando dejan una pila de cuadernos encima del escritorio si quieren sacar el que quedó abajo sin desarmar todo primero deben retirar los que están arriba en informática usamos pilas todo el tiempo para gestionar llamadas entre funciones evaluar expresiones aritméticas o deshacer acciones en un editor de texto también conviene recordar que cuando hablamos de pila de libros sobre la mesa usamos la palabra en un sentido cotidiano mientras que dentro del curso nos referimos a esta disciplina de acceso restringido por un solo extremo la cola funciona justamente al revés el primer elemento que llega es el primero en ser atendido cuando modelamos una fila de impresión los trabajos entran por el final de la cola y salen por el frente en estricto orden de llegada en la vida diaria vemos esto mismo cuando se forma una cola para entrar al casino o al auditorio de la mañana en términos computacionales implementar una cola eficiente sobre listas en las hadas requiere mantener un puntero al primer nodo y otro puntero adicional al último nodo de modo que tanto encolar como desencolar tomen tiempo constante sin recorrer toda la estructura en cada operación un punto que siempre genera errores en los controles es el manejo descuidado de los punteros cuando se trabaja cerca de la memoria física nos sirve memorizar las líneas de código de memoria sin dibujar antes qué apuntaba qué cada vez que eliminamos un nodo en medio de una lista lazada debemos conectar primero su predecesor con su sucesor antes de liberar la memoria ocupada si invertimos ese orden y liberamos antes de actualizar el enlace perdemos la dirección del resto de la lista y dejamos punteros colgantes que producen fallas graves difíciles de depurar en ejecución veamos también otro detalle práctico sobre la administración de memoria cuando implementamos arreglos dinámicos frente a listas enlazadas en un arreglo tradicional los elementos quedan guardados de manera compacta uno tras otro lo cual aprovecha mucho mejor la memoria caché del procesador porque leer un elemento trae consigo a los vecinos más cercanos en cambio en una lista ligada cada nodo puede quedar asignado en cualquier región disponible del montón y cada puntero adicional consume espacio extra de memoria que no almacena datos de negocio por eso aunque ambos permiten representar colecciones secuenciales elegir entre arreglos y listas depende tanto de las frecuencias de inserciones y eliminaciones como del patrón de recorrido que hará el algoritmo principal para cerrar esta primera parte quiero conectar estas estructuras lineales con la idea general de algoritmo y complejidad un algoritmo no es simplemente una receta arbitraria de pasos sino un procedimiento finito y bien definido que transforma entradas válidas en una salida esperada cuando comparamos un algoritmo sobre arreglos frente a uno equivalente sobre listas ligadas medimos cuantos pasos elementales consume a medida que crece el tamaño de los datos a esa relación de crecimiento la llamamos complejidad temporal y es el criterio que nos permite decidir con fundamento técnico que estructuras convienen usar antes de escribir un una sola línea en producción de igual modo analizamos la complejidad espacial para anticipar cuánta memoria adicional necesitará una solución cuando procesa miles o millones de elementos en paralelo en la próxima parte avanzaremos hacia destructuras no lineales tablas de dispersión y métodos clásicos de búsqueda y ordenamiento tómense un minuto para repasar sus apuntes antes de pasar al bloque siguiente y recuerden probar pequeños ejemplos paso a paso con papel y lápiz para consolear cómo cambiar los punteros en cada operación básica muchas gracias por su atención"
+    },
+    "terminos_tecnicos": {
+      "menciones_referencia": 57,
+      "menciones_transcripcion": 54,
+      "menciones_recuperadas": 54,
+      "fraccion_recuperada": 0.9474,
+      "detalle_por_concepto": {
+        "algoritmo": {
+          "referencia": 4,
+          "transcripcion": 4,
+          "recuperadas": 4
+        },
+        "arreglo": {
+          "referencia": 7,
+          "transcripcion": 6,
+          "recuperadas": 6
+        },
+        "cola": {
+          "referencia": 4,
+          "transcripcion": 4,
+          "recuperadas": 4
+        },
+        "complejidad": {
+          "referencia": 3,
+          "transcripcion": 3,
+          "recuperadas": 3
+        },
+        "lista enlazada": {
+          "referencia": 8,
+          "transcripcion": 6,
+          "recuperadas": 6
+        },
+        "memoria": {
+          "referencia": 7,
+          "transcripcion": 7,
+          "recuperadas": 7
+        },
+        "nodo": {
+          "referencia": 10,
+          "transcripcion": 10,
+          "recuperadas": 10
+        },
+        "ordenamiento": {
+          "referencia": 1,
+          "transcripcion": 1,
+          "recuperadas": 1
+        },
+        "pila": {
+          "referencia": 3,
+          "transcripcion": 3,
+          "recuperadas": 3
+        },
+        "puntero": {
+          "referencia": 10,
+          "transcripcion": 10,
+          "recuperadas": 10
+        }
+      }
+    },
+    "latencia_servidor_ms": {
+      "n": 58,
+      "min": 1179.0,
+      "mediana": 12688.0,
+      "p95": 22989.95,
+      "max": 23853.0,
+      "promedio": 12770.21,
+      "nota": "No válida para RNF01: ejecutado con --rapido (sin pacing en tiempo real)."
+    },
+    "memoria_proceso_max_mb": 1177.49,
+    "memoria_gpu": {
+      "proceso_mb": null,
+      "gpu_usada_antes_mb": 1189,
+      "gpu_usada_max_mb": 1271,
+      "delta_gpu_mb": 82,
+      "vram_total_mb": 6144
+    },
+    "meta_rnf": {
+      "rnf03_wer_max": 0.25,
+      "cumple_rnf03": true,
+      "rnf01_p95_max_ms": 5000,
+      "cumple_rnf01_servidor": null
+    },
+    "transcripcion": "Buenas tardes a todos y a todas. Hoy vamos a comenzar la primera sesión de repasos de estructuras de datos enfocada en cómo organizamos la información dentro del computador y por qué la elección de cada estructura cambio por completo en el desempeño de un programa. antes de partir con codigo necesito que pongamos atención en la instrucción detrás de la memoria principal en las estructuras lineales más básicas que usamos durante el semestre. Cuando declaramos un arreglo en memoria, el sistema operativo reserva un bloque contiguo de direcciones consecutivas Gracias a esa disposición contigua, calcular la posición de cualquier elemento tarda tiempo constante Porque basta tomar la dirección base y... sumar el desplazamiento identificado por el tamaño del dato. Sin embargo, esa misma ventaja a quien era una rigidez importante. Si la regla se llena y necesitamos almacenar más elementos no podemos simplemente estirarlos sobre el espacio vecino. porque esa zona puede estar ocupada por otra variable. En muchos programas reales los ingenieros tienen que llegar a un arreglo práctico entre reservar demasiado espacio desde el inicio o copiar todos los datos a un blog. que es nuevo más grande cada vez que falta capacidad. Para evitar esas copias masivas surgieron las listas enlazadas. A diferencia de los arreglos contiguos, una lista enlazada no exige que sus piezas estén pegadas una al lado de la otra en memoria cada unidad se llama Nodo y almacena dos partes fundamentales Por un lado, el valor útil que queremos guardar y por otro lado, un puntero que guarda la dirección del siguiente nodo en la secuencia. cuando recorremos una lista ligada desde la cabeza hasta el final vamos saltando de puntero en puntero siguiendo las referencias almacenadas en cada nodo Insertar un elemento nuevo al principio resulta muy barato. porque sólo creamos un nodo y ajustamos 2 punteros sin mover el resto de los datos. En cambio, si queremos acceder directamente al centésimo elemento, ya no existe una fórmula aritmética inmediata y debemos caminar nodo por nodo desde el comienzo. Durante las ayudan tías suele aparecer una duda muy común sobre dos estructuras que se parecen en el papel pero representan comportamientos opuestos. la pila y la cola. En una pila, todas las inserciones y extracciones ocurren por el mismo extremo, al que llamamos tope. El último elemento que entra es siempre el primero en salir. piensen en cuando dejan una pila de cuadernos encima del escritorio Si quieren sacar el que quedó abajo sin desarmar todo, primero deben retirar los que están arriba En informática usamos pilas todo el tiempo para gestionar llamadas entre funciones, evaluar expresiones aritméticas o deshacer acciones en un editor de texto. También conviene recordar que cuando hablamos de pila de libros sobre la mesa usamos la palabra en un sentido cotidiano, mientras que dentro del curso nos referimos a esta disciplina de acceso restringido por un solo extremo. La cola funciona justamente al revés. El primer elemento que llega es el primero en ser atendido. Cuando modelamos una fila de impresión, los trabajos entran por el final de la cola y salen por el frente en estricto orden de llegada. En la vida diaria vemos esto mismo cuando se forma una cola para entrar al casino o al auditorio de la mañana en términos computacionales implementar una cola eficiente sobre listas en las hadas requiere mantener un puntero al primer nodo y otro puntero adicional al último nodo de modo que tanto encolar como desencolar tomen tiempo constante sin recorrer toda la estructura en cada operación. Un punto que siempre genera errores en los controles es el manejo descuidado de los punteros cuando se trabaja cerca de la memoria física nos sirve memorizar las líneas de código de memoria sin dibujar antes qué apuntaba qué cada vez que eliminamos un nodo en medio de una lista lazada debemos conectar primero su predecesor con su sucesor antes de liberar la memoria ocupada si invertimos ese orden y liberamos antes de actualizar el enlace perdemos la dirección del resto de la lista y dejamos punteros colgantes que producen fallas graves difíciles de depurar en ejecución. Veamos también otro detalle práctico sobre la administración de memoria cuando implementamos arreglos dinámicos frente a listas enlazadas. En un arreglo tradicional los elementos quedan guardados de manera compacta uno tras otro. lo cual aprovecha mucho mejor la memoria caché del procesador porque leer un elemento trae consigo a los vecinos más cercanos. en cambio En una lista ligada, cada nodo puede quedar asignado en cualquier región disponible del montón. y cada puntero adicional consume espacio extra de memoria que no almacena datos de negocio. Por eso, aunque ambos permiten representar colecciones secuenciales. elegir entre arreglos y listas depende tanto de las frecuencias de inserciones y eliminaciones como del patrón de recorrido que hará el algoritmo principal. Para cerrar esta primera parte quiero conectar estas estructuras lineales con la idea general de algoritmo y complejidad. un algoritmo no es simplemente una receta arbitraria de pasos sino un procedimiento finito y bien definido que transforma entradas válidas en una salida esperada cuando comparamos un algoritmo sobre arreglos frente a uno equivalente sobre listas ligadas medimos cuantos pasos elementales consume a medida que crece el tamaño de los datos a esa relación de crecimiento la llamamos complejidad temporal y es el criterio que nos permite decidir con fundamento técnico que estructuras convienen usar antes de escribir un una sola línea en producción. de igual modo analizamos la complejidad espacial para anticipar cuánta memoria adicional necesitará una solución cuando procesa miles o millones de elementos en paralelo. En la próxima parte avanzaremos hacia destructuras no lineales. tablas de dispersión y métodos clásicos de búsqueda y ordenamiento. Tómense un minuto para repasar sus apuntes antes de pasar al bloque siguiente. Y recuerden probar pequeños ejemplos paso a paso con papel. y lápiz para consolear cómo cambiar los punteros en cada operación básica. Muchas gracias por su atención.",
+    "segmentos": [
+      {
+        "segmento_id": 1,
+        "inicio_ms": 420,
+        "fin_ms": 14100,
+        "llegada_fin_ms": 0,
+        "asr_ms": 911,
+        "nlp_ms": 8,
+        "emitido_ms": 1179,
+        "latencia_servidor_ms": 1179,
+        "texto": "Buenas tardes a todos y a todas. Hoy vamos a comenzar la primera sesión de repasos de estructuras de datos enfocada en cómo organizamos la información dentro del computador y por qué la elección de cada estructura cambio por completo en el desempeño de un programa."
+      },
+      {
+        "segmento_id": 2,
+        "inicio_ms": 14550,
+        "fin_ms": 24660,
+        "llegada_fin_ms": 0,
+        "asr_ms": 419,
+        "nlp_ms": 7,
+        "emitido_ms": 1722,
+        "latencia_servidor_ms": 1722,
+        "texto": "antes de partir con codigo necesito que pongamos atención en la instrucción detrás de la memoria principal en las estructuras lineales más básicas que usamos durante el semestre."
+      },
+      {
+        "segmento_id": 3,
+        "inicio_ms": 24660,
+        "fin_ms": 39660,
+        "llegada_fin_ms": 0,
+        "asr_ms": 554,
+        "nlp_ms": 8,
+        "emitido_ms": 2381,
+        "latencia_servidor_ms": 2381,
+        "texto": "Cuando declaramos un arreglo en memoria, el sistema operativo reserva un bloque contiguo de direcciones consecutivas Gracias a esa disposición contigua, calcular la posición de cualquier elemento tarda tiempo constante Porque basta tomar la dirección base y..."
+      },
+      {
+        "segmento_id": 4,
+        "inicio_ms": 39660,
+        "fin_ms": 42960,
+        "llegada_fin_ms": 0,
+        "asr_ms": 233,
+        "nlp_ms": 4,
+        "emitido_ms": 2741,
+        "latencia_servidor_ms": 2741,
+        "texto": "sumar el desplazamiento identificado por el tamaño del dato."
+      },
+      {
+        "segmento_id": 5,
+        "inicio_ms": 43110,
+        "fin_ms": 47310,
+        "llegada_fin_ms": 1,
+        "asr_ms": 221,
+        "nlp_ms": 4,
+        "emitido_ms": 3051,
+        "latencia_servidor_ms": 3050,
+        "texto": "Sin embargo, esa misma ventaja a quien era una rigidez importante."
+      },
+      {
+        "segmento_id": 6,
+        "inicio_ms": 47310,
+        "fin_ms": 54900,
+        "llegada_fin_ms": 1,
+        "asr_ms": 316,
+        "nlp_ms": 5,
+        "emitido_ms": 3452,
+        "latencia_servidor_ms": 3451,
+        "texto": "Si la regla se llena y necesitamos almacenar más elementos no podemos simplemente estirarlos sobre el espacio vecino."
+      },
+      {
+        "segmento_id": 7,
+        "inicio_ms": 54900,
+        "fin_ms": 69900,
+        "llegada_fin_ms": 1,
+        "asr_ms": 471,
+        "nlp_ms": 8,
+        "emitido_ms": 4017,
+        "latencia_servidor_ms": 4016,
+        "texto": "porque esa zona puede estar ocupada por otra variable. En muchos programas reales los ingenieros tienen que llegar a un arreglo práctico entre reservar demasiado espacio desde el inicio o copiar todos los datos a un blog."
+      },
+      {
+        "segmento_id": 8,
+        "inicio_ms": 69900,
+        "fin_ms": 73350,
+        "llegada_fin_ms": 1,
+        "asr_ms": 180,
+        "nlp_ms": 7,
+        "emitido_ms": 4324,
+        "latencia_servidor_ms": 4323,
+        "texto": "que es nuevo más grande cada vez que falta capacidad."
+      },
+      {
+        "segmento_id": 9,
+        "inicio_ms": 73350,
+        "fin_ms": 77580,
+        "llegada_fin_ms": 1,
+        "asr_ms": 249,
+        "nlp_ms": 4,
+        "emitido_ms": 4668,
+        "latencia_servidor_ms": 4667,
+        "texto": "Para evitar esas copias masivas surgieron las listas enlazadas."
+      },
+      {
+        "segmento_id": 10,
+        "inicio_ms": 77580,
+        "fin_ms": 85590,
+        "llegada_fin_ms": 1,
+        "asr_ms": 357,
+        "nlp_ms": 7,
+        "emitido_ms": 5127,
+        "latencia_servidor_ms": 5126,
+        "texto": "A diferencia de los arreglos contiguos, una lista enlazada no exige que sus piezas estén pegadas una al lado de la otra en memoria"
+      },
+      {
+        "segmento_id": 11,
+        "inicio_ms": 85740,
+        "fin_ms": 90030,
+        "llegada_fin_ms": 2,
+        "asr_ms": 226,
+        "nlp_ms": 4,
+        "emitido_ms": 5454,
+        "latencia_servidor_ms": 5452,
+        "texto": "cada unidad se llama Nodo y almacena dos partes fundamentales"
+      },
+      {
+        "segmento_id": 12,
+        "inicio_ms": 90030,
+        "fin_ms": 98130,
+        "llegada_fin_ms": 2,
+        "asr_ms": 337,
+        "nlp_ms": 5,
+        "emitido_ms": 5894,
+        "latencia_servidor_ms": 5892,
+        "texto": "Por un lado, el valor útil que queremos guardar y por otro lado, un puntero que guarda la dirección del siguiente nodo en la secuencia."
+      },
+      {
+        "segmento_id": 13,
+        "inicio_ms": 98430,
+        "fin_ms": 102750,
+        "llegada_fin_ms": 2,
+        "asr_ms": 213,
+        "nlp_ms": 4,
+        "emitido_ms": 6206,
+        "latencia_servidor_ms": 6204,
+        "texto": "cuando recorremos una lista ligada desde la cabeza hasta el final"
+      },
+      {
+        "segmento_id": 14,
+        "inicio_ms": 102750,
+        "fin_ms": 108000,
+        "llegada_fin_ms": 2,
+        "asr_ms": 276,
+        "nlp_ms": 7,
+        "emitido_ms": 6603,
+        "latencia_servidor_ms": 6601,
+        "texto": "vamos saltando de puntero en puntero siguiendo las referencias almacenadas en cada nodo"
+      },
+      {
+        "segmento_id": 15,
+        "inicio_ms": 108150,
+        "fin_ms": 112110,
+        "llegada_fin_ms": 2,
+        "asr_ms": 214,
+        "nlp_ms": 4,
+        "emitido_ms": 6923,
+        "latencia_servidor_ms": 6921,
+        "texto": "Insertar un elemento nuevo al principio resulta muy barato."
+      },
+      {
+        "segmento_id": 16,
+        "inicio_ms": 112110,
+        "fin_ms": 117330,
+        "llegada_fin_ms": 3,
+        "asr_ms": 253,
+        "nlp_ms": 5,
+        "emitido_ms": 7282,
+        "latencia_servidor_ms": 7279,
+        "texto": "porque sólo creamos un nodo y ajustamos 2 punteros sin mover el resto de los datos."
+      },
+      {
+        "segmento_id": 17,
+        "inicio_ms": 117330,
+        "fin_ms": 128700,
+        "llegada_fin_ms": 3,
+        "asr_ms": 466,
+        "nlp_ms": 6,
+        "emitido_ms": 7874,
+        "latencia_servidor_ms": 7871,
+        "texto": "En cambio, si queremos acceder directamente al centésimo elemento, ya no existe una fórmula aritmética inmediata y debemos caminar nodo por nodo desde el comienzo."
+      },
+      {
+        "segmento_id": 18,
+        "inicio_ms": 128700,
+        "fin_ms": 135120,
+        "llegada_fin_ms": 4,
+        "asr_ms": 280,
+        "nlp_ms": 6,
+        "emitido_ms": 8269,
+        "latencia_servidor_ms": 8265,
+        "texto": "Durante las ayudan tías suele aparecer una duda muy común sobre dos estructuras que se parecen en el papel"
+      },
+      {
+        "segmento_id": 19,
+        "inicio_ms": 135120,
+        "fin_ms": 138030,
+        "llegada_fin_ms": 5,
+        "asr_ms": 177,
+        "nlp_ms": 4,
+        "emitido_ms": 8544,
+        "latencia_servidor_ms": 8539,
+        "texto": "pero representan comportamientos opuestos."
+      },
+      {
+        "segmento_id": 20,
+        "inicio_ms": 138030,
+        "fin_ms": 140040,
+        "llegada_fin_ms": 5,
+        "asr_ms": 176,
+        "nlp_ms": 3,
+        "emitido_ms": 8820,
+        "latencia_servidor_ms": 8815,
+        "texto": "la pila y la cola."
+      },
+      {
+        "segmento_id": 21,
+        "inicio_ms": 140850,
+        "fin_ms": 152040,
+        "llegada_fin_ms": 5,
+        "asr_ms": 417,
+        "nlp_ms": 7,
+        "emitido_ms": 9332,
+        "latencia_servidor_ms": 9327,
+        "texto": "En una pila, todas las inserciones y extracciones ocurren por el mismo extremo, al que llamamos tope. El último elemento que entra es siempre el primero en salir."
+      },
+      {
+        "segmento_id": 22,
+        "inicio_ms": 152040,
+        "fin_ms": 157020,
+        "llegada_fin_ms": 5,
+        "asr_ms": 235,
+        "nlp_ms": 4,
+        "emitido_ms": 9653,
+        "latencia_servidor_ms": 9648,
+        "texto": "piensen en cuando dejan una pila de cuadernos encima del escritorio"
+      },
+      {
+        "segmento_id": 23,
+        "inicio_ms": 157020,
+        "fin_ms": 172020,
+        "llegada_fin_ms": 6,
+        "asr_ms": 455,
+        "nlp_ms": 8,
+        "emitido_ms": 10236,
+        "latencia_servidor_ms": 10230,
+        "texto": "Si quieren sacar el que quedó abajo sin desarmar todo, primero deben retirar los que están arriba En informática usamos pilas todo el tiempo para gestionar llamadas entre funciones, evaluar expresiones aritméticas"
+      },
+      {
+        "segmento_id": 24,
+        "inicio_ms": 172020,
+        "fin_ms": 175380,
+        "llegada_fin_ms": 6,
+        "asr_ms": 206,
+        "nlp_ms": 4,
+        "emitido_ms": 10552,
+        "latencia_servidor_ms": 10546,
+        "texto": "o deshacer acciones en un editor de texto."
+      },
+      {
+        "segmento_id": 25,
+        "inicio_ms": 175560,
+        "fin_ms": 190530,
+        "llegada_fin_ms": 6,
+        "asr_ms": 467,
+        "nlp_ms": 9,
+        "emitido_ms": 11136,
+        "latencia_servidor_ms": 11130,
+        "texto": "También conviene recordar que cuando hablamos de pila de libros sobre la mesa usamos la palabra en un sentido cotidiano, mientras que dentro del curso nos referimos a esta disciplina de acceso restringido por un solo extremo."
+      },
+      {
+        "segmento_id": 26,
+        "inicio_ms": 191100,
+        "fin_ms": 193980,
+        "llegada_fin_ms": 6,
+        "asr_ms": 188,
+        "nlp_ms": 4,
+        "emitido_ms": 11420,
+        "latencia_servidor_ms": 11414,
+        "texto": "La cola funciona justamente al revés."
+      },
+      {
+        "segmento_id": 27,
+        "inicio_ms": 193980,
+        "fin_ms": 197670,
+        "llegada_fin_ms": 6,
+        "asr_ms": 207,
+        "nlp_ms": 4,
+        "emitido_ms": 11735,
+        "latencia_servidor_ms": 11729,
+        "texto": "El primer elemento que llega es el primero en ser atendido."
+      },
+      {
+        "segmento_id": 28,
+        "inicio_ms": 197760,
+        "fin_ms": 207390,
+        "llegada_fin_ms": 6,
+        "asr_ms": 334,
+        "nlp_ms": 5,
+        "emitido_ms": 12177,
+        "latencia_servidor_ms": 12171,
+        "texto": "Cuando modelamos una fila de impresión, los trabajos entran por el final de la cola y salen por el frente en estricto orden de llegada."
+      },
+      {
+        "segmento_id": 29,
+        "inicio_ms": 207540,
+        "fin_ms": 214740,
+        "llegada_fin_ms": 6,
+        "asr_ms": 247,
+        "nlp_ms": 8,
+        "emitido_ms": 12550,
+        "latencia_servidor_ms": 12544,
+        "texto": "En la vida diaria vemos esto mismo cuando se forma una cola para entrar al casino o al auditorio de la mañana"
+      },
+      {
+        "segmento_id": 30,
+        "inicio_ms": 214800,
+        "fin_ms": 217440,
+        "llegada_fin_ms": 6,
+        "asr_ms": 173,
+        "nlp_ms": 4,
+        "emitido_ms": 12838,
+        "latencia_servidor_ms": 12832,
+        "texto": "en términos computacionales"
+      },
+      {
+        "segmento_id": 31,
+        "inicio_ms": 217440,
+        "fin_ms": 226050,
+        "llegada_fin_ms": 7,
+        "asr_ms": 349,
+        "nlp_ms": 6,
+        "emitido_ms": 13289,
+        "latencia_servidor_ms": 13282,
+        "texto": "implementar una cola eficiente sobre listas en las hadas requiere mantener un puntero al primer nodo y otro puntero adicional al último nodo"
+      },
+      {
+        "segmento_id": 32,
+        "inicio_ms": 226050,
+        "fin_ms": 234030,
+        "llegada_fin_ms": 7,
+        "asr_ms": 318,
+        "nlp_ms": 11,
+        "emitido_ms": 13711,
+        "latencia_servidor_ms": 13704,
+        "texto": "de modo que tanto encolar como desencolar tomen tiempo constante sin recorrer toda la estructura en cada operación."
+      },
+      {
+        "segmento_id": 33,
+        "inicio_ms": 234120,
+        "fin_ms": 241830,
+        "llegada_fin_ms": 7,
+        "asr_ms": 348,
+        "nlp_ms": 5,
+        "emitido_ms": 14176,
+        "latencia_servidor_ms": 14169,
+        "texto": "Un punto que siempre genera errores en los controles es el manejo descuidado de los punteros cuando se trabaja cerca de la memoria física"
+      },
+      {
+        "segmento_id": 34,
+        "inicio_ms": 241950,
+        "fin_ms": 249120,
+        "llegada_fin_ms": 7,
+        "asr_ms": 295,
+        "nlp_ms": 4,
+        "emitido_ms": 14573,
+        "latencia_servidor_ms": 14566,
+        "texto": "nos sirve memorizar las líneas de código de memoria sin dibujar antes qué apuntaba qué"
+      },
+      {
+        "segmento_id": 35,
+        "inicio_ms": 249120,
+        "fin_ms": 259680,
+        "llegada_fin_ms": 7,
+        "asr_ms": 386,
+        "nlp_ms": 6,
+        "emitido_ms": 15066,
+        "latencia_servidor_ms": 15059,
+        "texto": "cada vez que eliminamos un nodo en medio de una lista lazada debemos conectar primero su predecesor con su sucesor antes de liberar la memoria ocupada"
+      },
+      {
+        "segmento_id": 36,
+        "inicio_ms": 259680,
+        "fin_ms": 264330,
+        "llegada_fin_ms": 7,
+        "asr_ms": 222,
+        "nlp_ms": 4,
+        "emitido_ms": 15379,
+        "latencia_servidor_ms": 15372,
+        "texto": "si invertimos ese orden y liberamos antes de actualizar el enlace"
+      },
+      {
+        "segmento_id": 37,
+        "inicio_ms": 264330,
+        "fin_ms": 273090,
+        "llegada_fin_ms": 8,
+        "asr_ms": 389,
+        "nlp_ms": 5,
+        "emitido_ms": 15877,
+        "latencia_servidor_ms": 15869,
+        "texto": "perdemos la dirección del resto de la lista y dejamos punteros colgantes que producen fallas graves difíciles de depurar en ejecución."
+      },
+      {
+        "segmento_id": 38,
+        "inicio_ms": 273180,
+        "fin_ms": 281310,
+        "llegada_fin_ms": 8,
+        "asr_ms": 345,
+        "nlp_ms": 5,
+        "emitido_ms": 16323,
+        "latencia_servidor_ms": 16315,
+        "texto": "Veamos también otro detalle práctico sobre la administración de memoria cuando implementamos arreglos dinámicos frente a listas enlazadas."
+      },
+      {
+        "segmento_id": 39,
+        "inicio_ms": 281400,
+        "fin_ms": 287010,
+        "llegada_fin_ms": 8,
+        "asr_ms": 248,
+        "nlp_ms": 5,
+        "emitido_ms": 16670,
+        "latencia_servidor_ms": 16662,
+        "texto": "En un arreglo tradicional los elementos quedan guardados de manera compacta uno tras otro."
+      },
+      {
+        "segmento_id": 40,
+        "inicio_ms": 287010,
+        "fin_ms": 294150,
+        "llegada_fin_ms": 8,
+        "asr_ms": 318,
+        "nlp_ms": 5,
+        "emitido_ms": 17089,
+        "latencia_servidor_ms": 17081,
+        "texto": "lo cual aprovecha mucho mejor la memoria caché del procesador porque leer un elemento trae consigo a los vecinos más cercanos."
+      },
+      {
+        "segmento_id": 41,
+        "inicio_ms": 294390,
+        "fin_ms": 295890,
+        "llegada_fin_ms": 8,
+        "asr_ms": 145,
+        "nlp_ms": 3,
+        "emitido_ms": 17340,
+        "latencia_servidor_ms": 17332,
+        "texto": "en cambio"
+      },
+      {
+        "segmento_id": 42,
+        "inicio_ms": 295890,
+        "fin_ms": 301650,
+        "llegada_fin_ms": 8,
+        "asr_ms": 283,
+        "nlp_ms": 4,
+        "emitido_ms": 17711,
+        "latencia_servidor_ms": 17703,
+        "texto": "En una lista ligada, cada nodo puede quedar asignado en cualquier región disponible del montón."
+      },
+      {
+        "segmento_id": 43,
+        "inicio_ms": 301650,
+        "fin_ms": 306990,
+        "llegada_fin_ms": 8,
+        "asr_ms": 268,
+        "nlp_ms": 4,
+        "emitido_ms": 18070,
+        "latencia_servidor_ms": 18062,
+        "texto": "y cada puntero adicional consume espacio extra de memoria que no almacena datos de negocio."
+      },
+      {
+        "segmento_id": 44,
+        "inicio_ms": 306990,
+        "fin_ms": 312660,
+        "llegada_fin_ms": 8,
+        "asr_ms": 220,
+        "nlp_ms": 5,
+        "emitido_ms": 18377,
+        "latencia_servidor_ms": 18369,
+        "texto": "Por eso, aunque ambos permiten representar colecciones secuenciales."
+      },
+      {
+        "segmento_id": 45,
+        "inicio_ms": 312660,
+        "fin_ms": 321990,
+        "llegada_fin_ms": 9,
+        "asr_ms": 428,
+        "nlp_ms": 6,
+        "emitido_ms": 18914,
+        "latencia_servidor_ms": 18905,
+        "texto": "elegir entre arreglos y listas depende tanto de las frecuencias de inserciones y eliminaciones como del patrón de recorrido que hará el algoritmo principal."
+      },
+      {
+        "segmento_id": 46,
+        "inicio_ms": 322560,
+        "fin_ms": 330270,
+        "llegada_fin_ms": 9,
+        "asr_ms": 314,
+        "nlp_ms": 6,
+        "emitido_ms": 19331,
+        "latencia_servidor_ms": 19322,
+        "texto": "Para cerrar esta primera parte quiero conectar estas estructuras lineales con la idea general de algoritmo y complejidad."
+      },
+      {
+        "segmento_id": 47,
+        "inicio_ms": 330390,
+        "fin_ms": 334650,
+        "llegada_fin_ms": 10,
+        "asr_ms": 223,
+        "nlp_ms": 4,
+        "emitido_ms": 19677,
+        "latencia_servidor_ms": 19667,
+        "texto": "un algoritmo no es simplemente una receta arbitraria de pasos"
+      },
+      {
+        "segmento_id": 48,
+        "inicio_ms": 334650,
+        "fin_ms": 341670,
+        "llegada_fin_ms": 10,
+        "asr_ms": 272,
+        "nlp_ms": 7,
+        "emitido_ms": 20041,
+        "latencia_servidor_ms": 20031,
+        "texto": "sino un procedimiento finito y bien definido que transforma entradas válidas en una salida esperada"
+      },
+      {
+        "segmento_id": 49,
+        "inicio_ms": 341910,
+        "fin_ms": 348390,
+        "llegada_fin_ms": 11,
+        "asr_ms": 261,
+        "nlp_ms": 4,
+        "emitido_ms": 20398,
+        "latencia_servidor_ms": 20387,
+        "texto": "cuando comparamos un algoritmo sobre arreglos frente a uno equivalente sobre listas ligadas"
+      },
+      {
+        "segmento_id": 50,
+        "inicio_ms": 348390,
+        "fin_ms": 363390,
+        "llegada_fin_ms": 11,
+        "asr_ms": 558,
+        "nlp_ms": 7,
+        "emitido_ms": 21045,
+        "latencia_servidor_ms": 21034,
+        "texto": "medimos cuantos pasos elementales consume a medida que crece el tamaño de los datos a esa relación de crecimiento la llamamos complejidad temporal y es el criterio que nos permite decidir con fundamento técnico que estructuras convienen usar antes de escribir un"
+      },
+      {
+        "segmento_id": 51,
+        "inicio_ms": 363390,
+        "fin_ms": 365610,
+        "llegada_fin_ms": 11,
+        "asr_ms": 176,
+        "nlp_ms": 3,
+        "emitido_ms": 21328,
+        "latencia_servidor_ms": 21317,
+        "texto": "una sola línea en producción."
+      },
+      {
+        "segmento_id": 52,
+        "inicio_ms": 365880,
+        "fin_ms": 377640,
+        "llegada_fin_ms": 12,
+        "asr_ms": 452,
+        "nlp_ms": 7,
+        "emitido_ms": 21901,
+        "latencia_servidor_ms": 21889,
+        "texto": "de igual modo analizamos la complejidad espacial para anticipar cuánta memoria adicional necesitará una solución cuando procesa miles o millones de elementos en paralelo."
+      },
+      {
+        "segmento_id": 53,
+        "inicio_ms": 377880,
+        "fin_ms": 382980,
+        "llegada_fin_ms": 12,
+        "asr_ms": 232,
+        "nlp_ms": 4,
+        "emitido_ms": 22236,
+        "latencia_servidor_ms": 22224,
+        "texto": "En la próxima parte avanzaremos hacia destructuras no lineales."
+      },
+      {
+        "segmento_id": 54,
+        "inicio_ms": 382980,
+        "fin_ms": 387990,
+        "llegada_fin_ms": 12,
+        "asr_ms": 280,
+        "nlp_ms": 4,
+        "emitido_ms": 22622,
+        "latencia_servidor_ms": 22610,
+        "texto": "tablas de dispersión y métodos clásicos de búsqueda y ordenamiento."
+      },
+      {
+        "segmento_id": 55,
+        "inicio_ms": 388140,
+        "fin_ms": 393450,
+        "llegada_fin_ms": 12,
+        "asr_ms": 240,
+        "nlp_ms": 4,
+        "emitido_ms": 22952,
+        "latencia_servidor_ms": 22940,
+        "texto": "Tómense un minuto para repasar sus apuntes antes de pasar al bloque siguiente."
+      },
+      {
+        "segmento_id": 56,
+        "inicio_ms": 393450,
+        "fin_ms": 397380,
+        "llegada_fin_ms": 12,
+        "asr_ms": 227,
+        "nlp_ms": 4,
+        "emitido_ms": 23285,
+        "latencia_servidor_ms": 23273,
+        "texto": "Y recuerden probar pequeños ejemplos paso a paso con papel."
+      },
+      {
+        "segmento_id": 57,
+        "inicio_ms": 397380,
+        "fin_ms": 402960,
+        "llegada_fin_ms": 12,
+        "asr_ms": 244,
+        "nlp_ms": 4,
+        "emitido_ms": 23621,
+        "latencia_servidor_ms": 23609,
+        "texto": "y lápiz para consolear cómo cambiar los punteros en cada operación básica."
+      },
+      {
+        "segmento_id": 58,
+        "inicio_ms": 402960,
+        "fin_ms": 404650,
+        "llegada_fin_ms": 12,
+        "asr_ms": 151,
+        "nlp_ms": 3,
+        "emitido_ms": 23865,
+        "latencia_servidor_ms": 23853,
+        "texto": "Muchas gracias por su atención."
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 # SPEC-008 — Mediciones de la prueba de concepto: transcripción, coincidencia y distribución
 
 **Etapa del plan:** adelanto de Semestre 2 · Etapa 6 ("instrumenta el logging desde ya") de `docs/plan_desarrollo_tecnico.md`. Propuesta: Mes 4 del anteproyecto ("consolidación de resultados preliminares") y actividades AP Obj. 2 Act. 1 y Obj. 3 Act. 1. Informe: §3.5.1, RNF01, RNF03, RNF04, RNF06, RNF16, Tabla 4.1 y Tabla 4.10.
-**Estado:** Borrador
+**Estado:** Implementada — mediciones ejecutadas y documentadas en `docs/resultados_poc.md` (brecha declarada en R9: las dos grabaciones del autor fueron cercanas y silenciosas; queda pendiente una toma con ruido ambiente o mayor distancia).
 **Depende de:** SPEC-006, SPEC-007
 
 ---
@@ -147,13 +147,13 @@ Secciones: condiciones de medición; transcripción (tabla por configuración y 
 
 ## 6. Criterios de aceptación
 
-- [ ] R1–R19 satisfechos.
-- [ ] Hay resultados de ASR para al menos dos configuraciones sobre los dos audios (por ejemplo `small` en GPU y `base` en CPU, o con y sin contexto de vocabulario).
-- [ ] Hay un resultado de mapeo sobre la partición de prueba.
-- [ ] Hay resultados de los escenarios A y B de carga.
-- [ ] Cada cifra de `docs/resultados_poc.md` se puede rastrear a un JSON con su commit.
-- [ ] El documento declara que el corpus es voz del autor, el tamaño de cada muestra y que no hubo evaluación con usuarios.
-- [ ] No hay archivos de audio versionados.
+- [x] R1–R8 y R10–R19 satisfechos (en R9, existen 2 grabaciones propias de ~6.7 y ~6.9 min con referencias revisadas y fichas; ambas en condición cercana silenciosa, quedando declarada la brecha de una toma con ruido/distancia).
+- [x] Hay resultados de ASR para al menos dos configuraciones sobre los dos audios (`small` CUDA con prompt a ritmo real, `small` CUDA sin prompt `--rapido`, y `base` CPU con prompt a ritmo real).
+- [x] Hay un resultado de mapeo sobre la partición de prueba (`matching_prueba_20261121_005931.json`).
+- [x] Hay resultados de los escenarios A y B de carga (`carga_escenario_A_stub_20261119_212452.json`, `carga_escenario_B_stub_20261119_212954.json`).
+- [x] Cada cifra de `docs/resultados_poc.md` se puede rastrear a un JSON con su commit.
+- [x] El documento declara que el corpus es voz del autor, el tamaño de cada muestra y que no hubo evaluación con usuarios.
+- [x] No hay archivos de audio versionados.
 
 ## 7. Tareas de implementación
 

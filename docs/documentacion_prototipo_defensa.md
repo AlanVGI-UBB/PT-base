@@ -1,6 +1,6 @@
 # Documentación Técnica y Guía de Defensa — Puente LSCh
 
-**Estado del repositorio documentado:** hasta `SPEC-007` (implementada y verificada), incluyendo el congelamiento previo de la partición de prueba protegida de `SPEC-008` (`ml/datos/frases_anotadas.jsonl`).  
+**Estado del repositorio documentado:** hasta `SPEC-008` (implementada y verificada, con resultados reproducibles consolidados en `docs/resultados_poc.md`).  
 **Propósito:** reunir en un único documento todo lo que está efectivamente construido en código, cómo funciona internamente cada pieza, qué decisiones técnicas lo respaldan, qué limitaciones existen hoy y cómo defender el proyecto frente a preguntas técnicas, metodológicas o normativas de la comisión evaluadora.
 
 ---
@@ -20,7 +20,7 @@
 | **Auditoría UX y cierre de salas** | Implementado | Auth Bearer en REST, reconexión WS con backoff, manejo de errores y cierre real | `SPEC-005` |
 | **Transcripción real (PCM + faster-whisper)** | Implementado | `AudioWorklet` 16 kHz s16le, `Segmentador` RMS, `FasterWhisperProvider` local, retiro de Google | `SPEC-006` |
 | **Glosario piloto, clips de ensayo y matching v2** | Implementado | Curso piloto provisional `INF-221` (15 conceptos) + control `MAT-101`, 15 MP4 de ensayo, doble clave + bloqueos + abstenciones, cola acotada | `SPEC-007` |
-| **Mediciones cuantitativas de la PoC** | Parcial (partición congelada) | Partición `"prueba"` protegida (66 frases) + `"ajuste"` (36) congeladas antes de `SPEC-007`; faltan scripts de WER/latencia/carga y corpus de audio | `SPEC-008` |
+| **Mediciones cuantitativas de la PoC** | Implementado (brecha acústica R9 declarada) | Instrumentación `metrica_segmento`, `evaluar_asr.py`, `evaluar_matching.py`, `prueba_carga.py`, 2 audios propios (`~6.7` y `~6.9` min, condición cercana) y resultados en `docs/resultados_poc.md` | `SPEC-008` |
 | **Acceso por inscripción, pausa compartida y seguridad** | Pendiente (Borrador) | Permiso `puede_capturar`, clips protegidos, pausa en servidor, `scrypt`, CORS/JWT | `SPEC-009` |
 | **Co-diseño PIESDI y banco real (80–150 términos)** | Fuera de software (`OE1`) | Acuerdo con docente, validación con intérpretes y grabación real | Propuesta / Informe |
 
@@ -116,7 +116,7 @@ backend/
 │   │   ├── db.py                    # Conexión singleton SQLite WAL, init_schema(), migraciones
 │   │   └── nlp.py                   # Singleton get_nlp() cargando spacy.load("es_core_news_md")
 │   ├── evaluation/
-│   │   └── logging.py               # Legado de SPEC-002 (tablas sesion/segmento), actualmente sin uso
+│   │   └── metricas.py              # registrar_segmento() en metrica_segmento (controlado por METRICAS)
 │   ├── glossary/
 │   │   ├── indice.py                # construir_indice() (doble clave + bloqueos), obtener_indice_curso()
 │   │   ├── matching.py              # buscar_terminos(texto, indice) → Coincidencias(senas, abstenciones)
@@ -129,13 +129,13 @@ backend/
 │   └── signs_recognition/
 │       └── __init__.py              # Placeholder vacío (módulo secundario alumno→profesor, fuera de PoC)
 ├── data/
-│   ├── schema.sql                   # Definición de las 8 tablas SQLite
+│   ├── schema.sql                   # Definición de las 7 tablas SQLite (incluye metrica_segmento)
 │   ├── seed_glosario.json           # Datos semilla provisionales (INF-221 15 conceptos + MAT-101 control)
 │   └── videos_senas/                # 15 clips MP4 de ensayo (H.264, 640×360, 3 s) versionados en Git
 ├── scripts/
 │   ├── generar_clips_ensayo.py      # Genera tarjetas MP4 de ensayo con ffmpeg sin sobrescribir
 │   └── seed_glosario.py             # Poblamiento destructivo/idempotente y validación de índice
-├── tests/                           # Suite pytest (55 pruebas totales: 54 activas + 1 -m modelo)
+├── tests/                           # Suite pytest (60 pruebas totales: 59 activas + 1 -m modelo)
 ├── Dockerfile                       # Imagen python:3.11-slim + libgomp1 + es_core_news_md + seed
 └── requirements.txt                 # Dependencias Python fijadas
 ```
@@ -143,7 +143,7 @@ backend/
 ### 4.2 Flujo interno del módulo ASR (`app/asr/`)
 
 1. **`base.py`:**
-   * `ResultadoASR(segmento_id, texto, estable, inicio_ms, fin_ms)`: contrato único que devuelven tanto el stub como Whisper.
+   * `ResultadoASR(segmento_id, texto, estable, inicio_ms, fin_ms, llegada_fin_ms=0, asr_ms=0)`: contrato único que devuelven tanto el stub (con tiempos en `0`) como `FasterWhisperProvider`.
    * `get_asr_provider(provider=None)`: fábrica que lee `ASR_PROVIDER` (`"whisper"` o `"stub"`). Cualquier otro valor lanza `AsrConfigError` indicando las opciones válidas (`whisper | stub`).
 2. **`segmentador.py`:**
    * Recibe tramas binarias `s16le` (`<i2` little-endian), valida longitud par y las normaliza a `float32` en `[-1, 1]`.
@@ -213,12 +213,13 @@ backend/
 | `JWT_SECRET` | `"cambiar-en-produccion"` | Secreto HMAC-SHA256 para JWT |
 | `SALA_TIMEOUT_MS` | `30000` | Gracia tras desconexión abrupta del emisor antes de cerrar |
 | `AUTH_PROVIDER` | `"local"` | Reservado para futura autenticación institucional |
+| `METRICAS` | `True` | Activa/desactiva el registro de tiempos en `metrica_segmento` |
 
 ---
 
 ## 5. Modelo de datos (`backend/data/schema.sql`) y estado actual del Seed
 
-El esquema SQLite habilita `PRAGMA journal_mode=WAL` y `PRAGMA foreign_keys=ON`. Contiene 8 tablas:
+El esquema SQLite habilita `PRAGMA journal_mode=WAL` y `PRAGMA foreign_keys=ON`. Contiene 7 tablas:
 
 1. **`curso`:** `(id PK, cod_ramo, nombre)`. Ej.: `1, "INF-221", "Estructuras de Datos"`.
 2. **`termino`:** `(id PK, curso_id FK, texto_visible, formas_json, bloqueos_json, video_url, estado)`. Ya no almacena lemas manuales ni `n_palabras`; `estado` restringe `ensayo | publicado | retirado` vía `CHECK`.
@@ -226,7 +227,7 @@ El esquema SQLite habilita `PRAGMA journal_mode=WAL` y `PRAGMA foreign_keys=ON`.
 4. **`inscripcion`:** `(rut FK, curso_id FK, seccion, PK(rut, curso_id, seccion))`.
 5. **`clase`:** `(id PK, room_id, curso_id FK, seccion, rut_emisor FK, fecha_inicio, fecha_fin, duracion_ms, titulo)`. Registra cada sesión de clase.
 6. **`evento_clase`:** `(id PK, clase_id FK, timestamp_ms, texto, estable, senas_json, abstenciones_json)`. Almacena los segmentos consolidados, todas las señas detectadas y las abstenciones por bloqueo en JSON.
-7. **`sesion` y `segmento`:** tablas heredadas de `SPEC-002` (usadas solo por `evaluation/logging.py` y un test de FK en `test_schema.py`; `SPEC-009` contempla retirarlas).
+7. **`metrica_segmento`:** `(id PK, clase_id FK, segmento_id, audio_inicio_ms, audio_fin_ms, llegada_fin_ms, asr_ms, nlp_ms, emitido_ms, receptores)`. Instrumenta latencias con reloj monotónico por segmento final (las tablas obsoletas `sesion` y `segmento` de `SPEC-002` fueron retiradas).
 
 ### Datos sembrados actualmente (`backend/data/seed_glosario.json`)
 * **2 cursos:**
@@ -237,8 +238,9 @@ El esquema SQLite habilita `PRAGMA journal_mode=WAL` y `PRAGMA foreign_keys=ON`.
   * `9876543-3` — María González (inscrita en ambos cursos).
 * **15 clips MP4 de ensayo** en `backend/data/videos_senas/` (8.2–10.6 kB cada uno, H.264 640×360, 3 s, `-movflags +faststart`), generados por `backend/scripts/generar_clips_ensayo.py` con tarjetas de texto (`"CLIP DE ENSAYO"`, concepto, `"Sin validación lingüística"`) sin personas y **versionados en Git** para que un clon limpio arranque sin pasos manuales.
 
-### Datos congelados para evaluación (`ml/datos/`)
+### Datos y corpus para evaluación (`ml/`)
 * **`ml/datos/frases_anotadas.jsonl` y `ml/datos/README.md`:** 102 frases anotadas sobre los 15 conceptos de `INF-221` — **66 de `"prueba"`** (congeladas en el commit `04c6c7f` antes de ajustar formas/bloqueos en `SPEC-007`, cumpliendo `RNF04`) y **36 de `"ajuste"`**. Incluye frases sin conceptos, usos cotidianos ambiguos, compuestos y flexiones.
+* **`ml/datos/guiones/`, `referencias/` y `audio/` (ignorado en Git):** dos guiones de clase de `INF-221` (`982` y `899` palabras), sus grabaciones con voz del autor (`clase_01_cerca.wav` de `6 min 44.65 s` y `clase_02_cerca.wav` de `6 min 54.21 s`, en condición cercana silenciosa) y referencias revisadas contra audio; los resultados JSON trazables viven en `ml/resultados/` y su análisis completo en `docs/resultados_poc.md`.
 
 ---
 
@@ -340,7 +342,8 @@ frontend/
           "texto_detectado": "listas enlazadas"
         }
       ],
-      "timestamp_ms": 2150
+      "timestamp_ms": 2150,
+      "servidor_ms": 1795220781432
     }
     ```
   * **Desconexión inesperada del emisor:** `{"type": "emisor_desconectado", "mensaje": "..."}`.
@@ -365,17 +368,18 @@ frontend/
 
 ---
 
-## 9. Verificación actual del prototipo
+## 9. Verificación y resultados cuantitativos de la PoC
 
 | Verificación | Resultado observado | Alcance / Condición |
 |---|---|---|
-| `ruff check backend` | `All checks passed!` | Lint completo de `backend/` |
-| `pytest backend/tests` | **54 passed, 1 skipped** | Cubre auth (7), historial (5), índice (4), matching (7), sala/WS (9), esquema SQLite (5), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (13) |
+| `ruff check backend ml` | `All checks passed!` | Lint completo de `backend/` y `ml/` |
+| `pytest backend/tests` | **59 passed, 1 skipped** | Cubre auth (7), historial (5), índice (4), matching (7), sala/WS (10), esquema SQLite (6), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (16) |
+| `pytest ml/tests` | **11 passed** | Cubre `normalizacion.py` (4), `evaluar_matching.py` (1), `evaluar_asr.py` (5), `prueba_carga.py` (1) |
 | `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA (verificada en `SPEC-006`) |
 | `pnpm --prefix frontend build` | OK (46 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
-| Generación de clips y seed | OK | `generar_clips_ensayo.py` (15 MP4 H.264 640×360 de 3 s validados con `ffprobe`) y `seed_glosario.py` |
-| Prueba controlada de audio español | OK | Síntesis de voz en español (`Microsoft Helena Desktop`) pasada en tramas de 100 ms por `FasterWhisperProvider` (`small`, CUDA) produjo provisional y final exactos |
-| Pruebas unitarias JS en Node | OK | Simulación de `pcm-worklet.js` (48 kHz y 44.1 kHz → tramas 3200 B) y de `useColaSenas.js` (cola máx. 3, descartes, ventana de 20 s) |
+| Evaluación ASR real (`small` CUDA + prompt) | **WER `3.16–3.56 %` · p95 `805–821 ms`** | Sobre `clase_01_cerca.wav` (`404.65 s`) y `clase_02_cerca.wav` (`414.21 s`) a ritmo `1x`; glosario `100 %` (`57/57`) y `95.71 %` (`67/70`); detalle en `docs/resultados_poc.md` |
+| Evaluación de matching (`"prueba"`) | **Prec. `96.34 %` · Rec. `97.53 %`** | Partición protegida de `66` frases (`TP=79, FP=3, FN=2`); compuestos `100 %` (`21/21`) |
+| Carga WebSocket 5 min (`A` y `B`, `stub`) | **`0` perdidos/dup. · p95 `3–4 ms`** | `1+20` en 1 sala y `2 × (1+10)` en 2 salas (`3940` eventos entregados en c/u) sobre `localhost` |
 | `docker compose up --build` | **No ejecutado en esta revisión** | El daemon de Docker Desktop no estaba iniciado |
 | Prueba manual en navegador con micrófono físico y 2 dispositivos | **Pendiente de ejecución interactiva** | — |
 
@@ -383,7 +387,7 @@ frontend/
 
 ## 10. Limitaciones actuales conocidas (transparencia técnica)
 
-Estas brechas están identificadas explícitamente entre el prototipo actual (`SPEC-007`) y los requerimientos del informe de avance; las dos specs restantes en borrador (`SPEC-008` y `SPEC-009`) existen precisamente para cerrarlas:
+Estas brechas están identificadas explícitamente entre el prototipo actual (`SPEC-008`) y los requerimientos del informe de avance; `SPEC-009` aborda el cierre de las brechas de control de acceso, sesión y seguridad:
 
 1. **Seguridad y control de acceso incompletos (cubre `SPEC-009`):**
    * Hoy `ws_sala` solo valida que el token sea válido y que el `cod_ramo` exista: un usuario autenticado no inscrito puede escuchar una sala o crear una clase en una sección inexistente; `GET /api/cursos/{id}/glosario` y `/data/videos_senas/*` no verifican inscripción/permiso.
@@ -393,9 +397,10 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
    * Pausar detiene el envío desde el navegador, pero el servidor no cambia el estado de la sala, los oyentes no ven aviso de "Transmisión en pausa" y la discontinuidad no se registra en `evento_clase`.
 3. **Glosario provisional y límites de desambiguación (`OE1` / alcance PoC):**
    * Aunque el glosario ya es coherente con `INF-221` y los clips son tarjetas MP4 reproducibles rotuladas como ensayo, siguen siendo recursos **sin validación lingüística ni participación de PIESDI**.
-   * El mecanismo de `bloqueos` resuelve usos ambiguos conocidos de antemano (ej. `"de memoria"`, `"pila de cuadernos"`, `"hacer cola"`), pero no realiza desambiguación semántica general ni reconoce compuestos discontinuos (*"la lista está enlazada"*).
-4. **Mediciones cuantitativas formales pendientes (cubre `SPEC-008`):**
-   * La partición de prueba (`66` frases) ya está congelada y protegida en `ml/datos/frases_anotadas.jsonl`, pero aún falta implementar `evaluar_asr.py`, `evaluar_matching.py` y `prueba_carga.py`, grabar los dos audios de voz del autor y consolidar resultados en `docs/resultados_poc.md`.
+   * El mecanismo de `bloqueos` resuelve usos ambiguos conocidos de antemano (ej. `"de memoria"`, `"pila de cuadernos"`, `"hacer cola"`), pero las mediciones sobre `"prueba"` mostraron sus dos límites: `3` FP por contextos no vistos (*"cola larga"*, *"pila de pruebas"*, *"pila del micrófono"*) y `2` FN porque el bloqueo `"de memoria"` suprime compuestos técnicos reales (*"fuga de memoria"*, *"asignación de memoria"*).
+4. **Límites de la evidencia cuantitativa obtenida en la PoC (`docs/resultados_poc.md`):**
+   * El corpus ASR usa **voz única leída del autor** (no aula real espontánea) y ambas muestras (`6.7` y `6.9` min) quedaron grabadas con micrófono cercano en ambiente silencioso, dejando **pendiente la condición acústica con ruido ambiente o mayor distancia** (`R9`).
+   * `RNF01` se midió solo en servidor (sin captura inicial de `100 ms`, red Wi-Fi real ni renderizado en receptor), la prueba de carga usó `ASR_PROVIDER=stub` en `localhost` y no hubo evaluación con usuarios sordos.
 5. **Alcance diferido a Proyecto de Título (2027) y PIESDI:**
    * Co-diseño y banco real de 80–150 términos con PIESDI (`OE1`), reglas acotadas de ordenamiento de glosas (`RF15`), recuperación de eventos perdidos tras corte de red (`RF20`), reconexión del emisor a la misma clase, interfaz WCAG 2.2 AA (`RNF08`), administración desde la app (`RF24–RF27`) y reconocimiento de señas por cámara (`signs_recognition/`).
 
@@ -411,7 +416,7 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
    Para reducir la fricción operativa en aula (`SPEC-004`). Exigir que cada docente ingrese a una plataforma externa antes de dictar su cátedra dificulta la adopción. Con el enfoque centrado en el estudiante, el alumno conecta el micrófono lavalier al dispositivo emisor y entrega solo el transmisor al docente, gestionando toda la sesión desde la misma interfaz. A nivel de arquitectura, el cambio hacia `SPEC-009` mantiene este modelo pero restringiendo la captura mediante un permiso explícito (`puede_capturar`) para evitar que cualquier estudiante tome el rol de emisor.
 
 3. **¿Cómo aseguran que agregar 20 estudiantes a una sala no multiplique el costo de transcripción?**
-   El audio solo sube desde el único WebSocket `emitter` de la sala. El backend ejecuta `transcribe_stream` y `buscar_terminos` **una sola vez** por segmento y distribuye el JSON resultante en memoria a todos los WebSockets registrados en `RoomState.listeners` (patrón publicador/suscriptor con fan-out 1 → N).
+   El audio solo sube desde el único WebSocket `emitter` de la sala. El backend ejecuta `transcribe_stream` y `buscar_terminos` **una sola vez** por segmento y distribuye el JSON resultante en memoria a todos los WebSockets registrados en `RoomState.listeners` (patrón publicador/suscriptor con fan-out 1 → N). En la prueba de carga de 5 minutos con 20 receptores (Escenarios A y B con `stub`), se entregaron los `3940` eventos sin pérdidas ni duplicados con retardo p95 de `3–4 ms`.
 
 ### Audio, ASR y tiempo real
 4. **¿Por qué dejaron `MediaRecorder` y migraron a `AudioWorklet` con PCM 16 kHz?**
@@ -421,20 +426,20 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
    Efectivamente Whisper procesa ventanas completas, no streaming nativo carácter a carácter. Para adaptarlo a flujo continuo se diseñó `Segmentador`:
    * Detecta inicio/fin de habla por RMS en subtramas de 30 ms con 240 ms de *pre-roll*.
    * Mientras la frase sigue abierta, re-transcribe la ventana acumulada cada `1000 ms` como provisional (`final: false`) con tope de `15 s` (`ASR_MAX_SEGMENTO_MS`).
-   * Si una inferencia demora más que `ASR_PARCIAL_MS` y se acumula audio en la cola, el proveedor **omite las provisionales** pendientes hasta volver a ponerse al día, priorizando siempre las ventanas finales para no acumular latencia creciente.
+   * Si una inferencia demora más que `ASR_PARCIAL_MS` y se acumula audio en la cola, el proveedor **omite las provisionales** pendientes hasta volver a ponerse al día, priorizando siempre las ventanas finales para no acumular latencia creciente. En las pruebas a ritmo real sobre GPU RTX 3050 (`small`, `float16`), incluyendo >340 provisionales por audio, `RTF total` fue `0.28–0.31` y la latencia del servidor mantuvo `p95` de `805–821 ms` (en CPU `base` `int8` alcanzó `RTF total ~0.71` y `p95` de `1.9–2.3 s`).
 
 6. **¿Por qué eligieron `faster-whisper` local y eliminaron el proveedor de Google Cloud?**
-   El adaptador de Google heredado (`google_streaming.py`) estaba incompleto, no contaba con credenciales y obligaba a transmitir voz de docentes y estudiantes a servidores externos, lo que exige autorización institucional explícita bajo las Leyes N.º 19.628 y N.º 21.719. `faster-whisper` mantiene el audio únicamente en RAM dentro de la red local, permite correr en GPU (`float16`) o CPU (`int8`) y queda desacoplado detrás de la interfaz `StreamingASRProvider` por si en Proyecto de Título se compara contra un servicio remoto autorizado.
+   El adaptador de Google heredado (`google_streaming.py`) estaba incompleto, no tenía credenciales y obligaba a transmitir voz de docentes y estudiantes a servidores externos, lo que exige autorización institucional explícita bajo las Leyes N.º 19.628 y N.º 21.719. `faster-whisper` mantiene el audio únicamente en RAM dentro de la red local, permite correr en GPU (`float16`) o CPU (`int8`) y queda desacoplado detrás de la interfaz `StreamingASRProvider` por si en Proyecto de Título se compara contra un servicio remoto autorizado.
 
 7. **¿Qué pasa si la sala está en silencio o el micrófono no capta audio?**
-   En el cliente, si el nivel RMS permanece por debajo de `0.004` durante 10 segundos continuos, aparece el banner `"No se detecta audio en el micrófono"` sin cortar la sesión. En el servidor, `Segmentador` no abre segmentos por debajo del umbral (`0.01`), y además `faster-whisper` corre con `vad_filter=True` y `condition_on_previous_text=False`, de modo que el silencio prolongado no consume inferencias ni genera alucinaciones de texto.
+   En el cliente, si el nivel RMS permanece por debajo de `0.004` durante 10 segundos continuos, aparece el banner `"No se detecta audio en el micrófono"` sin cortar la sesión y desaparece al volver la señal. En el servidor, `Segmentador` no abre segmentos por debajo del umbral (`0.01`), y además `faster-whisper` corre con `vad_filter=True` y `condition_on_previous_text=False`, de modo que el silencio prolongado no consume inferencias ni genera alucinaciones de texto.
 
 8. **¿Qué ocurre si se corta la frase al presionar "Finalizar y Guardar" o si se corta la conexión del emisor?**
    Si el emisor finaliza explícitamente, el backend no cancela la tarea ASR: envía un centinela `None` por la cola de audio, espera hasta `ASR_FLUSH_TIMEOUT_MS` (5 s) a que `Segmentador.cerrar()` transcriba, haga matching y guarde el último tramo hablado, y recién entonces emite `clase_finalizada`. Si el emisor se desconecta abruptamente, el servidor notifica `emisor_desconectado`, espera `SALA_TIMEOUT_MS` y persiste la clase con todo lo consolidado hasta ese momento.
 
 ### NLP, LSCh y rigor metodológico
 9. **¿Por qué usan `spaCy` y n-gramas en lugar de un modelo de lenguaje o un avatar 3D?**
-   Un LLM generativo introduce latencia, costo y riesgo de alucinación o invención de correspondencias; un avatar 3D o traducción libre completa sigue siendo un problema abierto que omite rasgos no manuales esenciales de la LSCh. El alcance aprobado delimita el apoyo a un **glosario técnico cerrado** donde `spaCy` entrega lematización determinista en ~3 ms por frase y prioriza expresiones compuestas (*"raíz cuadrada"*, *"teorema del valor medio"*) antes que palabras aisladas.
+   Un LLM generativo introduce latencia, costo y riesgo de alucinación o invención de correspondencias; un avatar 3D o traducción libre completa sigue siendo un problema abierto que omite rasgos no manuales esenciales de la LSCh. El alcance aprobado delimita el apoyo a un **glosario técnico cerrado** donde `spaCy` entrega lematización determinista en pocos milisegundos por frase y prioriza expresiones compuestas (*"lista enlazada"*, *"árbol binario"*) antes que palabras aisladas. Además, inyectar el glosario en `initial_prompt` (`ASR_PROMPT_GLOSARIO=true`) demostró elevar la recuperación de términos en el ASR de `80.00 %` a `95.71 %` en el segundo audio de prueba (ej. rescatando `"tabla hash"`).
 
 10. **¿Este prototipo "traduce" español a Lengua de Señas Chilena?**
     **No.** Tanto la propuesta como el informe de avance y el prototipo dejan explícito que no es un traductor integral ni sustituye al intérprete de LSCh: ofrece subtítulos en tiempo real y un **apoyo visual terminológico** mediante clips de conceptos técnicos del curso. Cuando no hay coincidencia, se mantiene el texto sin inventar señas (`RN08`).
@@ -448,15 +453,15 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
 13. **¿Cómo evitan falsos positivos en palabras comunes como "de memoria", "pila" o "cola", y cómo evitan sobrecargar la pantalla si hablan rápido?**
     El motor (`glossary/indice.py` y `glossary/matching.py`) permite declarar `bloqueos` por término (que conservan preposiciones/artículos como `"de memoria"`, `"pila de cuadernos"`, `"hacer cola"`); cuando un bloqueo gana por longitud, consume sus palabras sin disparar clip y registra el caso en `evento_clase.abstenciones_json`. En el cliente, `useColaSenas` reproduce **un clip completo a la vez sin bucle**, acota la cola a **3 pendientes** (descartando el más antiguo y mostrando `"disponibles en el historial"`) y no re-encola un concepto repetido dentro de **20 s**, manteniendo el historial fiel completo en el servidor.
 
-14. **¿Cómo aseguran honestidad metodológica al evaluar la precisión del motor de NLP (`RNF04`)?**
-    Se redactó y congeló una **partición de prueba protegida** de 66 frases en `ml/datos/frases_anotadas.jsonl` (commit `04c6c7f`) **antes** de definir las formas admitidas y bloqueos de `SPEC-007`. Las reglas se ajustaron solo con criterio general y las 36 frases de `"ajuste"`, de modo que la evaluación de `SPEC-008` sobre `"prueba"` refleje desempeño real sin sobreajuste (*data leakage*).
+14. **¿Cómo aseguran honestidad metodológica al evaluar la precisión del motor de NLP (`RNF04`) y cuáles fueron los resultados reales?**
+    Se redactó y congeló una **partición de prueba protegida** de 66 frases en `ml/datos/frases_anotadas.jsonl` (commit `04c6c7f`) **antes** de definir las formas admitidas y bloqueos de `SPEC-007`. Las reglas se ajustaron solo con criterio general y las 36 frases de `"ajuste"`. Al evaluar la partición `"prueba"` sin ajustes posteriores se obtuvo **96.34 % de precisión** y **97.53 % de recuperación** (`100 %` en compuestos), identificando honestamente 5 errores (`3` FP cotidianos no vistos y `2` FN en `"fuga de memoria"` / `"asignación de memoria"` por sobrefiltrado del bloqueo `"de memoria"`).
 
 ### Seguridad, privacidad y operación
 15. **¿Se graba el audio de las clases? ¿Cómo abordan la privacidad de datos?**
-    No. El audio PCM solo existe en memoria transitoria durante el procesamiento del segmento y jamás se escribe a disco ni en la base de datos (`RNF11`). En SQLite se persiste únicamente el texto consolidado y los eventos de señas. En cuanto a contraseñas, JWT y acceso por inscripción, las brechas detectadas en el prototipo actual (SHA-256 fijo, autorización incompleta de salas/clips) están especificadas y acotadas en `SPEC-009` para su cierre antes de pruebas con participantes.
+    No. El audio PCM solo existe en memoria transitoria durante el procesamiento del segmento y jamás se escribe a disco ni en la base de datos (`RNF11`). En SQLite se persiste únicamente el texto consolidado y los eventos de señas (y métricas de tiempo por segmento si `METRICAS=true`, desactivable con `METRICAS=false`). En cuanto a contraseñas, JWT y acceso por inscripción, las brechas detectadas en el prototipo actual (SHA-256 fijo, autorización incompleta de salas/clips) están especificadas y acotadas en `SPEC-009` para su cierre antes de pruebas con participantes.
 
 16. **¿Por qué usan HTTPS y certificados propios si es un proyecto universitario local?**
     Los navegadores modernos bloquean `navigator.mediaDevices.getUserMedia`, `AudioWorklet` y la instalación de PWA en cualquier origen que no sea `localhost` o `https://`. Para que un estudiante acceda desde su celular por Wi-Fi a la IP del computador servidor (`run.ps1`) o por internet (`run-cloudflare.ps1`), el contenedor `nginx` sirve TLS válido mediante una CA de desarrollo instalable o terminación HTTPS de Cloudflare.
 
 17. **¿Qué faltaría para pasar de este prototipo de Anteproyecto al sistema final de Proyecto de Título (2027)?**
-    En el corto plazo (cierre del Anteproyecto, `SPEC-008` y `SPEC-009`): ejecutar las mediciones cuantitativas reproducibles (WER, latencia, precisión/recuperación del matching, carga con 20 receptores) y cerrar autorización por inscripción, permiso de captura, pausa compartida y seguridad (`scrypt`/CORS/JWT). Para Proyecto de Título (semestre 2027): trabajo lingüístico con PIESDI y docente del curso (80–150 señas validadas), reglas acotadas de ordenamiento de glosas (`RF15`), reconexión con recuperación por secuencia (`RF20`), auditoría/conservación (`RF28–RF29`), interfaz accesible WCAG 2.2 AA (`RNF08`) y evaluación empírica con estudiantes sordos.
+    En el corto plazo (cierre del Anteproyecto, `SPEC-009` y brecha acústica de `R9`): cerrar autorización por inscripción, permiso de captura, pausa compartida y seguridad (`scrypt`/CORS/JWT), y complementar las mediciones con una grabación en aula real o condición degradada con ruido/distancia. Para Proyecto de Título (semestre 2027): trabajo lingüístico con PIESDI y docente del curso (80–150 señas validadas), reglas acotadas de ordenamiento de glosas (`RF15`), análisis de contexto o excepciones sobre bloqueos (`"fuga de memoria"`), reconexión con recuperación por secuencia (`RF20`), auditoría/conservación (`RF28–RF29`), interfaz accesible WCAG 2.2 AA (`RNF08`) y evaluación empírica con estudiantes sordos.
