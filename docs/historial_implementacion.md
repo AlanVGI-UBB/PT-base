@@ -961,7 +961,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-21 — SPEC-008 (2/2): resultados medidos de PoC, informe técnico y documentación sincronizada
+## 2026-11-21 — `ed14036` — SPEC-008 (2/2): resultados medidos de PoC, informe técnico y documentación sincronizada
 **Refs:** SPEC-008 `specs/SPEC-008-mediciones-poc.md` (Completada con brecha acústica R9 declarada)
 
 **Resumen:** Se ejecutó la batería completa de evaluación de matching y transcripción ASR a ritmo real sobre las dos grabaciones del autor bajo el commit `0a8209c`, se consolidaron las cifras trazables y sus limitaciones en `docs/resultados_poc.md`, y se actualizó la documentación del prototipo y las especificaciones.
@@ -985,3 +985,16 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 **Notas:**
 - Próxima spec recomendada para cerrar el Anteproyecto: `SPEC-009` (`specs/SPEC-009-acceso-sesion-saneamiento.md`).
+
+---
+
+## 2026-11-21 — Guía explicativa en lenguaje simple sobre las pruebas de la PoC
+**Refs:** `docs/explicacion_pruebas_poc.md`, `docs/resultados_poc.md` (commit documental)
+
+**Resumen:** Se añadió una guía sin tecnicismos en `docs/explicacion_pruebas_poc.md` explicando en qué consistió cada prueba de la PoC (ASR, mapeo NLP y carga WebSocket), qué significan sus métricas y qué limitaciones deben declararse con transparencia en defensa.
+
+**Cambios:**
+- `docs/explicacion_pruebas_poc.md` — **nuevo**: explicación paso a paso en lenguaje cotidiano de WER, recuperación de términos del glosario, `RTF`, latencia `p95`, partición protegida `"prueba"`, escenarios de carga a `20` receptores y tabla resumen con límites de alcance.
+- Este archivo — hash `ed14036` registrado en la entrada anterior.
+
+**Verificación:** n/a (commit documental; todas las cifras contrastadas contra `docs/resultados_poc.md`).
