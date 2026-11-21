@@ -95,11 +95,12 @@ class RoomManager:
                 sala.listeners.discard(ws)
 
     @classmethod
-    async def broadcast(cls, room_id: str, evento: dict) -> None:
+    async def broadcast(cls, room_id: str, evento: dict) -> int:
         async with cls._get_lock():
             sala = cls._salas.get(room_id)
             if not sala:
-                return
+                return 0
+            receptores = len(sala.listeners)
             targets: list[WebSocket] = []
             if sala.emitter_ws:
                 targets.append(sala.emitter_ws)
@@ -110,6 +111,7 @@ class RoomManager:
                 await ws.send_text(text)
             except Exception:
                 pass
+        return receptores
 
     @classmethod
     async def eliminar(cls, room_id: str) -> RoomState | None:

@@ -53,3 +53,8 @@ def init_schema() -> None:
     if "abstenciones_json" not in columns and len(columns) > 0:
         conn.execute("ALTER TABLE evento_clase ADD COLUMN abstenciones_json TEXT")
         conn.commit()
+
+    # Limpieza de tablas heredadas sin uso desde SPEC-004 (SPEC-008)
+    conn.execute("DROP TABLE IF EXISTS segmento")
+    conn.execute("DROP TABLE IF EXISTS sesion")
+    conn.commit()

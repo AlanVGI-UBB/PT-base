@@ -28,11 +28,10 @@ def main() -> None:
 
     conn = get_connection()
     conn.execute("PRAGMA foreign_keys=OFF")
+    conn.execute("DELETE FROM metrica_segmento")
     conn.execute("DELETE FROM evento_clase")
     conn.execute("DELETE FROM clase")
     conn.execute("DELETE FROM inscripcion")
-    conn.execute("DELETE FROM segmento")
-    conn.execute("DELETE FROM sesion")
     conn.execute("DELETE FROM usuario")
     conn.execute("DELETE FROM termino")
     conn.execute("DELETE FROM curso")

@@ -1,0 +1,484 @@
+{
+  "tipo": "prueba_carga",
+  "configuracion": {
+    "escenario": "A",
+    "salas": [
+      {
+        "room_id": "INF-221-1",
+        "receptores": 20
+      }
+    ],
+    "minutos": 5.0,
+    "url_http": "http://127.0.0.1:8001",
+    "url_ws": "ws://127.0.0.1:8001",
+    "modo_audio": "stub",
+    "wav": null
+  },
+  "metadatos": {
+    "fecha_utc": "2026-11-19T21:24:52.743752+00:00",
+    "git_commit": "4783e1bfd7dcd213817bbd61e79afc92b8964a0d",
+    "git_dirty": true,
+    "hardware": {
+      "plataforma": "Windows-11-10.0.26300-SP0",
+      "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+      "python": "3.14.0",
+      "cpu_nucleos_logicos": 12,
+      "cpu_nucleos_fisicos": 8,
+      "ram_total_mb": 7967.9,
+      "gpu": {
+        "nombre": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+        "vram_total_mb": 6144,
+        "vram_usada_mb": 816,
+        "driver": "610.47"
+      }
+    },
+    "versiones": {
+      "fastapi": "0.111.1",
+      "uvicorn": "0.30.6",
+      "websockets": "16.1.1",
+      "psutil": "7.2.2",
+      "numpy": "2.5.1"
+    }
+  },
+  "resultados": {
+    "escenario": "A",
+    "duracion_objetivo_min": 5.0,
+    "duracion_real_s": 302.81,
+    "salas": [
+      {
+        "room_id": "INF-221-1",
+        "receptores_configurados": 20,
+        "eventos_emitidos_sala": 197,
+        "recibidos_total": 3940,
+        "perdidos_total": 0,
+        "duplicados_total": 0,
+        "fuera_de_orden_total": 0,
+        "receptores_con_error": 0,
+        "retardo_global_ms": {
+          "n": 3940,
+          "min": 0.0,
+          "mediana": 1.0,
+          "p95": 4.0,
+          "max": 12.0,
+          "promedio": 1.6
+        },
+        "por_receptor": [
+          {
+            "receptor_id": "INF-221-1-R01",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 3.0,
+              "max": 7.0,
+              "promedio": 1.47
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R02",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 3.0,
+              "max": 5.0,
+              "promedio": 1.23
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R03",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 2.0,
+              "max": 4.0,
+              "promedio": 0.98
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R04",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 1.2,
+              "max": 3.0,
+              "promedio": 0.85
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R05",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 1.0,
+              "mediana": 2.0,
+              "p95": 5.0,
+              "max": 10.0,
+              "promedio": 2.25
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R06",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 3.0,
+              "max": 6.0,
+              "promedio": 1.3
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R07",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 2.0,
+              "max": 4.0,
+              "promedio": 1.12
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R08",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 3.0,
+              "max": 7.0,
+              "promedio": 1.57
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R09",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 2.0,
+              "p95": 4.0,
+              "max": 9.0,
+              "promedio": 1.89
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R10",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 2.0,
+              "max": 4.0,
+              "promedio": 1.06
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R11",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 3.0,
+              "max": 6.0,
+              "promedio": 1.38
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R12",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 3.2,
+              "max": 7.0,
+              "promedio": 1.65
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R13",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 2.0,
+              "p95": 4.0,
+              "max": 8.0,
+              "promedio": 1.81
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R14",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 2.0,
+              "p95": 4.0,
+              "max": 9.0,
+              "promedio": 2.09
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R15",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 2.0,
+              "p95": 5.0,
+              "max": 10.0,
+              "promedio": 2.17
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R16",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 1.0,
+              "mediana": 2.0,
+              "p95": 5.0,
+              "max": 12.0,
+              "promedio": 2.38
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R17",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 2.0,
+              "max": 3.0,
+              "promedio": 0.9
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R18",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 1.0,
+              "p95": 4.0,
+              "max": 8.0,
+              "promedio": 1.73
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R19",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 0.0,
+              "mediana": 2.0,
+              "p95": 4.0,
+              "max": 9.0,
+              "promedio": 1.96
+            }
+          },
+          {
+            "receptor_id": "INF-221-1-R20",
+            "room_id": "INF-221-1",
+            "esperados": 197,
+            "recibidos": 197,
+            "perdidos": 0,
+            "duplicados": 0,
+            "fuera_de_orden": 0,
+            "finalizada": true,
+            "error": null,
+            "retardo_ms": {
+              "n": 197,
+              "min": 1.0,
+              "mediana": 2.0,
+              "p95": 5.0,
+              "max": 11.0,
+              "promedio": 2.29
+            }
+          }
+        ]
+      }
+    ],
+    "resumen_global": {
+      "salas": 1,
+      "receptores_totales": 20,
+      "recibidos_total": 3940,
+      "perdidos_total": 0,
+      "duplicados_total": 0,
+      "fuera_de_orden_total": 0,
+      "receptores_con_error": 0,
+      "retardo_p95_max_salas_ms": 4.0
+    },
+    "servidor": {
+      "pid": 6240,
+      "muestras": 301,
+      "cpu_pct": {
+        "n": 301,
+        "min": 0.0,
+        "mediana": 1.5,
+        "p95": 4.6,
+        "max": 84.1,
+        "promedio": 2.09
+      },
+      "rss_mb": {
+        "n": 301,
+        "min": 197.73,
+        "mediana": 337.67,
+        "p95": 338.0,
+        "max": 338.15,
+        "promedio": 336.99
+      }
+    },
+    "meta_rnf06": {
+      "descripcion": "Una fuente + 20 receptores (A), dos fuentes + 10 receptores c/u (B)",
+      "sin_perdidas_ni_errores": true
+    }
+  }
+}

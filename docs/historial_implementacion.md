@@ -895,7 +895,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-19 — Glosario piloto provisional, clips de ensayo y motor de coincidencia
+## 2026-11-19 — `4783e1b` — Glosario piloto provisional, clips de ensayo y motor de coincidencia
 **Refs:** SPEC-007 `specs/SPEC-007-glosario-piloto-clips-ensayo-matching.md` (Completada)
 
 **Resumen:** Se redefinió el glosario de la PoC en torno a un único curso piloto provisional (`INF-221`, 15 conceptos) más un curso de control sin términos (`MAT-101`), se generaron y versionaron 15 clips MP4 de ensayo sin personas, se reemplazaron los lemas manuales por un índice automático con doble clave (lemas + formas) y bloqueos con registro de abstenciones, y se incorporó una cola acotada en el cliente sin bucle ni truncamiento a 4 segundos.
@@ -925,3 +925,36 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - `pnpm --prefix frontend build` → OK (46 módulos, PWA generada).
 - Pruebas extra: `generar_clips_ensayo.py` (15 MP4 H.264 640×360 3 s validados con `ffprobe`), `seed_glosario.py`, y simulación en Node de `useColaSenas` (cola máx 3, descartes, ventana 20 s).
 - Pendiente por entorno: verificación en clon limpio con `docker compose build` (daemon Docker apagado) y prueba manual interactiva en navegador.
+
+---
+
+## 2026-11-20 — SPEC-008 (1/2): instrumentación de métricas, scripts de medición y corpus propio
+**Refs:** SPEC-008 `specs/SPEC-008-mediciones-poc.md` (R1–R16, R18–R19; parcial)
+
+**Resumen:** Se implementó la instrumentación de latencias por segmento en el servidor, se retiraron `evaluation/logging.py` y las tablas heredadas `sesion`/`segmento`, se crearon los scripts reproducibles de evaluación (`normalizacion.py`, `evaluar_asr.py`, `evaluar_matching.py`, `prueba_carga.py`) con sus pruebas y dependencias separadas en `ml/`, y se ensamblaron y revisaron los dos audios propios del autor (`clase_01_cerca.wav` y `clase_02_cerca.wav`) junto a sus guiones y referencias.
+
+**Cambios:**
+- **Backend — Instrumentación y esquema (`backend/`):**
+  - `data/schema.sql`, `app/core/db.py`, `scripts/seed_glosario.py` — reemplazo de tablas `sesion` y `segmento` por `metrica_segmento` (limpieza también al inicializar esquema).
+  - `app/evaluation/metricas.py` — **nuevo** (reemplaza a la eliminada `evaluation/logging.py`): `registrar_segmento()` controlada por `METRICAS` (`True` por defecto en `app/core/config.py` y `.env.example`).
+  - `app/asr/base.py`, `app/asr/segmentador.py`, `app/asr/stub.py`, `app/asr/whisper_local.py` — `Ventana` suma `llegada_fin_ms` y `ResultadoASR` suma `llegada_fin_ms` y `asr_ms` (`0` en stub; en `FasterWhisperProvider` se marca la llegada de tramas con reloj monotónico en `_pump()` y se mide duración de inferencia).
+  - `app/salas/manager.py`, `app/main.py` — `RoomManager.broadcast()` retorna receptores conectados; el evento `"segmento"` agrega `"servidor_ms"` (epoch ms al difundir); `ws_sala` mide `nlp_ms` y `emitido_ms` con reloj monotónico y persiste métricas de segmentos finales en `metrica_segmento`.
+  - `tests/test_schema.py`, `tests/test_segmentador.py`, `tests/test_sala.py` — pruebas de `metrica_segmento`, eliminación de tablas obsoletas, `llegada_fin_ms`, `asr_ms`, `servidor_ms` y `METRICAS=false`.
+- **ML, corpus y configuración (`ml/`, `.gitignore`, `AGENTS.md`):**
+  - `ml/requirements.txt` — `jiwer`, `psutil`, `websockets` separadas de `backend/requirements.txt`.
+  - `.gitignore` — ignora `ml/datos/audio/` y `audios-pruebas/`.
+  - `AGENTS.md` — incorpora `ruff check backend ml` y `pytest ml/tests` a la verificación mínima.
+  - `ml/comun.py`, `ml/normalizacion.py`, `ml/evaluar_matching.py`, `ml/evaluar_asr.py`, `ml/prueba_carga.py` — implementación completa + suite en `ml/tests/`.
+  - `ml/datos/guiones/clase_01.txt`, `ml/datos/guiones/clase_02.txt`, `ml/datos/referencias/`, `ml/datos/README.md` — guiones del curso `INF-221`, referencias revisadas contra los 26 tramos `.m4a` ensamblados (`6 min 44.65 s` y `6 min 54.21 s`) y fichas con brecha declarada respecto a la condición de ruido/distancia.
+- **Mediciones preliminares acumuladas en `ml/resultados/`:**
+  - `carga_escenario_A_stub_20261119_212452.json` y `carga_escenario_B_stub_20261119_212954.json` (pruebas completas de 5 minutos: `0` perdidos/duplicados/fuera de orden).
+
+**Verificación:**
+- `ruff check backend ml` → `All checks passed!`
+- `pytest backend/tests` → `59 passed, 1 skipped` (`@pytest.mark.modelo`).
+- `pytest ml/tests` → `11 passed`.
+- `pnpm --prefix frontend build` → OK (46 módulos).
+- `git status --short ml/datos/audio` → vacío (sin audios versionados).
+
+**Notas:**
+- Próximo paso (2/2): ejecutar la matriz de `ml/evaluar_asr.py` a ritmo real sobre ambos audios ensamblados, actualizar `matching` sobre commit limpio y consolidar `docs/resultados_poc.md`.

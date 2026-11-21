@@ -181,6 +181,7 @@ def test_handler_provisional_no_persiste_ni_matchea_y_vaciado_final(client, monk
             assert ev_fin["type"] == "segmento"
             assert ev_fin["segment_id"] == 7
             assert ev_fin["final"] is True
+            assert isinstance(ev_fin["servidor_ms"], int)
             assert len(ev_fin["senas"]) == 1
             assert ev_fin["senas"][0]["texto_visible"] == "lista enlazada"
             assert ev_fin["senas"][0]["texto_detectado"] == "listas enlazadas"
@@ -215,6 +216,18 @@ def test_handler_provisional_no_persiste_ni_matchea_y_vaciado_final(client, monk
     assert json.loads(eventos[1]["abstenciones_json"]) == [
         {"bloqueo": "de memoria", "texto_detectado": "de memoria"}
     ]
+
+    metricas = conn.execute(
+        "SELECT * FROM metrica_segmento WHERE clase_id = 1 ORDER BY id"
+    ).fetchall()
+    assert len(metricas) == 2
+    assert metricas[0]["segmento_id"] == 7
+    assert metricas[0]["audio_inicio_ms"] == 0
+    assert metricas[0]["audio_fin_ms"] == 1600
+    assert metricas[0]["receptores"] == 1
+    assert metricas[0]["emitido_ms"] >= metricas[0]["llegada_fin_ms"]
+    assert metricas[0]["nlp_ms"] >= 0
+    assert metricas[1]["segmento_id"] == 8
 
 
 def test_rechazo_tramas_fuera_de_contrato(client, monkeypatch, caplog):
@@ -252,3 +265,23 @@ def test_prompt_glosario_desactivado_no_envia_contexto(client, monkeypatch):
         em.send_text(json.dumps({"action": "finalizar"}))
 
     assert fake.contexto_recibido is None
+
+
+def test_metricas_desactivadas_no_escribe_metrica_segmento(client, monkeypatch):
+    monkeypatch.setenv("METRICAS", "false")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+    token = crear_token("11111111-1")
+    with client.websocket_connect(f"/ws/sala/INF-221-SEC1?rol=emitter&token={token}") as em:
+        with client.websocket_connect(f"/ws/sala/INF-221-SEC1?rol=listener&token={token}") as lis:
+            ev = lis.receive_json()
+            assert ev["type"] == "segmento"
+            assert isinstance(ev["servidor_ms"], int)
+            em.send_text(json.dumps({"action": "finalizar"}))
+            assert lis.receive_json()["type"] == "clase_finalizada"
+
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM metrica_segmento").fetchall()
+    assert rows == []

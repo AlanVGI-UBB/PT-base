@@ -54,6 +54,8 @@ class StubAsrProvider:
                     estable=True,
                     inicio_ms=idx * interval_ms,
                     fin_ms=(idx + 1) * interval_ms,
+                    llegada_fin_ms=0,
+                    asr_ms=0,
                 )
                 idx += 1
         finally:

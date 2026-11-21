@@ -16,6 +16,7 @@ from app.auth.routes import router as auth_router
 from app.core.auth import obtener_rut, verificar_token
 from app.core.config import get_settings
 from app.core.db import get_connection
+from app.evaluation.metricas import registrar_segmento
 from app.glossary.indice import obtener_indice_curso
 from app.glossary.matching import buscar_terminos
 from app.glossary.repository import ensure_schema, list_terminos
@@ -164,6 +165,7 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         logger.info("Sala %s creada por %s (clase %d)", room_id, rut, clase_id_db)
 
         t_inicio = int(time.time() * 1000)
+        t_mono_inicio_ns = time.monotonic_ns()
         audio_queue: asyncio.Queue[bytes | None] = asyncio.Queue()
         stop_event = asyncio.Event()
         session_state: dict = {
@@ -226,8 +228,11 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 if not resultado.texto.strip():
                     continue
                 ts_ms = int(time.time() * 1000) - t_inicio
+                nlp_ms = 0
                 if resultado.estable:
+                    nlp_ini_ns = time.monotonic_ns()
                     coincidencias = buscar_terminos(resultado.texto, sala.indice)
+                    nlp_ms = (time.monotonic_ns() - nlp_ini_ns) // 1_000_000
                     senas = coincidencias.senas
                     senas_json = json.dumps(senas, ensure_ascii=False)
                     abstenciones_json = json.dumps(
@@ -245,6 +250,8 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 else:
                     senas = []
 
+                emitido_ms = (time.monotonic_ns() - t_mono_inicio_ns) // 1_000_000
+                servidor_ms = time.time_ns() // 1_000_000
                 evento = {
                     "type": "segmento",
                     "segment_id": resultado.segmento_id,
@@ -252,8 +259,21 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                     "final": resultado.estable,
                     "senas": senas,
                     "timestamp_ms": ts_ms,
+                    "servidor_ms": servidor_ms,
                 }
-                await RoomManager.broadcast(room_id, evento)
+                receptores = await RoomManager.broadcast(room_id, evento)
+                if resultado.estable:
+                    registrar_segmento(
+                        clase_id=clase_id_db,
+                        segmento_id=resultado.segmento_id,
+                        audio_inicio_ms=resultado.inicio_ms,
+                        audio_fin_ms=resultado.fin_ms,
+                        llegada_fin_ms=resultado.llegada_fin_ms,
+                        asr_ms=resultado.asr_ms,
+                        nlp_ms=nlp_ms,
+                        emitido_ms=emitido_ms,
+                        receptores=receptores,
+                    )
 
         async def _cerrar_listeners(evento: dict) -> None:
             await RoomManager.broadcast(room_id, evento)

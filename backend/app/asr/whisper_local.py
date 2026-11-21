@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import logging
 import threading
+import time
 from typing import Any, AsyncIterator
 from weakref import WeakKeyDictionary
 
@@ -182,12 +183,14 @@ class FasterWhisperProvider:
         prompt: str | None,
     ) -> ResultadoASR | None:
         async with _get_async_lock():
+            t_ini = time.monotonic_ns()
             texto = await asyncio.to_thread(
                 self._transcribir_sync,
                 ventana.pcm,
                 idioma,
                 prompt,
             )
+            asr_ms = (time.monotonic_ns() - t_ini) // 1_000_000
         texto = texto.strip()
         if not texto:
             return None
@@ -197,6 +200,8 @@ class FasterWhisperProvider:
             estable=ventana.final,
             inicio_ms=ventana.inicio_ms,
             fin_ms=ventana.fin_ms,
+            llegada_fin_ms=ventana.llegada_fin_ms,
+            asr_ms=asr_ms,
         )
 
     @staticmethod
@@ -224,6 +229,7 @@ class FasterWhisperProvider:
         lang: str = "es",
         contexto: list[str] | None = None,
     ) -> AsyncIterator[ResultadoASR]:
+        t0_ns = time.monotonic_ns()
         segmentador = Segmentador(
             silencio_ms=self._silencio_ms,
             max_segmento_ms=self._max_segmento_ms,
@@ -233,58 +239,64 @@ class FasterWhisperProvider:
         idioma = _normalizar_idioma(lang)
         prompt = _construir_prompt(contexto) if self._prompt_habilitado else None
 
-        pcm_queue: asyncio.Queue[bytes | object] = asyncio.Queue()
+        pcm_queue: asyncio.Queue[tuple[bytes | object, int]] = asyncio.Queue()
         queued_bytes = 0
 
         async def _pump() -> None:
             nonlocal queued_bytes
             try:
                 async for trama in audio_iter:
+                    llegada_ms = (time.monotonic_ns() - t0_ns) // 1_000_000
                     queued_bytes += len(trama)
-                    await pcm_queue.put(trama)
+                    await pcm_queue.put((trama, llegada_ms))
             finally:
-                await pcm_queue.put(_FIN)
+                fin_ms = (time.monotonic_ns() - t0_ns) // 1_000_000
+                await pcm_queue.put((_FIN, fin_ms))
 
         pump_task = asyncio.create_task(_pump())
         terminado = False
+        fin_llegada_ms: int | None = None
         try:
             while not terminado:
-                tramas: list[bytes] = []
+                tramas: list[tuple[bytes, int]] = []
                 try:
-                    item = await asyncio.wait_for(
+                    payload, ts_ms = await asyncio.wait_for(
                         pcm_queue.get(),
                         timeout=self._silencio_ms / 1000.0,
                     )
                 except asyncio.TimeoutError:
-                    v_timeout = segmentador.cerrar()
+                    timeout_ms = (time.monotonic_ns() - t0_ns) // 1_000_000
+                    v_timeout = segmentador.cerrar(llegada_ms=timeout_ms)
                     if v_timeout is not None:
                         res = await self._transcribir_ventana(v_timeout, idioma, prompt)
                         if res is not None:
                             yield res
                     continue
 
-                if item is _FIN:
+                if payload is _FIN:
                     terminado = True
+                    fin_llegada_ms = ts_ms
                 else:
-                    queued_bytes -= len(item)  # type: ignore[arg-type]
-                    tramas.append(item)  # type: ignore[arg-type]
+                    queued_bytes -= len(payload)  # type: ignore[arg-type]
+                    tramas.append((payload, ts_ms))  # type: ignore[arg-type]
 
                 while not pcm_queue.empty():
-                    nxt = pcm_queue.get_nowait()
-                    if nxt is _FIN:
+                    nxt_payload, nxt_ts_ms = pcm_queue.get_nowait()
+                    if nxt_payload is _FIN:
                         terminado = True
+                        fin_llegada_ms = nxt_ts_ms
                         break
-                    queued_bytes -= len(nxt)  # type: ignore[arg-type]
-                    tramas.append(nxt)  # type: ignore[arg-type]
+                    queued_bytes -= len(nxt_payload)  # type: ignore[arg-type]
+                    tramas.append((nxt_payload, nxt_ts_ms))  # type: ignore[arg-type]
 
-                total_bytes = sum(len(t) for t in tramas)
+                total_bytes = sum(len(t) for t, _ in tramas)
                 pendiente_ms = (total_bytes // 2) * 1000 // SAMPLE_RATE
 
                 ventanas: list[Ventana] = []
-                for trama in tramas:
-                    ventanas.extend(segmentador.alimentar(trama))
+                for trama, llegada_ms in tramas:
+                    ventanas.extend(segmentador.alimentar(trama, llegada_ms=llegada_ms))
                 if terminado:
-                    v_fin = segmentador.cerrar()
+                    v_fin = segmentador.cerrar(llegada_ms=fin_llegada_ms)
                     if v_fin is not None:
                         ventanas.append(v_fin)
 

@@ -49,14 +49,35 @@ def test_schema_idempotent(db_path):
     c1.close()
 
 
-def test_segmento_fk(conn):
-    conn.execute("INSERT INTO sesion (id, curso_id, inicio) VALUES (1, 1, '2026-01-01')")
+def test_tablas_obsoletas_eliminadas(conn):
+    tablas = {
+        row[0]
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    }
+    assert "sesion" not in tablas
+    assert "segmento" not in tablas
+    assert "metrica_segmento" in tablas
+
+
+def test_metrica_segmento_fk(conn):
     conn.execute(
-        "INSERT INTO segmento (sesion_id, texto, estable) VALUES (1, 'hola', 1)"
+        "INSERT INTO usuario (rut, password_hash, nombre, apellido) "
+        "VALUES ('11-1', 'hash', 'A', 'B')"
+    )
+    conn.execute(
+        "INSERT INTO clase (id, room_id, curso_id, seccion, rut_emisor, fecha_inicio) "
+        "VALUES (1, 'INF-221-SEC1', 1, 'SEC1', '11-1', '2026-01-01')"
+    )
+    conn.execute(
+        "INSERT INTO metrica_segmento ("
+        "clase_id, segmento_id, audio_inicio_ms, audio_fin_ms, "
+        "llegada_fin_ms, asr_ms, nlp_ms, emitido_ms, receptores"
+        ") VALUES (1, 3, 100, 1500, 1510, 80, 5, 1600, 4)"
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM segmento").fetchone()
-    assert row["texto"] == "hola"
+    row = conn.execute("SELECT * FROM metrica_segmento").fetchone()
+    assert row["segmento_id"] == 3
+    assert row["receptores"] == 4
 
 
 def test_nuevas_tablas(db_path):

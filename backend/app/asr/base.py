@@ -11,6 +11,8 @@ class ResultadoASR:
     estable: bool
     inicio_ms: int
     fin_ms: int
+    llegada_fin_ms: int = 0
+    asr_ms: int = 0
 
 
 class StreamingASRProvider(Protocol):

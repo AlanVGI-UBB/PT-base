@@ -14,23 +14,6 @@ CREATE TABLE IF NOT EXISTS termino (
     estado TEXT NOT NULL DEFAULT 'ensayo' CHECK (estado IN ('ensayo', 'publicado', 'retirado'))
 );
 
-CREATE TABLE IF NOT EXISTS sesion (
-    id INTEGER PRIMARY KEY,
-    curso_id INTEGER NOT NULL REFERENCES curso(id),
-    inicio TEXT NOT NULL,
-    fin TEXT
-);
-
-CREATE TABLE IF NOT EXISTS segmento (
-    id INTEGER PRIMARY KEY,
-    sesion_id INTEGER NOT NULL REFERENCES sesion(id),
-    texto TEXT,
-    recibido_at TEXT,
-    emitido_at TEXT,
-    estable INTEGER DEFAULT 0,
-    senas_json TEXT
-);
-
 CREATE TABLE IF NOT EXISTS usuario (
     rut TEXT PRIMARY KEY,
     password_hash TEXT NOT NULL,
@@ -65,4 +48,17 @@ CREATE TABLE IF NOT EXISTS evento_clase (
     estable INTEGER DEFAULT 0,
     senas_json TEXT,
     abstenciones_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS metrica_segmento (
+    id INTEGER PRIMARY KEY,
+    clase_id INTEGER NOT NULL REFERENCES clase(id),
+    segmento_id INTEGER NOT NULL,
+    audio_inicio_ms INTEGER NOT NULL,
+    audio_fin_ms INTEGER NOT NULL,
+    llegada_fin_ms INTEGER NOT NULL,
+    asr_ms INTEGER NOT NULL,
+    nlp_ms INTEGER NOT NULL,
+    emitido_ms INTEGER NOT NULL,
+    receptores INTEGER NOT NULL
 );

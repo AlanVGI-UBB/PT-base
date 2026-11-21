@@ -29,8 +29,9 @@ del alcance declarado en la spec activa.
 Ejecutar antes de dar una tarea por terminada:
 
 ```powershell
-ruff check backend
+ruff check backend ml
 pytest backend/tests
+pytest ml/tests
 pnpm --prefix frontend build
 ```
 

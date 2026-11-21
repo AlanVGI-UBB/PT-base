@@ -340,3 +340,61 @@ async def test_humo_modelo_real_whisper(monkeypatch):
     resultados = [r async for r in provider.transcribe_stream(silencio())]
     assert resultados == []
     _limpiar_cache_modelo()
+
+
+def test_segmentador_registra_llegada_fin_ms():
+    seg = Segmentador(silencio_ms=300, max_segmento_ms=15000, parcial_ms=1000, pre_roll_ms=0)
+    seg.alimentar(_trama_voz(100), llegada_ms=100)
+    seg.alimentar(_trama_voz(100), llegada_ms=200)
+    ventanas = []
+    for t_ms in (300, 400, 500, 600):
+        ventanas.extend(seg.alimentar(_trama_silencio(100), llegada_ms=t_ms))
+    assert len(ventanas) == 1
+    assert ventanas[0].final is True
+    assert ventanas[0].llegada_fin_ms == 600
+
+    seg.alimentar(_trama_voz(100), llegada_ms=900)
+    cerrada = seg.cerrar(llegada_ms=950)
+    assert cerrada is not None
+    assert cerrada.llegada_fin_ms == 950
+
+
+@pytest.mark.asyncio
+async def test_whisper_provider_mide_asr_ms_y_llegada_fin_ms(monkeypatch):
+    monkeypatch.setenv("ASR_PROMPT_GLOSARIO", "false")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    fake = _FakeModeloWhisper(respuestas=["lista enlazada"], delay_s=0.05)
+    provider = FasterWhisperProvider(modelo=fake, silencio_ms=300, parcial_ms=2000)
+
+    async def audio():
+        for _ in range(3):
+            yield _trama_voz(100)
+            await asyncio.sleep(0.02)
+        for _ in range(3):
+            yield _trama_silencio(100)
+            await asyncio.sleep(0.02)
+
+    resultados = [r async for r in provider.transcribe_stream(audio())]
+    assert len(resultados) == 1
+    assert resultados[0].asr_ms >= 40
+    assert resultados[0].llegada_fin_ms >= 50
+
+
+@pytest.mark.asyncio
+async def test_stub_provider_entrega_metricas_en_cero(monkeypatch):
+    monkeypatch.setenv("STUB_INTERVAL_MS", "20")
+    from app.asr.stub import StubAsrProvider
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    provider = StubAsrProvider()
+
+    async def audio():
+        await asyncio.sleep(0.08)
+        yield _trama_silencio(100)
+
+    resultados = [r async for r in provider.transcribe_stream(audio())]
+    assert len(resultados) >= 1
+    assert all(r.llegada_fin_ms == 0 and r.asr_ms == 0 for r in resultados)

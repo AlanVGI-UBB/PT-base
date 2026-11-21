@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "cambiar-en-produccion"
     SALA_TIMEOUT_MS: int = 30000
     AUTH_PROVIDER: str = "local"
+    METRICAS: bool = True
 
     model_config = {"env_file": str(BASE_DIR / ".env"), "extra": "ignore"}
 

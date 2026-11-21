@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from dataclasses import dataclass
+import time
 
 import numpy as np
 
@@ -17,6 +18,7 @@ class Ventana:
     inicio_ms: int
     fin_ms: int
     final: bool
+    llegada_fin_ms: int = 0
 
 
 class Segmentador:
@@ -48,6 +50,8 @@ class Segmentador:
         self._seg_muestras = 0
         self._silencio_acumulado_ms = 0
         self._ultimo_parcial_ms = 0
+        self._t0_ns = time.monotonic_ns()
+        self._ultima_llegada_ms: int | None = None
 
     @property
     def en_segmento(self) -> bool:
@@ -58,12 +62,20 @@ class Segmentador:
         self._seg_chunks = []
         self._seg_muestras = 0
         self._silencio_acumulado_ms = 0
+        self._ultima_llegada_ms = None
 
-    def alimentar(self, trama: bytes) -> list[Ventana]:
+    def alimentar(self, trama: bytes, llegada_ms: int | None = None) -> list[Ventana]:
         if len(trama) % 2 != 0:
             raise ValueError("La trama PCM s16le debe tener longitud par")
         if not trama:
             return []
+
+        ts_llegada_ms = (
+            llegada_ms
+            if llegada_ms is not None
+            else (time.monotonic_ns() - self._t0_ns) // 1_000_000
+        )
+        self._ultima_llegada_ms = ts_llegada_ms
 
         muestras = np.frombuffer(trama, dtype="<i2").astype(np.float32) / 32768.0
         if len(self._residuo) > 0:
@@ -126,6 +138,7 @@ class Segmentador:
                         inicio_ms=self._seg_inicio_ms,
                         fin_ms=sub_fin_ms,
                         final=True,
+                        llegada_fin_ms=ts_llegada_ms,
                     )
                 )
                 self._limpiar_segmento()
@@ -137,6 +150,7 @@ class Segmentador:
                         inicio_ms=self._seg_inicio_ms,
                         fin_ms=sub_fin_ms,
                         final=False,
+                        llegada_fin_ms=ts_llegada_ms,
                     )
                 )
                 self._ultimo_parcial_ms = sub_fin_ms
@@ -144,18 +158,26 @@ class Segmentador:
         self._residuo = datos[offset:].copy()
         return ventanas
 
-    def cerrar(self) -> Ventana | None:
+    def cerrar(self, llegada_ms: int | None = None) -> Ventana | None:
         self._pre_roll.clear()
         if not self._en_segmento:
             if len(self._residuo) > 0:
                 self._muestras_procesadas += len(self._residuo)
                 self._residuo = np.empty(0, dtype=np.float32)
+            self._ultima_llegada_ms = None
             return None
 
         if len(self._residuo) > 0:
             self._seg_chunks.append(self._residuo)
             self._muestras_procesadas += len(self._residuo)
             self._residuo = np.empty(0, dtype=np.float32)
+
+        if llegada_ms is not None:
+            ts_llegada_ms = llegada_ms
+        elif self._ultima_llegada_ms is not None:
+            ts_llegada_ms = self._ultima_llegada_ms
+        else:
+            ts_llegada_ms = (time.monotonic_ns() - self._t0_ns) // 1_000_000
 
         fin_ms = (self._muestras_procesadas * 1000) // SAMPLE_RATE
         ventana = Ventana(
@@ -164,6 +186,7 @@ class Segmentador:
             inicio_ms=self._seg_inicio_ms,
             fin_ms=fin_ms,
             final=True,
+            llegada_fin_ms=ts_llegada_ms,
         )
         self._limpiar_segmento()
         return ventana
