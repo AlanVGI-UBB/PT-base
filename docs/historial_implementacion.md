@@ -1058,7 +1058,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-22 — Correcciones tras pruebas E2E en navegador: SQLite por hilo, persistencia de sesión y estabilidad WebSocket
+## 2026-11-22 — `f5e65cf` — Correcciones tras pruebas E2E en navegador: SQLite por hilo, persistencia de sesión y estabilidad WebSocket
 **Refs:** verificación E2E de `SPEC-009` (`specs/SPEC-009-acceso-sesion-saneamiento.md`)
 
 **Resumen:** Durante la verificación interactiva de extremo a extremo en navegador (3 usuarios, 2 pestañas y precarga de los 15 clips protegidos) se detectaron y corrigieron cuatro fallos de concurrencia y ciclo de vida: acceso multihilo a SQLite, restauración de sesión al recargar/abrir segunda pestaña, reconexión involuntaria del emisor por cambio de token y bucle de reconexión WS ante errores terminales del servidor.
@@ -1078,3 +1078,16 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - `pytest ml/tests` → `11 passed`.
 - `pnpm --prefix frontend build` → OK (48 módulos).
 - E2E en navegador real (`http://127.0.0.1:5173` + backend `8001`): clips sin token `401`, ruta antigua `404`, Pedro `403`, María sin botón de captura, Juan con `CondicionesModal`, precarga de 15 clips (`0` errores HTTP/CORS/consola), 2 pestañas sincronizadas en pausa/reanudación con videos `blob:`, historial con separadores, Replay continuo y desconexión abrupta (`Registro incompleto`).
+
+---
+
+## 2026-11-22 — Sincronización completa de `docs/documentacion_prototipo_defensa.md` con `SPEC-009` y correcciones E2E
+**Refs:** `docs/documentacion_prototipo_defensa.md`, `SPEC-009` (commit documental)
+
+**Resumen:** Se revisó línea por línea la guía técnica de defensa y se actualizaron las secciones internas que aún conservaban referencias anteriores a `SPEC-009` (diagrama de estados sin pausa, árbol de módulos backend/frontend, flujo de `ws_sala`, vistas de usuario y respuestas del banco de preguntas frecuentes).
+
+**Cambios:**
+- `docs/documentacion_prototipo_defensa.md` — actualiza §1 (emisor autorizado por `puede_capturar`), §2.1 y §2.2 (estado `Pausada`, `estado_sesion`, `cierre=explicito|timeout`), §3 (`jiwer` vigente, SQLite por hilo), §4.1–§4.4 (retira `/ws/echo`, `list_cursos`, `usuario_participa`; añade `core/permisos.py`, vaciado en pausa `b""`, 72 pruebas totales), §6.1 y §6.3 (añade `api/clips.js`, `CondicionesModal.jsx`, pausa compartida, `"Registro incompleto"` y separadores en Apunte; retira `/data/` en `nginx.conf`) y §11 (preguntas #1, #2 y #8).
+- Este archivo — registra hash `f5e65cf` en la entrada anterior.
+
+**Verificación:** n/a (commit documental; contrastado contra los archivos vigentes del repositorio).

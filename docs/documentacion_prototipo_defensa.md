@@ -25,9 +25,9 @@
 | **Co-diseño PIESDI y banco real (80–150 términos)** | Fuera de software (`OE1`) | Acuerdo con docente, validación con intérpretes y grabación real | Propuesta / Informe |
 
 ### Decisión estructural clave: el paradigma centrado en el estudiante
-Originalmente (`SPEC-001` a `SPEC-003`) existían dos vistas separadas ("Soy profesor" y "Soy alumno"). A partir de `SPEC-004`, la plataforma se reestructuró bajo un **perfil único centrado en el estudiante**:
-* **Por qué:** el docente no necesita operar la aplicación ni iniciar sesión durante la cátedra. El estudiante con permiso/rol de captura conecta un micrófono (idealmente lavalier inalámbrico) a su dispositivo y entrega el transmisor al docente.
-* **Emisor único + Fan-out (1 → N):** el primer usuario que inicia la transmisión en una sala actúa como **emisor** (`rol=emitter`), capturando y enviando audio. Si hay otros estudiantes de la misma clase conectados, entran como **oyentes** (`rol=listener`) y reciben exactamente la misma transcripción y señas sin duplicar la inferencia ASR.
+Originalmente (`SPEC-001` a `SPEC-003`) existían dos vistas separadas ("Soy profesor" y "Soy alumno"). A partir de `SPEC-004` (y reforzado en `SPEC-009`), la plataforma se estructuró bajo un **perfil único centrado en el estudiante**:
+* **Por qué:** el docente no necesita operar la aplicación ni iniciar sesión durante la cátedra. Un estudiante inscrito con permiso explícito de captura (`inscripcion.puede_capturar`) conecta un micrófono (idealmente lavalier inalámbrico) a su dispositivo y entrega el transmisor al docente.
+* **Emisor único autorizado + Fan-out (1 → N):** solo un usuario con permiso `puede_capturar` (tras confirmar el aviso de condiciones) puede actuar como **emisor** (`rol=emitter`), capturando y enviando audio. Los demás estudiantes inscritos en la sección entran como **oyentes** (`rol=listener`) y reciben exactamente la misma transcripción, estado de pausa y señas sin duplicar la inferencia ASR.
 
 ---
 
@@ -44,12 +44,12 @@ flowchart LR
     ASR --> Seg["Segmentador RMS (subtramas 30 ms, pre-roll 240 ms)"]
     Seg -->|"Ventanas PCM float32"| WM["WhisperModel (CTranslate2, CUDA/CPU, Lock único)"]
     WM -->|"final: false (cada 1 s)"| Br["RoomManager.broadcast"]
-    WM -->|"final: true (silencio 600 ms / 15 s / cierre)"| NLP["spaCy + Indice (doble clave y bloqueos)"]
+    WM -->|"final: true (silencio 600 ms / 15 s / pausa / cierre)"| NLP["spaCy + Indice (doble clave y bloqueos)"]
     NLP -->|"senas + abstenciones"| DB[("SQLite WAL (evento_clase)")]
     NLP -->|"Solo senas (sin abstenciones)"| Br
-    Br -->|"JSON segmento"| Em["Emisor (SalaView.jsx)"]
-    Br -->|"JSON segmento"| Oy["Oyentes (SalaView.jsx)"]
-    Em --> UI["Subtítulos por segment_id + useColaSenas + SenaPlayer"]
+    Br -->|"JSON segmento / estado_sesion"| Em["Emisor (SalaView.jsx)"]
+    Br -->|"JSON segmento / estado_sesion"| Oy["Oyentes (SalaView.jsx)"]
+    Em --> UI["Subtítulos por segment_id + useColaSenas + SenaPlayer (blob:)"]
     Oy --> UI
 ```
 
@@ -58,38 +58,42 @@ flowchart LR
 ```mermaid
 stateDiagram-v2
     [*] --> SinSala: Sala inexistente en RoomManager
-    SinSala --> Activa: Emisor conecta con JWT y crea clase en SQLite
+    SinSala --> Activa: Emisor autorizado (JWT + inscripcion + puede_capturar + condiciones=1)
+    Activa --> Pausada: Emisor envia action="pausar" (vacia segmento, guarda pausa, difunde estado_sesion)
+    Pausada --> Activa: Emisor envia action="reanudar" (guarda reanudacion, difunde estado_sesion)
     Activa --> Vaciando: Emisor envia action="finalizar"
-    Vaciando --> Finalizada: Transcribe buffer pendiente (max 5 s), guarda clase, emite clase_finalizada
+    Pausada --> Vaciando: Emisor envia action="finalizar"
+    Vaciando --> Finalizada: Transcribe buffer pendiente (max 5 s), guarda clase (cierre=explicito), emite clase_finalizada
     Activa --> Desconexion: Emisor corta WS sin finalizar
-    Desconexion --> Finalizada: Emite emisor_desconectado, espera SALA_TIMEOUT_MS, guarda parcial, emite clase_finalizada
+    Pausada --> Desconexion: Emisor corta WS sin finalizar
+    Desconexion --> Finalizada: Guarda evento desconexion, emite emisor_desconectado, espera SALA_TIMEOUT_MS, cierre=timeout
     Finalizada --> [*]: Cierra listeners y elimina sala de memoria
 ```
 
 ### 2.3 Separación de provisionales y finales (regla `RN10`)
 1. Mientras el docente habla sin pausas mayores a `ASR_SILENCIO_MS` (600 ms), el `Segmentador` emite ventanas provisionales cada `ASR_PARCIAL_MS` (1000 ms) con el mismo `segmento_id`.
 2. El servidor difunde las provisionales con `"final": false` y `"senas": []` — **no ejecuta matching NLP ni escribe en `evento_clase`**. Así se evita disparar clips erróneos si Whisper corrige una palabra al avanzar la frase, y no se ensucia el historial.
-3. Cuando hay 600 ms de silencio tras voz, el segmento alcanza 15 s (`ASR_MAX_SEGMENTO_MS`), dejan de llegar tramas por 600 ms o el emisor finaliza la clase, se emite la ventana final (`estable=True`) con el **mismo `segmento_id`**.
-4. Solo entonces el backend ejecuta `buscar_terminos(texto, sala.indice)` sobre el texto consolidado, inserta **una sola fila** en `evento_clase` (con `senas_json` y `abstenciones_json`), y difunde `"final": true` únicamente con la lista `senas` (las abstenciones no se envían al cliente).
-5. En el frontend (`SalaView.jsx`), los subtítulos se indexan y reemplazan por `segment_id` (resaltando el tramo exacto `texto_detectado`), y las señas entran a la cola secuencial (`useColaSenas`) sin bucle.
+3. Cuando hay 600 ms de silencio tras voz, el segmento alcanza 15 s (`ASR_MAX_SEGMENTO_MS`), dejan de llegar tramas por 600 ms, el emisor pausa la sesión o finaliza la clase, se emite la ventana final (`estable=True`) con el **mismo `segmento_id`**.
+4. Solo entonces el backend ejecuta `buscar_terminos(texto, sala.indice)` sobre el texto consolidado, inserta **una sola fila** en `evento_clase` (`tipo='segmento'`, con `senas_json` y `abstenciones_json`), y difunde `"final": true` únicamente con la lista `senas` (las abstenciones no se envían al cliente).
+5. En el frontend (`SalaView.jsx`), los subtítulos se indexan y reemplazan por `segment_id` (resaltando el tramo exacto `texto_detectado`), y las señas entran a la cola secuencial (`useColaSenas`) sin bucle, reproduciendo clips autenticados desde memoria (`blob:`).
 
 ---
 
 ## 3. Decisiones técnicas y su justificación
 
-Esta sección responde a preguntas del tipo *"¿por qué usaron tecnología X en vez de Y?"*.
+Esta sección responde a preguntas del tipo *"¿por qué usaron tecnología X en vez de Y?"* (ver tabla formal de divergencias respecto al informe/plan en `docs/decisiones_tecnicas.md`).
 
 | Decisión | Alternativa descartada / del informe | Justificación en el prototipo |
 |---|---|---|
-| **Python 3.11/3.14 + FastAPI** | Node.js + Express | El ecosistema de audio, ASR (`faster-whisper`), NLP (`spaCy`) y evaluación (`pytest`, futuro `jiwer`) vive nativo en Python; FastAPI aporta WebSockets ASGI asíncronos y validación Pydantic sin capa extra. |
+| **Python 3.11/3.14 + FastAPI** | Node.js + Express | El ecosistema de audio, ASR (`faster-whisper`), NLP (`spaCy`) y evaluación (`pytest`, `jiwer`) vive nativo en Python; FastAPI aporta WebSockets ASGI asíncronos y validación Pydantic sin capa extra. |
 | **PWA React + Vite (JS)** | App móvil nativa o TypeScript | Un único código corre en computador, tablet y celular sin pasar por tiendas. Se usó JavaScript (divergiendo de TypeScript del informe) para priorizar velocidad de iteración en la PoC. El routing por hash (`#/...`) evita configurar reescrituras SPA complejas durante desarrollo. |
 | **Captura con `AudioWorklet` (PCM s16le 16 kHz)** | `MediaRecorder` (WebM/Opus) | `MediaRecorder` (usado hasta `SPEC-005`) solo incluye cabecera WebM en el primer fragmento: los trozos siguientes no son decodificables de forma aislada y una reconexión rompe el stream. PCM 16 kHz mono a 16 bits es el formato nativo de Whisper (32 kB/s exactos) y permite segmentación determinista por energía. |
 | **Remuestreo lineal en el worklet** | Asumir `AudioContext` a 16 kHz | Navegadores móviles, Firefox o controladores de audio de Windows suelen forzar 44.1 kHz o 48 kHz aunque se solicite 16 kHz. El procesador `pcm-worklet.js` detecta `sampleRate` global y remuestrea en tiempo real con interpolación lineal sin pérdida de continuidad entre bloques de 128 muestras. |
 | **`faster-whisper` local** | Google Cloud Speech-to-Text / Web Speech API | El adaptador anterior de Google (`google_streaming.py`) estaba incompleto, no tenía credenciales y requería enviar voz a un tercero (restringido por autorización y Leyes 19.628 / 21.719). Web Speech API solo opera en motores Chromium y depende de la nube de Google. `faster-whisper` corre offline sobre CTranslate2 (`float16` en GPU CUDA / `int8` en CPU), sin costo por minuto ni fuga de audio. |
 | **`Segmentador` por RMS + `vad_filter`** | Enviar todo el audio crudo al modelo o usar Silero continuo | Whisper no es un modelo streaming puro sino de ventanas. Detectar energía RMS en subtramas de 30 ms con pre-roll de 240 ms permite ignorar silencio sin gastar GPU/CPU, controlar el ritmo de provisionales (`1000 ms`) y omitir provisionales si hay atraso (`> ASR_PARCIAL_MS`). Whisper además aplica su filtro de voz interno (`vad_filter=True`) y `condition_on_previous_text=False` para evitar alucinaciones repetitivas en silencios. |
 | **`spaCy` (`es_core_news_md`) + doble clave + bloqueos** | Matching exacto por substring, lemas manuales o LLM generativo | El matching exacto falla ante flexiones y mantener lemas a mano rompe cuando cambia el contexto. El sistema indexa automáticamente cada `forma` con **doble clave** (lemas y forma en minúscula, excluyendo `DET`, `ADP`, `CCONJ`, `SCONJ` y puntuación) buscando el n-grama más largo dinámicamente y preservando `texto_detectado` original. Los `bloqueos` conservan preposiciones/artículos (ej. `"de memoria"`) para abstenerse en usos ambiguos conocidos sin inventar señas. |
-| **Cola acotada de señas y tarjetas de ensayo (`ffmpeg`)** | Mostrar todas las señas en bucle por 4 s o usar videos propios | Reproducir clips sin límite genera retraso creciente respecto al habla (§4.1.4). `useColaSenas` reproduce una seña completa a la vez (sin bucle), limita la cola a **3 pendientes** (descarta la más antigua avisando `"disponibles en el historial"`) y omite menciones repetidas del mismo concepto durante **20 s**. Como no hay validación lingüística con PIESDI, las señas no se inventan (`RN08`): los MP4 son tarjetas de ensayo sin personas, rotuladas en pantalla. |
-| **SQLite con modo WAL** | PostgreSQL | Para la PoC (1–4 cursos, decenas de términos y sesiones locales), SQLite con `WAL` y `foreign_keys=ON` elimina la gestión de otro servicio manteniendo integridad relacional y SQL estándar. |
+| **Cola acotada de señas y tarjetas de ensayo (`ffmpeg`)** | Mostrar todas las señas en bucle por 4 s o usar videos propios | Reproducir clips sin límite genera retraso creciente respecto al habla (§4.1.4). `useColaSenas` reproduce una seña completa a la vez (sin bucle), limita la cola a **3 pendientes** (descarta la más antigua avisando `"disponibles en el historial"`) y omite menciones repetidas del mismo concepto durante **20 s**. Como no hay validación lingüística con PIESDI, las señas no se inventan (`RN08`): los MP4 son tarjetas de ensayo sin personas, rotuladas en pantalla y servidas tras autenticación e inscripción. |
+| **SQLite con modo WAL (conexión por hilo)** | PostgreSQL | Para la PoC (2 cursos, decenas de términos y sesiones locales), SQLite con `WAL`, `busy_timeout=5000`, `foreign_keys=ON` y conexiones por hilo (`threading.local()`) elimina la gestión de otro servicio manteniendo integridad relacional y concurrencia segura ante descargas paralelas de clips. |
 | **`RoomManager` en memoria** | Redis Pub/Sub / Kafka | Con un único proceso Uvicorn, mantener salas y sets de WebSockets en memoria da latencia mínima (microsegundos) sin dependencias extra. Limitación asumida para Proyecto de Título: no escala horizontalmente a múltiples workers ni soporta recuperación por secuencia ante reconexiones. |
 | **Nginx con HTTPS autofirmado + Cloudflare Tunnel** | HTTP plano | Las APIs web `getUserMedia`, `AudioWorklet` y la instalación como PWA **exigen contexto seguro** (`localhost` o HTTPS). Para probar desde celulares en red local se genera una CA propia y certificado con SAN para la IP local, además de soporte opcional para Cloudflare Tunnel (`wss://` automático). |
 
@@ -102,40 +106,41 @@ Esta sección responde a preguntas del tipo *"¿por qué usaron tecnología X en
 ```text
 backend/
 ├── app/
-│   ├── main.py                      # App FastAPI, lifespan, CORS, estáticos, /api/cursos, /ws/sala, /ws/echo
+│   ├── main.py                      # App FastAPI, lifespan, CORS acotado, /api/cursos, glosario, clips protegidos, /ws/sala
 │   ├── asr/
 │   │   ├── base.py                  # ResultadoASR, StreamingASRProvider, AsrConfigError, get_asr_provider()
 │   │   ├── segmentador.py           # Segmentador por energía RMS (30 ms) + Ventana
-│   │   ├── whisper_local.py         # FasterWhisperProvider, caché singleton de WhisperModel y locks
+│   │   ├── whisper_local.py         # FasterWhisperProvider, caché singleton de WhisperModel, vaciado en pausa (b"") y locks
 │   │   └── stub.py                  # StubAsrProvider (8 frases de INF-221 para desarrollo/tests)
 │   ├── auth/
-│   │   └── routes.py                # POST /api/auth/login, GET /api/auth/usuario/me
+│   │   └── routes.py                # POST /api/auth/login (scrypt), GET /api/auth/usuario/me
 │   ├── core/
-│   │   ├── auth.py                  # crear_token, verificar_token, obtener_rut, hash_password
-│   │   ├── config.py                # Settings (pydantic-settings) desde variables de entorno / .env
-│   │   ├── db.py                    # Conexión singleton SQLite WAL, init_schema(), migraciones
-│   │   └── nlp.py                   # Singleton get_nlp() cargando spacy.load("es_core_news_md")
+│   │   ├── auth.py                  # crear_token (JWT_EXP_MIN), verificar_token, obtener_rut, hash_password/verificar_password (scrypt)
+│   │   ├── config.py                # Settings (pydantic-settings), JWT_SECRET aleatorio con warning si vacío, CORS_ORIGINS
+│   │   ├── db.py                    # Conexiones SQLite WAL por hilo (threading.local), init_schema(), migraciones
+│   │   ├── nlp.py                   # Singleton get_nlp() cargando spacy.load("es_core_news_md")
+│   │   └── permisos.py              # resolver_sala(), inscripcion(), inscripcion_en_curso(), exigir_inscripcion*()
 │   ├── evaluation/
 │   │   └── metricas.py              # registrar_segmento() en metrica_segmento (controlado por METRICAS)
 │   ├── glossary/
 │   │   ├── indice.py                # construir_indice() (doble clave + bloqueos), obtener_indice_curso()
 │   │   ├── matching.py              # buscar_terminos(texto, indice) → Coincidencias(senas, abstenciones)
-│   │   └── repository.py            # list_cursos, list_terminos (formas, bloqueos, estado), inserts
+│   │   └── repository.py            # ensure_schema(), list_terminos() (con ruta protegida), obtener_termino_video()
 │   ├── historial/
-│   │   ├── repository.py            # CRUD de clase y evento_clase + usuario_participa()
-│   │   └── routes.py                # GET /api/historial, GET /api/historial/{id}, GET /api/salas/{id}/estado
+│   │   ├── repository.py            # crear_clase (condiciones), finalizar_clase (cierre), guardar_evento (tipo), listar/obtener
+│   │   └── routes.py                # GET /api/historial, GET /api/historial/{id}, GET /api/salas/{id}/estado (403/puede_capturar)
 │   ├── salas/
-│   │   └── manager.py               # RoomState (con Indice) y RoomManager (pub/sub en memoria)
+│   │   └── manager.py               # RoomState (Indice, estado activa/pausada, estado_ts_ms) y RoomManager (pub/sub en memoria)
 │   └── signs_recognition/
 │       └── __init__.py              # Placeholder vacío (módulo secundario alumno→profesor, fuera de PoC)
 ├── data/
-│   ├── schema.sql                   # Definición de las 7 tablas SQLite (incluye metrica_segmento)
-│   ├── seed_glosario.json           # Datos semilla provisionales (INF-221 15 conceptos + MAT-101 control)
-│   └── videos_senas/                # 15 clips MP4 de ensayo (H.264, 640×360, 3 s) versionados en Git
+│   ├── schema.sql                   # Definición de las 7 tablas SQLite (con puede_capturar, cierre, condiciones, tipo)
+│   ├── seed_glosario.json           # Datos semilla provisionales (INF-221 15 conceptos, MAT-101 control, 3 usuarios)
+│   └── videos_senas/                # 15 clips MP4 de ensayo (H.264, 640×360, 3 s) servidos solo vía endpoint protegido
 ├── scripts/
 │   ├── generar_clips_ensayo.py      # Genera tarjetas MP4 de ensayo con ffmpeg sin sobrescribir
-│   └── seed_glosario.py             # Poblamiento destructivo/idempotente y validación de índice
-├── tests/                           # Suite pytest (60 pruebas totales: 59 activas + 1 -m modelo)
+│   └── seed_glosario.py             # Poblamiento destructivo/idempotente (scrypt vía app.core.auth) y validación de índice
+├── tests/                           # Suite pytest (72 pruebas totales: 71 activas + 1 -m modelo)
 ├── Dockerfile                       # Imagen python:3.11-slim + libgomp1 + es_core_news_md + seed
 └── requirements.txt                 # Dependencias Python fijadas
 ```
@@ -158,12 +163,13 @@ backend/
      * `auto`: consulta `ctranslate2.get_cuda_device_count()`. Si hay GPU, intenta `device="cuda"` con `float16`; si falla o no hay CUDA, registra `logger.warning` y cae a `device="cpu"` con `int8`.
      * `cuda` o `cpu` explícitos: fuerzan el dispositivo correspondiente (lanzando `AsrConfigError` si falla).
    * **Ejecución no bloqueante y exclusión mutua:** cada ventana se ejecuta en un hilo separado vía `asyncio.to_thread`, serializada con un `asyncio.Lock` por event loop (`_ASYNC_LOCKS`) y `_MODELO_LOCK`, impidiendo que dos salas concurrentes compitan sobre el mismo `WhisperModel`.
-   * **Manejo de falta de tramas y atraso:** una tarea `_pump` vuelca `audio_iter` a una `asyncio.Queue` llevando la cuenta exacta de `queued_bytes`:
+   * **Manejo de falta de tramas, pausa y atraso:** una tarea `_pump` vuelca `audio_iter` a una `asyncio.Queue` llevando la cuenta exacta de `queued_bytes`:
      * Si no llegan tramas durante `ASR_SILENCIO_MS`, `asyncio.wait_for` vence y ejecuta `segmentador.cerrar()`, consolidando la frase abierta.
+     * Al recibir una trama vacía `b""` (enviada por `_receiver` cuando el emisor pausa), ejecuta `segmentador.cerrar()` para consolidar inmediatamente el segmento abierto sin cerrar el stream.
      * Al drenar la cola tras una inferencia, si había más de `ASR_PARCIAL_MS` de audio pendiente, `_filtrar_ventanas` conserva **todas** las ventanas finales pero omite las provisionales hasta ponerse al día.
    * **Parámetros de inferencia:** `language` normalizado (`"es-CL"` → `"es"`), `vad_filter=True`, `condition_on_previous_text=False` e `initial_prompt` armado con la lista deduplicada de `texto_visible` del glosario si `ASR_PROMPT_GLOSARIO=true`.
 4. **`stub.py` (`StubAsrProvider`):**
-   * Vigila `audio_iter` en segundo plano para detenerse inmediatamente cuando la sala finaliza (`None` en la cola), y mientras tanto emite cíclicamente las 8 frases de `FRASES` (orientadas al curso piloto `INF-221`, incluyendo conceptos y un caso bloqueado `"de memoria"`) cada `STUB_INTERVAL_MS` con `segmento_id` secuencial y tiempos simulados.
+   * Vigila `audio_iter` en segundo plano para detenerse inmediatamente cuando la sala finaliza (`None` en la cola), y mientras tanto emite cíclicamente las 8 frases de `FRASES` (orientadas al curso piloto `INF-221`, incluyendo conceptos y un caso bloqueado `"de memoria"`) cada `STUB_INTERVAL_MS` con `segmento_id` secuencial y tiempos simulados (suprimidos mientras la sala está pausada).
 
 ### 4.3 Índice y motor de coincidencia lingüística (`app/glossary/`)
 1. **Construcción del índice (`indice.py` — `construir_indice` / `obtener_indice_curso`):**
@@ -179,17 +185,20 @@ backend/
    * Si gana un bloqueo por longitud, consume esas palabras y agrega `{"bloqueo", "texto_detectado"}` a `Coincidencias.abstenciones` sin activar seña.
    * Si gana una forma, recupera el tramo exacto original `doc[tok_ini:tok_fin].text` como `texto_detectado` y agrega `{termino_id, texto_visible, video_url, estado, texto_detectado}` a `Coincidencias.senas`.
 
-### 4.4 Gestión de salas, vaciado y cierre (`app/main.py` y `app/salas/manager.py`)
+### 4.4 Gestión de salas, pausa compartida, vaciado y cierre (`app/main.py` y `app/salas/manager.py`)
 * `RoomManager` administra `_salas: dict[str, RoomState]` con locks indexados por event loop (`WeakKeyDictionary`) para soportar múltiples loops de `pytest` y concurrencia asíncrona en producción.
-* Al conectarse el emisor (`rol=emitter`):
-  1. Valida JWT, formato `COD_RAMO-SECCION`, existencia del curso y que no exista ya una sala activa para ese `room_id`.
-  2. Instancia el proveedor ASR antes de crear la sala (si falla la configuración, cierra con error sin dejar sala huérfana).
-  3. Carga/obtiene en caché el `Indice` del curso (`obtener_indice_curso`), arma el `contexto` con `texto_visible` de términos no retirados (si `ASR_PROMPT_GLOSARIO=true`), crea el `RoomState` e inserta el registro inicial en `clase`.
-  4. Lanza dos tareas concurrentes: `_receiver` y `_transcribir`.
-* **Validación de tramas binarias en `_receiver`:** descarta toda trama con longitud impar o `> ASR_MAX_TRAMA_BYTES` (64000 bytes), emitiendo un único `logger.warning` por sesión.
+* Al conectarse a `/ws/sala/{room_id}`:
+  1. Valida token JWT (`verificar_token`), existencia de la sala (`resolver_sala`) e inscripción del RUT en curso y sección (`inscripcion`). Cualquier fallo envía `{"type": "error", "mensaje": "No tienes acceso a esta sala"}` y cierra sin crear sala ni clase.
+  2. Si `rol=emitter`, exige además `puede_capturar == True`, `condiciones == "1"` y que no exista ya una sala activa para ese `room_id`.
+  3. Instancia el proveedor ASR antes de crear la sala (si falla la configuración, cierra con error sin dejar sala huérfana), carga/obtiene el `Indice` del curso, arma el `contexto` si `ASR_PROMPT_GLOSARIO=true`, crea el `RoomState` e inserta el registro inicial en `clase` con `condiciones_confirmadas = 1`.
+  4. Si `rol=listener`, se registra atómicamente en `RoomManager.agregar_listener` y recibe de inmediato `{"type": "estado_sesion", "estado": "activa" | "pausada", "timestamp_ms": ...}` con el estado vigente.
+* **Validación de tramas binarias y pausa en `_receiver`:**
+  * Mientras `sala.estado == "pausada"`, descarta toda trama binaria entrante. En estado activo descarta tramas con longitud impar o `> ASR_MAX_TRAMA_BYTES` (64000 bytes), emitiendo un único `logger.warning` por sesión.
+  * Ante `{"action": "pausar"}`: cambia el estado a `"pausada"`, encola `b""` para vaciar el segmento abierto, persiste un evento `tipo="pausa"` en `evento_clase` y difunde `estado_sesion`.
+  * Ante `{"action": "reanudar"}`: vuelve a `"activa"`, persiste un evento `tipo="reanudacion"` y difunde `estado_sesion`.
 * **Finalización explícita vs desconexión abrupta:**
-  * Si recibe `{"action": "finalizar", "titulo": ...}`: encola `None` en `audio_queue`, `_audio_gen` termina y espera a `_transcribir` hasta `ASR_FLUSH_TIMEOUT_MS` (5000 ms) para procesar y persistir el último tramo hablado antes de llamar `finalizar_clase` y emitir `clase_finalizada`.
-  * Si el emisor corta la conexión sin finalizar: marca `stop_event`, difunde `emisor_desconectado`, espera `SALA_TIMEOUT_MS` (30000 ms en prod, 100 ms en tests), persiste la clase con el timeline parcial obtenido hasta ese instante, difunde `clase_finalizada` y cierra todos los WebSockets oyentes.
+  * Si recibe `{"action": "finalizar", "titulo": ...}`: encola `None` en `audio_queue`, espera a `_transcribir` hasta `ASR_FLUSH_TIMEOUT_MS` (5000 ms) para consolidar el último tramo hablado, marca `cierre="explicito"` en `clase` y emite `clase_finalizada`.
+  * Si el emisor corta la conexión sin finalizar: guarda un evento `tipo="desconexion"`, difunde `emisor_desconectado`, espera `SALA_TIMEOUT_MS` (30000 ms en prod, 100 ms en tests), guarda la clase con `cierre="timeout"`, difunde `clase_finalizada` y cierra todos los WebSockets oyentes.
   * El bloque `try ... finally` garantiza ejecutar `RoomManager.eliminar(room_id)` incluso si la tarea es cancelada.
 
 ### 4.5 Variables de configuración (`app/core/config.py`)
@@ -258,28 +267,30 @@ frontend/
 │   ├── App.jsx                        # Router manual por window.location.hash
 │   ├── App.css                        # Tema oscuro completo y diseño responsive
 │   ├── api/
-│   │   └── cliente.js                 # Cliente fetch con Bearer, normalización RUT, manejo 401
+│   │   ├── cliente.js                 # Cliente fetch con Bearer, normalización RUT, manejo 401/403
+│   │   └── clips.js                   # Descarga autenticada de clips a blob:, caché Map, precargar() y liberarClips()
 │   ├── audio/
 │   │   ├── pcm-worklet.js             # AudioWorkletProcessor (resampling a 16 kHz, Int16 LE, RMS)
 │   │   └── capturaPcm.js              # Ciclo de captura: iniciar, pausar, reanudar, detener
 │   ├── hooks/
-│   │   ├── useAuth.js                 # Estado de sesión en localStorage y evento puente-auth-expired
+│   │   ├── useAuth.js                 # Persistencia de sesión en localStorage y evento puente-auth-expired
 │   │   ├── useColaSenas.js            # Cola secuencial (máx. 3 pendientes) y ventana 20 s anti-repetición
-│   │   └── useWebSocket.js            # Reconexión con backoff exponencial [3, 6, 12, 24] s (máx 5)
+│   │   └── useWebSocket.js            # Reconexión con backoff exponencial [3, 6, 12, 24] s (máx 5) y detener()
 │   ├── components/
 │   │   ├── Header.jsx                 # Navbar con logo, tabs Inicio/Historial y avatar
 │   │   ├── EstadoConexion.jsx         # Indicador visual conectado/reconectando/desconectado/fallo
 │   │   ├── Feedback.jsx               # Banner visual de error/warning/info
+│   │   ├── CondicionesModal.jsx       # Aviso informativo y confirmación obligatoria previa a capturar (RN15)
 │   │   ├── FinalizarModal.jsx         # Modal para asignar título opcional al cerrar clase
-│   │   └── SenaPlayer.jsx             # Reproductor <video> sin bucle con rótulo de ensayo y onEnded
+│   │   └── SenaPlayer.jsx             # Reproductor <video> desde blob: sin bucle, velocidad, pausa y rótulo de ensayo
 │   └── views/
 │       ├── LoginView.jsx              # Formulario RUT + contraseña + botón Instalar PWA
-│       ├── DashboardView.jsx          # Clase actual destacada + grid de asignaturas + estado en vivo
-│       ├── SalaView.jsx               # Vista en vivo (emisor PCM / oyente + subtítulos + señas)
-│       ├── HistorialView.jsx          # Buscador, filtros asignatura/mes y cards por mes
-│       └── ClaseDetailView.jsx        # Modos Apunte y Replay (1x/1.5x/2x + barra de progreso)
+│       ├── DashboardView.jsx          # Clase actual + grid de asignaturas, estado en vivo y botones según puede_capturar
+│       ├── SalaView.jsx               # Vista en vivo (emisor PCM / oyente + pausa compartida + precarga clips)
+│       ├── HistorialView.jsx          # Buscador, filtros asignatura/mes, cards y badge "Registro incompleto"
+│       └── ClaseDetailView.jsx        # Modos Apunte (con separadores) y Replay continuo (1x/1.5x/2x)
 ├── vite.config.js                     # Configuración Vite 5 + VitePWA (autoUpdate, manifest, sw.js)
-├── nginx.conf                         # Reverse proxy HTTPS/SSL y proxy WS/API/data
+├── nginx.conf                         # Reverse proxy HTTPS/SSL y proxy WS/API (sin /data/ público)
 ├── Dockerfile                         # Build Node 20 + pnpm → nginx:alpine con openssl
 └── docker-entrypoint.sh               # Sustituye BACKEND_UPSTREAM y genera CA/cert autofirmados
 ```
@@ -296,13 +307,15 @@ frontend/
    * Cada **1600 muestras (100 ms)** calcula la energía RMS y escribe un `ArrayBuffer` de **3200 bytes** en formato entero de 16 bits *little-endian* mediante `DataView.setInt16(..., true)`, transfiriéndolo por `port.postMessage({ buffer, rms }, [buffer])` sin copia de memoria.
 
 ### 6.3 Vistas y experiencia de usuario
-* **Login (`LoginView.jsx`):** valida formato y dígito verificador chileno módulo 11 (`normalizarRut`) antes de llamar al servidor; gestiona el evento `beforeinstallprompt` (o guía manual de Chrome) para instalar la PWA.
-* **Dashboard (`DashboardView.jsx`):** consulta las asignaturas inscritas y el estado en vivo de cada sala (`GET /api/salas/{roomId}/estado`), mostrando punto verde `"En vivo"` o `"Sin clase activa"`.
+* **Login (`LoginView.jsx`):** valida formato y dígito verificador chileno módulo 11 (`normalizarRut`) antes de llamar al servidor; persiste la sesión al recargar o abrir nuevas pestañas (`useAuth.js`); gestiona `beforeinstallprompt` (o guía manual de Chrome) para instalar la PWA.
+* **Dashboard (`DashboardView.jsx`):** consulta las asignaturas inscritas con `puede_capturar` y el estado en vivo de cada sala (`GET /api/salas/{roomId}/estado`), mostrando `"En vivo"` / `"Entrar a la clase"` cuando hay transmisión activa, `"Iniciar Transmisión de Clase"` solo si el usuario tiene `puede_capturar`, y `"Sin clase activa"` sin botón de inicio en caso contrario.
 * **Sala en vivo (`SalaView.jsx`):**
-  * **Emisor:** muestra medidor visual de nivel de señal (`.nivel-audio`), contador `mm:ss`, controles de Pausa/Reanudar y Finalizar y Guardar (`FinalizarModal`). Si el nivel RMS permanece bajo `UMBRAL_SILENCIO` (0.004) por 10 s mientras está activo, muestra el aviso `"No se detecta audio en el micrófono"` sin cortar la sesión y lo oculta al volver la señal. Al confirmar finalizar, detiene el micrófono, envía `{"action": "finalizar", "titulo"}` y espera `clase_finalizada` (hasta 6 s de respaldo) antes de cerrar el WebSocket para permitir el vaciado del último tramo hablado.
+  * **Acceso y precarga:** verifica estado/permisos al entrar (`403` muestra `"No tienes acceso a esta sala"`; sin transmisión y sin permiso muestra `"Aún no hay una transmisión en esta sala"` sin asumir rol emisor). Descarga en segundo plano (máx. 4 en paralelo) los clips del glosario vía `clips.js` y libera las URLs `blob:` al salir (`liberarClips()`).
+  * **Emisor y condiciones (`CondicionesModal`):** antes de solicitar micrófono exige confirmar qué se guarda (texto y señas; el audio no se almacena), quién puede consultarlo, falta de política institucional de conservación y que no reemplaza la autorización del curso (`RN15`); solo tras confirmar conecta con `&condiciones=1`. Muestra medidor visual de nivel de señal (`.nivel-audio`), contador `mm:ss`, aviso `"No se detecta audio en el micrófono"` tras 10 s bajo `UMBRAL_SILENCIO` (0.004), pausa/reanudación sincronizada vía WS (`{"action": "pausar" | "reanudar"}`) y cierre con título (`FinalizarModal`).
+  * **Pausa compartida:** al recibir `estado_sesion` (`pausada`), tanto el emisor como todos los oyentes (incluso quienes se unen durante la pausa) ven el banner `"Transmisión en pausa"` y la insignia `EN PAUSA`.
   * **Subtítulos:** actualiza o inserta entradas por `segment_id` (sin duplicar ni perder el lugar), resalta el tramo real reconocido (`texto_detectado || texto_visible`) con `<strong class="termino">` —destacando incluso variantes como *"listas ligadas"* o *"recursiva"*— y persiste el tamaño de letra (`12–32 px`) en `localStorage`.
-  * **Cola de señas (`useColaSenas` + `SenaPlayer`):** al llegar un segmento final con señas, `encolar()` reproduce **un clip completo a la vez sin bucle** y avanza al siguiente vía `onEnded` (con recuperación de 1.5 s ante `onError`). Admite hasta **3 pendientes**; si se llena, descarta el pendiente más antiguo e incrementa el contador visible (`"En cola: ... · ... disponibles en el historial"`). Si un mismo concepto ya se está reproduciendo, está en cola o terminó hace **menos de 20 s**, no vuelve a encolarse (manteniéndose resaltado en el subtítulo y registrado completo en el historial). Cuando `estado === "ensayo"`, muestra el rótulo `"Clip de ensayo · sin validación lingüística"`.
-* **Historial y Detalle (`HistorialView.jsx`, `ClaseDetailView.jsx`):** búsqueda en tiempo real por título/ramo/preview, filtros por asignatura y mes, vista **Apunte** (texto completo resaltado por `texto_detectado`) y vista **Replay** (reproducción continua al ritmo de lectura del texto y terminación completa de las señas del segmento sin silencios muertos, respetando Play/Pausa real y velocidad `1x/1.5x/2x` tanto en clips como en lectura, con barra deslizante, salto por clic y marca de tiempo original de referencia).
+  * **Cola de señas (`useColaSenas` + `SenaPlayer`):** descarga cada clip con cabecera `Authorization: Bearer` a una URL de objeto `blob:` reutilizada en caché (`clips.js`), reproduce **un clip completo a la vez sin bucle** y avanza al siguiente vía `onEnded` (con recuperación de 1.5 s ante error). Admite hasta **3 pendientes** (descarta el más antiguo avisando `"disponibles en el historial"`) y omite menciones repetidas del mismo concepto durante **20 s**. Cuando `estado === "ensayo"`, muestra el rótulo `"Clip de ensayo · sin validación lingüística"`.
+* **Historial y Detalle (`HistorialView.jsx`, `ClaseDetailView.jsx`):** búsqueda en tiempo real por título/ramo/preview, filtros por asignatura y mes, insignia **"Registro incompleto"** cuando `cierre === "timeout"`, vista **Apunte** (texto completo resaltado por `texto_detectado` con separadores visuales de *"Transmisión pausada"*, *"Transmisión reanudada"* y *"Emisor desconectado"* con marca de tiempo) y vista **Replay** (reproducción continua al ritmo de lectura y terminación completa de los clips `blob:` del segmento, saltando separadores sin detenerse, respetando Play/Pausa real y velocidad `1x/1.5x/2x`, con barra deslizante y salto por clic).
 
 ---
 
@@ -405,10 +418,10 @@ Tras completar `SPEC-009` (acceso por inscripción, permiso de captura, clips pr
 
 ### Arquitectura y funcionamiento general
 1. **¿Cómo funciona el sistema de punta a punta durante una clase real?**
-   El estudiante habilitado abre la PWA e inicia la transmisión en su asignatura (`INF-221-1`). El navegador solicita acceso al micrófono vía `getUserMedia`, captura mediante `AudioWorklet` tramas PCM mono a 16 kHz (3200 bytes cada 100 ms) y las envía por WebSocket al backend FastAPI. En el servidor, `Segmentador` detecta voz por energía RMS y agrupa segmentos; `FasterWhisperProvider` ejecuta inferencia en un hilo separado sobre GPU/CPU generando resultados provisionales cada segundo y un resultado final tras 600 ms de silencio. Solo el texto final pasa por `spaCy` (`es_core_news_md`) para detectar términos del glosario por n-gramas lematizados, se guarda en SQLite (`evento_clase`) y se difunde por `RoomManager` tanto al emisor como a todos los oyentes suscritos a la misma sala.
+   El estudiante inscrito y habilitado con `puede_capturar` abre la PWA, entra a su asignatura (`INF-221-1`), confirma el aviso de condiciones de registro (`CondicionesModal`) e inicia la transmisión. Mientras se precargan en segundo plano los clips protegidos del curso (`clips.js`), el navegador solicita el micrófono vía `getUserMedia`, captura mediante `AudioWorklet` tramas PCM mono a 16 kHz (3200 bytes cada 100 ms) y las envía por WebSocket (`/ws/sala/INF-221-1?rol=emitter&...&condiciones=1`) al backend FastAPI. En el servidor, `Segmentador` detecta voz por energía RMS y agrupa segmentos; `FasterWhisperProvider` ejecuta inferencia en un hilo separado sobre GPU/CPU generando resultados provisionales cada segundo y un resultado final tras 600 ms de silencio (o al pausar/finalizar). Solo el texto final pasa por `spaCy` (`es_core_news_md`) para detectar términos del glosario por n-gramas lematizados, se guarda en SQLite (`evento_clase`) y se difunde por `RoomManager` tanto al emisor como a todos los oyentes inscritos en la misma sala, quienes reproducen los clips autenticados desde memoria (`blob:`).
 
 2. **¿Por qué cambiaron de "vista profesor / vista alumno" a un perfil único centrado en el estudiante?**
-   Para reducir la fricción operativa en aula (`SPEC-004`). Exigir que cada docente ingrese a una plataforma externa antes de dictar su cátedra dificulta la adopción. Con el enfoque centrado en el estudiante, el alumno conecta el micrófono lavalier al dispositivo emisor y entrega solo el transmisor al docente, gestionando toda la sesión desde la misma interfaz. A nivel de arquitectura, el cambio hacia `SPEC-009` mantiene este modelo pero restringiendo la captura mediante un permiso explícito (`puede_capturar`) para evitar que cualquier estudiante tome el rol de emisor.
+   Para reducir la fricción operativa en aula (`SPEC-004`). Exigir que cada docente ingrese a una plataforma externa antes de dictar su cátedra dificulta la adopción. Con el enfoque centrado en el estudiante, el alumno conecta el micrófono lavalier al dispositivo emisor y entrega solo el transmisor al docente, gestionando toda la sesión desde la misma interfaz. `SPEC-009` mantiene este modelo pero restringiendo la captura mediante un permiso explícito (`inscripcion.puede_capturar`) y confirmación previa de condiciones, evitando que cualquier estudiante tome el rol de emisor por orden de llegada.
 
 3. **¿Cómo aseguran que agregar 20 estudiantes a una sala no multiplique el costo de transcripción?**
    El audio solo sube desde el único WebSocket `emitter` de la sala. El backend ejecuta `transcribe_stream` y `buscar_terminos` **una sola vez** por segmento y distribuye el JSON resultante en memoria a todos los WebSockets registrados en `RoomState.listeners` (patrón publicador/suscriptor con fan-out 1 → N). En la prueba de carga de 5 minutos con 20 receptores (Escenarios A y B con `stub`), se entregaron los `3940` eventos sin pérdidas ni duplicados con retardo p95 de `3–4 ms`.
@@ -429,8 +442,8 @@ Tras completar `SPEC-009` (acceso por inscripción, permiso de captura, clips pr
 7. **¿Qué pasa si la sala está en silencio o el micrófono no capta audio?**
    En el cliente, si el nivel RMS permanece por debajo de `0.004` durante 10 segundos continuos, aparece el banner `"No se detecta audio en el micrófono"` sin cortar la sesión y desaparece al volver la señal. En el servidor, `Segmentador` no abre segmentos por debajo del umbral (`0.01`), y además `faster-whisper` corre con `vad_filter=True` y `condition_on_previous_text=False`, de modo que el silencio prolongado no consume inferencias ni genera alucinaciones de texto.
 
-8. **¿Qué ocurre si se corta la frase al presionar "Finalizar y Guardar" o si se corta la conexión del emisor?**
-   Si el emisor finaliza explícitamente, el backend no cancela la tarea ASR: envía un centinela `None` por la cola de audio, espera hasta `ASR_FLUSH_TIMEOUT_MS` (5 s) a que `Segmentador.cerrar()` transcriba, haga matching y guarde el último tramo hablado, y recién entonces emite `clase_finalizada`. Si el emisor se desconecta abruptamente, el servidor notifica `emisor_desconectado`, espera `SALA_TIMEOUT_MS` y persiste la clase con todo lo consolidado hasta ese momento.
+8. **¿Qué ocurre al pausar, al presionar "Finalizar y Guardar" o si se corta la conexión del emisor?**
+   Al **pausar**, el emisor envía `{"action": "pausar"}`: el servidor descarta tramas nuevas, inyecta una señal de vaciado (`b""`) para consolidar la frase abierta, registra el evento `tipo="pausa"` y difunde `estado_sesion` para que los oyentes vean `"Transmisión en pausa"`. Al **finalizar explícitamente**, el backend envía un centinela `None` por la cola de audio, espera hasta `ASR_FLUSH_TIMEOUT_MS` (5 s) a que `Segmentador.cerrar()` consolide el último tramo, marca `cierre="explicito"` y emite `clase_finalizada`. Si el emisor se **desconecta abruptamente**, el servidor guarda un evento `tipo="desconexion"`, notifica `emisor_desconectado`, espera `SALA_TIMEOUT_MS` y guarda la clase con `cierre="timeout"`, mostrándola en el historial con la insignia **"Registro incompleto"** y el separador de desconexión en Apunte.
 
 ### NLP, LSCh y rigor metodológico
 9. **¿Por qué usan `spaCy` y n-gramas en lugar de un modelo de lenguaje o un avatar 3D?**
