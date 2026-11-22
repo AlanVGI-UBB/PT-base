@@ -41,11 +41,25 @@ export async function obtenerClip(url) {
   return promesa
 }
 
-export function precargar(glosario) {
+export function precargar(glosario, concurrencia = 4) {
   if (!Array.isArray(glosario)) return
-  for (const termino of glosario) {
-    if (!termino?.video_url || termino.estado === 'retirado') continue
-    obtenerClip(termino.video_url).catch(() => {})
+  const urls = glosario
+    .filter((termino) => termino?.video_url && termino.estado !== 'retirado')
+    .map((termino) => termino.video_url)
+  if (urls.length === 0) return
+
+  const genActual = generacion
+  let indice = 0
+  const worker = async () => {
+    while (indice < urls.length && genActual === generacion) {
+      const url = urls[indice]
+      indice += 1
+      await obtenerClip(url).catch(() => {})
+    }
+  }
+  const n = Math.min(concurrencia, urls.length)
+  for (let i = 0; i < n; i += 1) {
+    worker()
   }
 }
 

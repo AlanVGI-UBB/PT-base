@@ -134,13 +134,18 @@ export default function SalaView({ roomId, user, onVolver }) {
       })
   }, [roomId, user])
 
-  const token = getToken()
-  const wsUrl = rol && sesionIniciada && token
+  const [tokenSesion, setTokenSesion] = useState(() => getToken())
+
+  useEffect(() => {
+    setTokenSesion(getToken())
+  }, [user?.rut])
+
+  const wsUrl = rol && sesionIniciada && tokenSesion
     ? rol === 'emitter'
       ? (condicionesConfirmadas
-          ? `${WS_URL}/ws/sala/${roomId}?rol=emitter&token=${encodeURIComponent(token)}&condiciones=1`
+          ? `${WS_URL}/ws/sala/${roomId}?rol=emitter&token=${encodeURIComponent(tokenSesion)}&condiciones=1`
           : null)
-      : `${WS_URL}/ws/sala/${roomId}?rol=listener&token=${encodeURIComponent(token)}`
+      : `${WS_URL}/ws/sala/${roomId}?rol=listener&token=${encodeURIComponent(tokenSesion)}`
     : null
 
   const manejarMensaje = useCallback((data) => {
@@ -176,6 +181,7 @@ export default function SalaView({ roomId, user, onVolver }) {
       setFeedback({ tipo: 'warning', mensaje: data.mensaje || 'El emisor se desconectó. La clase se guardará automáticamente.' })
     } else if (data.type === 'error') {
       const mensaje = data.mensaje || 'Ocurrió un error en la conexión'
+      setSesionIniciada(false)
       setFeedback({ tipo: 'error', mensaje })
       if (/token/i.test(mensaje)) expulsarSesion()
     }

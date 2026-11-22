@@ -12,8 +12,15 @@ export function useAuth() {
     if (stored) {
       try {
         const data = JSON.parse(stored)
-        setToken(data.token)
-        setUser(data.user)
+        const restoredUser = data.user || (data.rut
+          ? { rut: data.rut, nombre: data.nombre, apellido: data.apellido }
+          : null)
+        if (data.token && restoredUser) {
+          setToken(data.token)
+          setUser(restoredUser)
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
       } catch {
         localStorage.removeItem(STORAGE_KEY)
       }

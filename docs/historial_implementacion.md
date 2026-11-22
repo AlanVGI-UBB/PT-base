@@ -1020,7 +1020,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-22 — SPEC-009: acceso por inscripción, permiso de captura, estado de sesión, seguridad y saneamiento
+## 2026-11-22 — `1e81c11` — SPEC-009: acceso por inscripción, permiso de captura, estado de sesión, seguridad y saneamiento
 **Refs:** SPEC-009 `specs/SPEC-009-acceso-sesion-saneamiento.md` (R1–R25, Completada)
 
 **Resumen:** Se cerraron las brechas de control de acceso, estado de sesión, seguridad y mantenimiento entre el prototipo y la especificación del informe: autorización por inscripción en salas/glosario/estado/clips, permiso explícito `puede_capturar`, pausa compartida en servidor con discontinuidades y cierre `explicito|timeout`, aviso previo de condiciones, contraseñas con `scrypt`, JWT de 480 min sin secreto fijo, CORS acotado, limpieza de código sin uso y documentación vigente.
@@ -1055,3 +1055,26 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - `pytest ml/tests` → `11 passed`.
 - `pnpm --prefix frontend build` → OK (48 módulos).
 - `python backend/scripts/seed_glosario.py` → OK (2 cursos, 15 términos, 3 usuarios, 5 inscripciones).
+
+---
+
+## 2026-11-22 — Correcciones tras pruebas E2E en navegador: SQLite por hilo, persistencia de sesión y estabilidad WebSocket
+**Refs:** verificación E2E de `SPEC-009` (`specs/SPEC-009-acceso-sesion-saneamiento.md`)
+
+**Resumen:** Durante la verificación interactiva de extremo a extremo en navegador (3 usuarios, 2 pestañas y precarga de los 15 clips protegidos) se detectaron y corrigieron cuatro fallos de concurrencia y ciclo de vida: acceso multihilo a SQLite, restauración de sesión al recargar/abrir segunda pestaña, reconexión involuntaria del emisor por cambio de token y bucle de reconexión WS ante errores terminales del servidor.
+
+**Cambios:**
+- `backend/app/core/db.py` — reemplaza la única conexión global compartida por conexiones SQLite por hilo (`threading.local()` con `timeout=30.0`, `WAL`, `busy_timeout=5000`), eliminando `sqlite3.InterfaceError` (HTTP 500/404 espurios) cuando el cliente precarga clips en paralelo.
+- `backend/tests/test_auth.py` — agrega `test_clips_concurrencia_multihilo_sin_errores_sqlite` (24 descargas en 12 hilos simultáneos).
+- `frontend/src/api/clips.js` — acota la precarga en segundo plano a 4 descargas concurrentes.
+- `frontend/src/hooks/useAuth.js` — corrige la restauración de `user` desde `localStorage` (`{ rut, nombre, apellido, token }`) al recargar la página o abrir una segunda pestaña.
+- `frontend/src/hooks/useWebSocket.js`, `frontend/src/views/SalaView.jsx` — fija el token de sesión del WS en estado (evitando desconectar al emisor si otra pestaña refresca sesión) y detiene reconexiones al recibir `type: "error"` del servidor.
+- `docs/documentacion_prototipo_defensa.md` — actualiza resultados de verificación tras las pruebas E2E completas.
+
+**Verificación:**
+- `ruff check backend ml` → `All checks passed!`
+- `pytest backend/tests` → `71 passed, 1 skipped` (`@pytest.mark.modelo`).
+- `pytest backend/tests -m modelo` → `1 passed` (Whisper CUDA real).
+- `pytest ml/tests` → `11 passed`.
+- `pnpm --prefix frontend build` → OK (48 módulos).
+- E2E en navegador real (`http://127.0.0.1:5173` + backend `8001`): clips sin token `401`, ruta antigua `404`, Pedro `403`, María sin botón de captura, Juan con `CondicionesModal`, precarga de 15 clips (`0` errores HTTP/CORS/consola), 2 pestañas sincronizadas en pausa/reanudación con videos `blob:`, historial con separadores, Replay continuo y desconexión abrupta (`Registro incompleto`).

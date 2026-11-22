@@ -1,21 +1,46 @@
 import sqlite3
+import threading
 from pathlib import Path
 
+_local = threading.local()
 _conn = None
+
+
+def _abrir_conexion(db_path: str) -> sqlite3.Connection:
+    path = Path(db_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(path), timeout=30.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
 
 
 def get_connection() -> sqlite3.Connection:
     global _conn
-    if _conn is None:
-        from app.core.config import get_settings
+    from app.core.config import get_settings
 
-        db_path = Path(get_settings().DB_PATH)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        _conn = sqlite3.connect(str(db_path), check_same_thread=False)
-        _conn.row_factory = sqlite3.Row
-        _conn.execute("PRAGMA journal_mode=WAL")
-        _conn.execute("PRAGMA foreign_keys=ON")
-    return _conn
+    if _conn is None:
+        _conn = object()
+
+    db_path = str(Path(get_settings().DB_PATH))
+    conn = getattr(_local, "conn", None)
+    if (
+        conn is None
+        or getattr(_local, "epoch", None) is not _conn
+        or getattr(_local, "db_path", None) != db_path
+    ):
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        conn = _abrir_conexion(db_path)
+        _local.conn = conn
+        _local.epoch = _conn
+        _local.db_path = db_path
+    return conn
 
 
 def init_schema() -> None:

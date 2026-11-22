@@ -69,6 +69,14 @@ export function useWebSocket(url, { onMessage, onOpen, onClose } = {}) {
     conectar()
   }, [conectar])
 
+  const detener = useCallback(() => {
+    aliveRef.current = false
+    clearTimeout(timeoutRef.current)
+    wsRef.current?.close()
+    wsRef.current = null
+    setEstado('cerrado')
+  }, [])
+
   const enviar = useCallback((data) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(data)
@@ -81,5 +89,6 @@ export function useWebSocket(url, { onMessage, onOpen, onClose } = {}) {
     intentos,
     enviar,
     reintentar,
+    detener,
   }
 }

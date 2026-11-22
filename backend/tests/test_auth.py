@@ -200,6 +200,21 @@ def test_clip_protegido_401_403_404_y_200(client):
     assert resp_estatico.status_code == 404
 
 
+def test_clips_concurrencia_multihilo_sin_errores_sqlite(client):
+    from concurrent.futures import ThreadPoolExecutor
+
+    token = crear_token("9876543-3")
+
+    def pedir(_):
+        resp = client.get("/api/cursos/1/senas/1/video", headers=auth(token))
+        return resp.status_code, len(resp.content)
+
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        resultados = list(pool.map(pedir, range(24)))
+
+    assert all(code == 200 and tam > 1024 for code, tam in resultados)
+
+
 def test_health(client):
     resp = client.get("/health")
     assert resp.status_code == 200

@@ -375,14 +375,14 @@ frontend/
 | Verificación | Resultado observado | Alcance / Condición |
 |---|---|---|
 | `ruff check backend ml` | `All checks passed!` | Lint completo de `backend/` y `ml/` |
-| `pytest backend/tests` | **70 passed, 1 skipped** | Cubre auth/scrypt/JWT/clips (13), historial/cierre/tipos (5), índice (4), matching (7), sala/WS/acceso/pausa (14), esquema SQLite (6), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (17) |
+| `pytest backend/tests` | **71 passed, 1 skipped** | Cubre auth/scrypt/JWT/clips y concurrencia SQLite (14), historial/cierre/tipos (5), índice (4), matching (7), sala/WS/acceso/pausa (14), esquema SQLite (6), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (17) |
 | `pytest ml/tests` | **11 passed** | Cubre `normalizacion.py` (4), `evaluar_matching.py` (1), `evaluar_asr.py` (5), `prueba_carga.py` (1) |
-| `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA (verificada en `SPEC-006`) |
+| `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA (verificada también tras `SPEC-009`) |
 | `pnpm --prefix frontend build` | OK (48 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
 | Evaluación ASR real (`small` CUDA + prompt) | **WER `3.16–3.56 %` · p95 `805–821 ms`** | Sobre `clase_01_cerca.wav` (`404.65 s`) y `clase_02_cerca.wav` (`414.21 s`) a ritmo `1x`; glosario `100 %` (`57/57`) y `95.71 %` (`67/70`); detalle en `docs/resultados_poc.md` |
 | Evaluación de matching (`"prueba"`) | **Prec. `96.34 %` · Rec. `97.53 %`** | Partición protegida de `66` frases (`TP=79, FP=3, FN=2`); compuestos `100 %` (`21/21`) |
 | Carga WebSocket 5 min (`A` y `B`, `stub`) | **`0` perdidos/dup. · p95 `3–4 ms`** | `1+20` en 1 sala y `2 × (1+10)` en 2 salas (`3940` eventos entregados en c/u) sobre `localhost` |
-| Prueba interactiva en navegador con micrófono real | **Verificada (1 dispositivo)** | Transcripción en vivo y Replay continuo probados en Zen Browser (Windows 11); resta prueba interactiva con 2 dispositivos en red |
+| Prueba interactiva E2E en navegador (`SPEC-009`) | **Verificada (3 usuarios, 2 pestañas)** | Clips `401/404`, `CA01` (Pedro `403`), oyente sin captura (María), emisor + `CondicionesModal`, 2 pestañas sincronizadas en pausa/reanudación con `blob:` clips, cierre `timeout` (`Registro incompleto`) y Replay continuo; `0` errores HTTP/CORS/consola |
 
 ---
 
