@@ -35,7 +35,23 @@ Prototipo de Prueba de Concepto (PoC) completado hasta **`SPEC-009`**:
 
 ## Modos de ejecución
 
-### 1) Desarrollo nativo (recomendado para usar GPU CUDA en Windows)
+### 1) Desarrollo nativo (recomendado: sin Docker, menor RAM y GPU CUDA en Windows)
+
+**Forma rápida (un solo comando desde la raíz):**
+
+```powershell
+.\run-local.ps1
+```
+
+* Levanta backend (`faster-whisper`, modelo `small`, GPU/CPU automático) y frontend Vite sin abrir Docker.
+* Si el puerto `8000` o `5173` está ocupado, elige automáticamente el siguiente libre y conecta ambos procesos.
+* Opciones útiles:
+  * `.\run-local.ps1 -Provider stub` — modo liviano sin cargar Whisper (mínimo consumo de RAM).
+  * `.\run-local.ps1 -Seed` — re-siembra la base de datos local antes de iniciar.
+  * `.\run-local.ps1 -Open` — abre la aplicación automáticamente en tu navegador.
+* Presiona `Ctrl + C` para detener ambos servidores y liberar la RAM.
+
+**O manualmente en dos terminales:**
 
 **Backend:**
 

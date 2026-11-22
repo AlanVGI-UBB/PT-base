@@ -1094,7 +1094,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-22 — Rediseño visual del frontend: Editorial Académico (modo claro y modo oscuro)
+## 2026-11-22 — `1d31bee` — Rediseño visual del frontend: Editorial Académico (modo claro y modo oscuro)
 **Refs:** diseño UI/UX aprobado con Stitch (Opción 1 «Editorial Académico» + «Editorial Nocturno»)
 
 **Resumen:** Se renovó la fachada completa del frontend PWA adoptando el sistema visual *Editorial Académico* con tipografía unificada (`Plus Jakarta Sans`), paleta de alto confort lector en modo claro (alabastro cálido, azul marino institucional y resaltado ámbar) y modo oscuro equivalente (grafito cálido), junto con selector persistente de tema y ajustes de accesibilidad y diseño responsivo.
@@ -1117,3 +1117,19 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - `pytest ml/tests` → `11 passed`.
 - `pnpm --prefix frontend build` → OK (50 módulos).
 - Revisión visual y funcional en navegador real sobre las 5 vistas (`Login`, `Dashboard`, `Sala en vivo`, `Historial`, `Apunte / Replay`) en modo claro y modo oscuro con persistencia tras recarga y `0` errores de consola o HTTP.
+
+---
+
+## 2026-11-22 — Script local sin Docker (`run-local.ps1`)
+**Refs:** operación local en Windows con menor uso de RAM y soporte directo de GPU CUDA
+
+**Resumen:** Se añadió `run-local.ps1` en la raíz del proyecto para levantar backend (FastAPI) y frontend (Vite) con un solo comando sin requerir Docker, detectando automáticamente puertos libres y deteniendo ambos árboles de procesos al pulsar `Ctrl + C`.
+
+**Cambios:**
+- `run-local.ps1` — **nuevo**: valida `backend/venv` y `pnpm`, instala `node_modules` o siembra la base de datos solo si faltan (o con `-Seed`), busca puertos libres automáticamente si `8000` o `5173` están ocupados, configura `CORS_ORIGINS`, `VITE_API_URL` y `VITE_WS_URL` sin contaminar la sesión PowerShell, soporta `-Provider whisper|stub`, `-Model`, `-Device`, `-Open`, y limpia ambos árboles de procesos en `finally`.
+- `README.md` — documenta `.\run-local.ps1` y sus opciones dentro de la sección de desarrollo nativo.
+- Este archivo — registra el hash `1d31bee` en la entrada anterior.
+
+**Verificación:**
+- Validación sintáctica AST en PowerShell 5.1 → `0` errores.
+- Prueba de arranque en vivo (`.\run-local.ps1 -Provider stub`) → detección automática de puertos ocupados, arranque simultáneo de Vite y Uvicorn, sin re-sembrar BD existente y cierre limpio de procesos hijos.
