@@ -988,7 +988,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-21 — Guía explicativa en lenguaje simple sobre las pruebas de la PoC
+## 2026-11-21 — `b809773` — Guía explicativa en lenguaje simple sobre las pruebas de la PoC
 **Refs:** `docs/explicacion_pruebas_poc.md`, `docs/resultados_poc.md` (commit documental)
 
 **Resumen:** Se añadió una guía sin tecnicismos en `docs/explicacion_pruebas_poc.md` explicando en qué consistió cada prueba de la PoC (ASR, mapeo NLP y carga WebSocket), qué significan sus métricas y qué limitaciones deben declararse con transparencia en defensa.
@@ -998,3 +998,22 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - Este archivo — hash `ed14036` registrado en la entrada anterior.
 
 **Verificación:** n/a (commit documental; todas las cifras contrastadas contra `docs/resultados_poc.md`).
+
+---
+
+## 2026-11-22 — Mejoras tras prueba real en vivo: captura PCM nativa y Replay continuo sin tiempos muertos
+**Refs:** hallazgos de prueba manual en vivo (`SPEC-006`, `SPEC-007`)
+
+**Resumen:** Tras la primera prueba interactiva con micrófono real en Zen Browser (Windows 11), se corrigió la compatibilidad de captura PCM usando frecuencia nativa del hardware sin cancelación de eco conflictiva, y se rediseñó el modo Replay para respetar Play/Pausa real, aplicar velocidad a los videos y avanzar continuamente al ritmo de lectura y señas sin silencios muertos.
+
+**Cambios:**
+- `frontend/src/audio/capturaPcm.js` — usa `new AudioContext()` a frecuencia nativa (delegando el remuestreo a `pcm-worklet.js`) y `echoCancellation: false` / `noiseSuppression: false` con `autoGainControl: true`, evitando bloqueos WASAPI/Bluetooth y Firefox/Zen.
+- `frontend/src/components/SenaPlayer.jsx` — agrega props opcionales `reproduciendo = true` y `velocidad = 1` para controlar `play()`/`pause()`, `playbackRate` y el fallback de error únicamente en reproducción activa (compatible sin cambios con `SalaView.jsx`).
+- `frontend/src/views/ClaseDetailView.jsx` — corrige el bug que reproducía clips automáticamente estando pausado, memoriza `estables` con `useMemo` para evitar reinicios de temporizador, reemplaza la espera por diferencia de `timestamp_ms` por avance continuo coordinado entre tiempo mínimo de lectura proporcional al texto (`2–5,5 s` base) y término completo de todas las señas del segmento (escalado por `1x / 1.5x / 2x`), muestra estado real (`En pausa` / `Reproduciendo` / `Finalizado`) más marca de tiempo original de referencia y permite saltar a cualquier diálogo ya visible haciendo clic.
+- `docs/documentacion_prototipo_defensa.md` — sincroniza las secciones §6.2 y §6.3 con los cambios de captura y Replay.
+
+**Verificación:**
+- `ruff check backend ml` → `All checks passed!`
+- `pytest backend/tests` → `59 passed, 1 skipped` (`@pytest.mark.modelo`).
+- `pytest ml/tests` → `11 passed`.
+- `pnpm --prefix frontend build` → OK (46 módulos).

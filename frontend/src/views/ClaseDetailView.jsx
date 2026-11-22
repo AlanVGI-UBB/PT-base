@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchHistorialDetalle } from '../api/cliente'
 import Feedback from '../components/Feedback'
 import SenaPlayer from '../components/SenaPlayer'
 
 const FUENTE_KEY = 'puente_lsch_font_size'
+const LECTURA_BASE_MS = 1400
+const LECTURA_POR_PALABRA_MS = 260
+const LECTURA_MIN_MS = 2000
+const LECTURA_MAX_MS = 5500
+const TRANSICION_MS = 350
 
 const IconoVolver = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -60,6 +65,18 @@ function parseSenas(senasRaw) {
   try { return JSON.parse(senasRaw) } catch { return [] }
 }
 
+function calcularTiempoLecturaBaseMs(texto) {
+  const palabras = (texto || '').trim().split(/\s+/).filter(Boolean).length
+  return Math.min(LECTURA_MAX_MS, Math.max(LECTURA_MIN_MS, LECTURA_BASE_MS + palabras * LECTURA_POR_PALABRA_MS))
+}
+
+function formatearMarcaTiempo(ms) {
+  const totalSeg = Math.max(0, Math.floor((ms || 0) / 1000))
+  const min = String(Math.floor(totalSeg / 60)).padStart(2, '0')
+  const seg = String(totalSeg % 60).padStart(2, '0')
+  return `${min}:${seg}`
+}
+
 export default function ClaseDetailView() {
   const [clase, setClase] = useState(null)
   const [eventos, setEventos] = useState([])
@@ -68,11 +85,16 @@ export default function ClaseDetailView() {
   const [tamFuente, setTamFuente] = useState(() => Number(localStorage.getItem(FUENTE_KEY)) || 18)
   const [replayPos, setReplayPos] = useState(0)
   const [senaIdx, setSenaIdx] = useState(0)
+  const [replayRunId, setReplayRunId] = useState(0)
   const [replayPlaying, setReplayPlaying] = useState(false)
+  const [replayFinalizado, setReplayFinalizado] = useState(false)
   const [replayVelocidad, setReplayVelocidad] = useState(1)
+  const [clipsHechosPara, setClipsHechosPara] = useState(null)
+  const [lecturaHechaPara, setLecturaHechaPara] = useState(null)
+
   const claseId = window.location.hash.split('/').pop()
   const subtitulosRef = useRef(null)
-  const timeoutRef = useRef(null)
+  const lecturaRef = useRef({ clave: null, restanteBase: 0 })
 
   useEffect(() => {
     setError('')
@@ -87,48 +109,71 @@ export default function ClaseDetailView() {
       })
   }, [claseId])
 
-  const estables = (eventos || []).filter((e) => e.estable || e.texto)
+  const estables = useMemo(
+    () => (eventos || []).filter((e) => e.estable || e.texto),
+    [eventos],
+  )
+  const eventoActual = modo === 'replay' ? (estables[replayPos] || null) : null
   const tituloPantalla = clase ? (clase.titulo || `${clase.cod_ramo} — ${clase.seccion}`) : ''
-  const senasActuales = modo === 'replay' && estables[replayPos]
-    ? parseSenas(estables[replayPos].senas)
-    : []
+  const senasActuales = useMemo(
+    () => (eventoActual ? parseSenas(eventoActual.senas) : []),
+    [eventoActual],
+  )
   const senaActual = senasActuales[senaIdx] || null
+  const claveSegmento = `${replayRunId}-${replayPos}`
 
-  useEffect(() => {
-    setSenaIdx(0)
-  }, [replayPos, modo])
+  const clipsTerminados = senasActuales.length === 0 || clipsHechosPara === claveSegmento
+  const lecturaCompleta = lecturaHechaPara === claveSegmento
 
+  // Temporizador de lectura proporcional al texto (pausa y ajusta velocidad sin reiniciar)
   useEffect(() => {
-    clearTimeout(timeoutRef.current)
-    if (!replayPlaying || estables.length === 0 || replayPos >= estables.length - 1) {
-      if (replayPos >= estables.length - 1 && replayPlaying) {
-        setReplayPlaying(false)
+    if (modo !== 'replay' || !replayPlaying || !eventoActual || lecturaCompleta) {
+      return undefined
+    }
+    if (lecturaRef.current.clave !== claveSegmento) {
+      lecturaRef.current = {
+        clave: claveSegmento,
+        restanteBase: calcularTiempoLecturaBaseMs(eventoActual.texto),
       }
-      return
     }
-    const current = estables[replayPos]
-    const next = estables[replayPos + 1]
-    if (!current || !next) {
-      setReplayPlaying(false)
-      return
+    const esperaMs = Math.max(0, Math.round(lecturaRef.current.restanteBase / replayVelocidad))
+    const inicio = Date.now()
+    const timer = setTimeout(() => {
+      lecturaRef.current.restanteBase = 0
+      setLecturaHechaPara(claveSegmento)
+    }, esperaMs)
+
+    return () => {
+      clearTimeout(timer)
+      const transcurridoBase = (Date.now() - inicio) * replayVelocidad
+      lecturaRef.current.restanteBase = Math.max(0, lecturaRef.current.restanteBase - transcurridoBase)
     }
-    const delay = Math.max(200, ((next.timestamp_ms || 0) - (current.timestamp_ms || 0)) / replayVelocidad)
-    const id = setTimeout(() => {
-      setReplayPos((p) => p + 1)
-    }, delay)
-    timeoutRef.current = id
-    return () => clearTimeout(id)
-  }, [replayPlaying, replayPos, replayVelocidad, estables])
+  }, [modo, replayPlaying, eventoActual, claveSegmento, lecturaCompleta, replayVelocidad])
+
+  // Avanza al siguiente segmento cuando terminan tanto sus clips como el tiempo mínimo de lectura
+  useEffect(() => {
+    if (modo !== 'replay' || !replayPlaying || estables.length === 0) return undefined
+    if (!clipsTerminados || !lecturaCompleta) return undefined
+
+    const esperaTransicion = Math.round(TRANSICION_MS / replayVelocidad)
+    const timer = setTimeout(() => {
+      if (replayPos < estables.length - 1) {
+        setReplayPos((p) => p + 1)
+        setSenaIdx(0)
+      } else {
+        setReplayPlaying(false)
+        setReplayFinalizado(true)
+      }
+    }, esperaTransicion)
+
+    return () => clearTimeout(timer)
+  }, [modo, replayPlaying, clipsTerminados, lecturaCompleta, replayPos, estables.length, replayVelocidad])
 
   useEffect(() => {
     if (subtitulosRef.current) {
       subtitulosRef.current.scrollTop = subtitulosRef.current.scrollHeight
     }
   }, [replayPos, modo])
-
-  useEffect(() => {
-    return () => clearTimeout(timeoutRef.current)
-  }, [])
 
   const cambiarTam = (delta) => setTamFuente((s) => {
     const nuevo = Math.min(32, Math.max(12, s + delta))
@@ -157,18 +202,46 @@ export default function ClaseDetailView() {
     )
   }
 
+  const entrarAReplay = () => {
+    setModo('replay')
+    setReplayPos(0)
+    setSenaIdx(0)
+    setReplayPlaying(false)
+    setReplayFinalizado(false)
+    setClipsHechosPara(null)
+    setLecturaHechaPara(null)
+    setReplayRunId((r) => r + 1)
+  }
+
+  const saltarAPosicion = (nuevaPos) => {
+    setReplayPos(nuevaPos)
+    setSenaIdx(0)
+    setReplayFinalizado(false)
+    setClipsHechosPara(null)
+    setLecturaHechaPara(null)
+    setReplayRunId((r) => r + 1)
+  }
+
   const handleTogglePlay = () => {
+    if (estables.length === 0) return
     if (replayPlaying) {
       setReplayPlaying(false)
     } else {
-      if (replayPos >= estables.length - 1) setReplayPos(0)
+      if (replayFinalizado || (replayPos >= estables.length - 1 && clipsTerminados && lecturaCompleta)) {
+        saltarAPosicion(0)
+      }
       setReplayPlaying(true)
     }
   }
 
   const handleChangePos = (e) => {
-    setReplayPos(Number(e.target.value))
+    saltarAPosicion(Number(e.target.value))
   }
+
+  const estadoTexto = replayPlaying
+    ? 'Reproduciendo'
+    : (replayFinalizado ? 'Finalizado' : 'En pausa')
+  const marcaTiempoActual = eventoActual ? formatearMarcaTiempo(eventoActual.timestamp_ms) : '00:00'
 
   return (
     <main className="sala">
@@ -196,7 +269,7 @@ export default function ClaseDetailView() {
               </button>
               <button
                 className={`sala-subtitulos__modo-btn ${modo === 'replay' ? 'sala-subtitulos__modo-btn--active' : ''}`}
-                onClick={() => { setModo('replay'); setReplayPos(0); setReplayPlaying(false) }}
+                onClick={entrarAReplay}
               >
                 Replay
               </button>
@@ -221,7 +294,8 @@ export default function ClaseDetailView() {
                 <p
                   key={i}
                   className="sala-subtitulo sala-subtitulo--final"
-                  style={i === replayPos ? { fontWeight: 600 } : { opacity: 0.6 }}
+                  style={i === replayPos ? { fontWeight: 600 } : { opacity: 0.6, cursor: 'pointer' }}
+                  onClick={() => { if (i !== replayPos) saltarAPosicion(i) }}
                 >
                   {highlight(e.texto, e.senas)}
                 </p>
@@ -229,9 +303,12 @@ export default function ClaseDetailView() {
             )}
           </div>
 
-          {modo === 'replay' && (
+          {modo === 'replay' && estables.length > 0 && (
             <div className="sala-subtitulos__status">
-              <span>Reproduciendo: {replayPos + 1} / {estables.length} · {replayVelocidad}x</span>
+              <span>
+                {estadoTexto}: {replayPos + 1} / {estables.length} · {marcaTiempoActual} · {replayVelocidad}x
+                {senasActuales.length > 1 ? ` · seña ${Math.min(senaIdx + 1, senasActuales.length)}/${senasActuales.length}` : ''}
+              </span>
             </div>
           )}
         </section>
@@ -241,10 +318,15 @@ export default function ClaseDetailView() {
             {modo === 'replay' && senaActual ? (
               <SenaPlayer
                 sena={senaActual}
-                playId={`${replayPos}-${senaIdx}`}
+                playId={`${replayRunId}-${replayPos}-${senaIdx}`}
+                reproduciendo={replayPlaying && !clipsTerminados}
+                velocidad={replayVelocidad}
                 onEnded={() => {
+                  if (!replayPlaying) return
                   if (senaIdx + 1 < senasActuales.length) {
                     setSenaIdx((i) => i + 1)
+                  } else {
+                    setClipsHechosPara(claveSegmento)
                   }
                 }}
               />
@@ -257,7 +339,9 @@ export default function ClaseDetailView() {
                   </svg>
                 </div>
                 <div className="sala-video__placeholder-text">
-                  Video de la seña disponible<br/>al iniciar el replay
+                  {modo === 'replay'
+                    ? 'Sin señas en este segmento'
+                    : <>Video de la seña disponible<br/>al iniciar el replay</>}
                 </div>
               </div>
             )}
@@ -269,7 +353,7 @@ export default function ClaseDetailView() {
         <footer className="sala-bottombar">
           <div className="sala-estado">
             <div className="sala-estado__label">Modo Replay</div>
-            <div className="sala-estado__sub">Reproducción de la clase guardada</div>
+            <div className="sala-estado__sub">Reproducción continua al ritmo de lectura y señas</div>
           </div>
           <div className="sala-controles">
             <button className="btn btn--ghost-pause" onClick={handleTogglePlay}>

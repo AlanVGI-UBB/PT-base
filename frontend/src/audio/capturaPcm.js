@@ -2,19 +2,17 @@ export async function iniciar({ onTrama, onNivel } = {}) {
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: {
       channelCount: 1,
-      echoCancellation: true,
-      noiseSuppression: true,
+      echoCancellation: false,
+      noiseSuppression: false,
       autoGainControl: true,
     },
   })
 
   let ctx
   try {
-    try {
-      ctx = new AudioContext({ sampleRate: 16000 })
-    } catch {
-      ctx = new AudioContext()
-    }
+    // Usar frecuencia nativa del hardware evita silencios de WASAPI/Bluetooth al forzar 16 kHz;
+    // pcm-worklet.js remuestrea a 16 kHz cuando sampleRate !== 16000.
+    ctx = new AudioContext()
     if (ctx.state === 'suspended') {
       await ctx.resume()
     }
