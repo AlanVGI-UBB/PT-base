@@ -86,7 +86,7 @@ const IconoMeta = ({ tipo }) => {
   return <IconoPalabras size={14} />
 }
 
-export default function HistorialView({ user }) {
+export default function HistorialView({ user, onLogout, theme, onToggleTheme }) {
   const [clases, setClases] = useState([])
   const [loading, setLoading] = useState(true)
   const [busqueda, setBusqueda] = useState('')
@@ -138,20 +138,25 @@ export default function HistorialView({ user }) {
 
   return (
     <>
-      <Header activeTab="history" user={user} />
+      <Header
+        activeTab="history"
+        user={user}
+        onLogout={onLogout}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+      />
 
       <main className="historial-page">
         <header className="historial-page__intro">
-          <h1 className="historial-page__titulo">Historial de Clases</h1>
+          <h1 className="historial-page__titulo">Historial de clases</h1>
           <p className="historial-page__subtitulo">
-            Revisa transcripciones pasadas, notas guardadas y momentos destacados de
-            tus sesiones anteriores. Usa los filtros para encontrar clases específicas rápidamente.
+            Revisa transcripciones pasadas, discontinuidades y señas registradas de tus sesiones anteriores.
           </p>
         </header>
 
         <div className="historial-page__filtros">
           <div className="historial-search">
-            <IconoBuscar size={18} />
+            <IconoBuscar size={17} />
             <input
               type="text"
               value={busqueda}
@@ -173,7 +178,7 @@ export default function HistorialView({ user }) {
             </select>
 
             <select
-              className="historial-filtro historial-filtro--fecha"
+              className="historial-filtro"
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
               aria-label="Filtrar por fecha"
@@ -208,20 +213,17 @@ export default function HistorialView({ user }) {
                       <article
                         key={c.id}
                         className="historial-card"
-                        onClick={() => window.location.hash = `#/historial/${c.id}`}
+                        onClick={() => { window.location.hash = `#/historial/${c.id}` }}
                       >
                         <header className="historial-card__head">
-                          <span className="historial-card__asignatura">
-                            <span className={`historial-card__dot historial-card__dot--${c.cod_ramo}`} />
-                            {c.curso_nombre}
-                          </span>
+                          <span className="code-pill">{c.cod_ramo} · Sec. {c.seccion}</span>
                           <div className="historial-card__fecha">
                             <div className="historial-card__dia">{dia}</div>
                             <div className="historial-card__hora">{hora}</div>
                           </div>
                         </header>
 
-                        <h3 className="historial-card__titulo">{truncar(titulo, 32)}</h3>
+                        <h3 className="historial-card__titulo">{truncar(titulo, 48)}</h3>
                         {c.cierre === 'timeout' && (
                           <span className="badge-incompleto">Registro incompleto</span>
                         )}

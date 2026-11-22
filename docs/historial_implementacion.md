@@ -1081,7 +1081,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-22 — Sincronización completa de `docs/documentacion_prototipo_defensa.md` con `SPEC-009` y correcciones E2E
+## 2026-11-22 — `e55e826` — Sincronización completa de `docs/documentacion_prototipo_defensa.md` con `SPEC-009` y correcciones E2E
 **Refs:** `docs/documentacion_prototipo_defensa.md`, `SPEC-009` (commit documental)
 
 **Resumen:** Se revisó línea por línea la guía técnica de defensa y se actualizaron las secciones internas que aún conservaban referencias anteriores a `SPEC-009` (diagrama de estados sin pausa, árbol de módulos backend/frontend, flujo de `ws_sala`, vistas de usuario y respuestas del banco de preguntas frecuentes).
@@ -1091,3 +1091,29 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - Este archivo — registra hash `f5e65cf` en la entrada anterior.
 
 **Verificación:** n/a (commit documental; contrastado contra los archivos vigentes del repositorio).
+
+---
+
+## 2026-11-22 — Rediseño visual del frontend: Editorial Académico (modo claro y modo oscuro)
+**Refs:** diseño UI/UX aprobado con Stitch (Opción 1 «Editorial Académico» + «Editorial Nocturno»)
+
+**Resumen:** Se renovó la fachada completa del frontend PWA adoptando el sistema visual *Editorial Académico* con tipografía unificada (`Plus Jakarta Sans`), paleta de alto confort lector en modo claro (alabastro cálido, azul marino institucional y resaltado ámbar) y modo oscuro equivalente (grafito cálido), junto con selector persistente de tema y ajustes de accesibilidad y diseño responsivo.
+
+**Cambios:**
+- **Sistema de temas y tipografía (`frontend/`):**
+  - `index.html`, `vite.config.js`, `public/icon.svg` — carga `Plus Jakarta Sans` (`400/500/600/700`), restaura `data-theme` antes del primer pintado para evitar parpadeo y alinea ícono y manifiesto PWA a `#16325B` / `#F7F5F0` / `#D9822B`.
+  - `src/hooks/useTheme.js` — **nuevo**: persiste la preferencia `light|dark` en `localStorage` (`puente_lsch_theme`) y sincroniza `<html data-theme>` y `<meta name="theme-color">`.
+  - `src/components/ThemeToggle.jsx` — **nuevo**: botón accesible para alternar entre modo claro y oscuro en todas las vistas.
+  - `src/App.css` — reescrito con variables CSS duales (`[data-theme="light"]` y `[data-theme="dark"]`), tarjetas limpias sobre lienzo cálido, resaltado ámbar uniforme de términos técnicos (`.termino`), barra de cola de señas con etiquetas, escenario de video oscuro y ajuste responsivo en pantallas medianas y móviles.
+- **Vistas y componentes (`frontend/src/`):**
+  - `App.jsx`, `hooks/useAuth.js`, `components/Header.jsx`, `components/FinalizarModal.jsx` — integra `useTheme()`, actualiza `#/dashboard` al iniciar sesión, renueva el header editorial (tabs centradas `Inicio`/`Historial`, tema, nombre+RUT, botón `Salir` y avatar circular) y añade atributos ARIA (`role="dialog"`, `aria-modal`, `aria-labelledby`) a `FinalizarModal`.
+  - `views/LoginView.jsx`, `views/DashboardView.jsx`, `views/SalaView.jsx`, `views/HistorialView.jsx`, `views/ClaseDetailView.jsx` — aplica el nuevo sistema visual manteniendo intacta toda la lógica funcional y de permisos de `SPEC-009` (tarjeta destacada de clase actual, sala en 2 columnas con chips de cola en vivo y dock estático, tarjetas de historial con badge `"Registro incompleto"`, y detalle Apunte/Replay con controles segmentados).
+- **Documentación:**
+  - `docs/documentacion_prototipo_defensa.md` — actualiza §6.1, §6.3 y §9 con el sistema visual dual, los nuevos módulos (`useTheme.js`, `ThemeToggle.jsx`) y el build de 50 módulos.
+
+**Verificación:**
+- `ruff check backend ml` → `All checks passed!`
+- `pytest backend/tests` → `71 passed, 1 skipped` (`@pytest.mark.modelo`).
+- `pytest ml/tests` → `11 passed`.
+- `pnpm --prefix frontend build` → OK (50 módulos).
+- Revisión visual y funcional en navegador real sobre las 5 vistas (`Login`, `Dashboard`, `Sala en vivo`, `Historial`, `Apunte / Replay`) en modo claro y modo oscuro con persistencia tras recarga y `0` errores de consola o HTTP.

@@ -44,6 +44,9 @@ export function useAuth() {
     setUser({ rut, nombre, apellido })
     setToken(token)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userData))
+    if (!window.location.hash || window.location.hash === '#/login') {
+      window.location.hash = '#/dashboard'
+    }
   }, [])
 
   const logout = useCallback(() => {

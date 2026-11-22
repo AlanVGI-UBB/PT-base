@@ -7,6 +7,7 @@ import FinalizarModal from '../components/FinalizarModal'
 import Feedback from '../components/Feedback'
 import EstadoConexion from '../components/EstadoConexion'
 import SenaPlayer from '../components/SenaPlayer'
+import ThemeToggle from '../components/ThemeToggle'
 import { useColaSenas } from '../hooks/useColaSenas'
 import { useWebSocket } from '../hooks/useWebSocket'
 
@@ -73,7 +74,21 @@ function formatearTiempo(segundos) {
   return `${m}:${s}`
 }
 
-export default function SalaView({ roomId, user, onVolver }) {
+function getInitials(nombre = '', apellido = '') {
+  const n = (nombre || '').trim()
+  const a = (apellido || '').trim()
+  if (n && a) return `${n[0]}${a[0]}`.toUpperCase()
+  if (n) return n.slice(0, 2).toUpperCase()
+  return '?'
+}
+
+function parseRoomId(roomId = '') {
+  const idx = roomId.lastIndexOf('-')
+  if (idx === -1) return { codigo: roomId, seccion: '' }
+  return { codigo: roomId.slice(0, idx), seccion: roomId.slice(idx + 1) }
+}
+
+export default function SalaView({ roomId, user, onVolver, theme, onToggleTheme }) {
   const [rol, setRol] = useState(null)
   const [determinando, setDeterminando] = useState(true)
   const [subtitulos, setSubtitulos] = useState([])
@@ -304,13 +319,12 @@ export default function SalaView({ roomId, user, onVolver }) {
   })
 
   const nivelPorcentaje = Math.min(100, Math.round(Math.sqrt(nivelAudio) * 180))
+  const { codigo: codigoRamo, seccion: seccionSala } = parseRoomId(roomId)
 
   if (determinando) {
     return (
       <main className="sala">
-        <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>
-          Verificando sala...
-        </p>
+        <p className="dashboard__vacio">Verificando sala...</p>
       </main>
     )
   }
@@ -318,14 +332,26 @@ export default function SalaView({ roomId, user, onVolver }) {
   if (!rol) {
     return (
       <main className="sala">
-        <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+        <header className="sala-topbar">
+          <div className="sala-topbar__left">
+            <button type="button" className="btn btn--ghost" onClick={onVolver}>
+              <IconoSalir size={16} /> <span>Salir</span>
+            </button>
+            <span className="sala-topbar__sep" aria-hidden="true" />
+            <span className="sala-topbar__brand">Puente LSCh</span>
+          </div>
+          <div className="sala-topbar__right">
+            {onToggleTheme && <ThemeToggle theme={theme} onToggle={onToggleTheme} />}
+          </div>
+        </header>
+        <div style={{ padding: '3rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
           {mensajeSinTransmision ? (
             <Feedback tipo="info" mensaje={mensajeSinTransmision} />
           ) : (
             <Feedback tipo="error" mensaje={feedback?.mensaje} onClose={() => setFeedback(null)} />
           )}
-          <button className="btn btn--ghost" onClick={onVolver}>
-            <IconoSalir size={18} /> <span>Volver al inicio</span>
+          <button type="button" className="btn btn--outline" onClick={onVolver}>
+            <IconoSalir size={16} /> <span>Volver al inicio</span>
           </button>
         </div>
       </main>
@@ -335,32 +361,50 @@ export default function SalaView({ roomId, user, onVolver }) {
   return (
     <main className="sala">
       <header className="sala-topbar">
-        {rol === 'emitter' && grabando ? (
-          <button
-            className="btn btn--ghost"
-            onClick={abrirModalFinalizar}
-            title="Para salir debes finalizar y guardar la sesión"
-          >
-            <IconoSalir size={18} /> <span>Salir</span>
-          </button>
-        ) : (
-          <button className="btn btn--ghost" onClick={onVolver}>
-            <IconoSalir size={18} /> <span>Salir</span>
-          </button>
-        )}
-        <h1 className="sala-titulo">{roomId.replace('-', ' — ')}</h1>
-        {estadoWs === 'conectado' && (
-          <span className={`sala-en-vivo ${sesionPausada ? 'sala-en-vivo--pausada' : ''}`}>
-            <span className="sala-en-vivo__dot" />
-            {sesionPausada ? 'EN PAUSA' : 'EN VIVO'}
-          </span>
-        )}
-        {sesionIniciada && <EstadoConexion estado={estadoWs} intentos={intentos} />}
-        {estadoWs === 'fallo' && (
-          <button className="btn btn--ghost" onClick={reintentar}>
-            Reintentar conexión
-          </button>
-        )}
+        <div className="sala-topbar__left">
+          {rol === 'emitter' && grabando ? (
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={abrirModalFinalizar}
+              title="Para salir debes finalizar y guardar la sesión"
+            >
+              <IconoSalir size={16} /> <span>Salir</span>
+            </button>
+          ) : (
+            <button type="button" className="btn btn--ghost" onClick={onVolver}>
+              <IconoSalir size={16} /> <span>Salir</span>
+            </button>
+          )}
+          <span className="sala-topbar__sep" aria-hidden="true" />
+          <span className="sala-topbar__brand">Puente LSCh</span>
+        </div>
+
+        <div className="sala-topbar__center">
+          <span className="code-pill">{codigoRamo}</span>
+          {seccionSala && <h1 className="sala-titulo">Sección {seccionSala}</h1>}
+        </div>
+
+        <div className="sala-topbar__right">
+          {estadoWs === 'conectado' && (
+            <span className={`sala-en-vivo ${sesionPausada ? 'sala-en-vivo--pausada' : ''}`}>
+              <span className="sala-en-vivo__dot" />
+              {sesionPausada ? 'EN PAUSA' : 'EN VIVO'}
+            </span>
+          )}
+          {sesionIniciada && <EstadoConexion estado={estadoWs} intentos={intentos} />}
+          {estadoWs === 'fallo' && (
+            <button type="button" className="btn btn--outline btn--sm" onClick={reintentar}>
+              Reintentar
+            </button>
+          )}
+          {onToggleTheme && <ThemeToggle theme={theme} onToggle={onToggleTheme} />}
+          {user && (
+            <div className="header__avatar" title={`${user.nombre} ${user.apellido}`}>
+              {getInitials(user.nombre, user.apellido)}
+            </div>
+          )}
+        </div>
       </header>
 
       {sesionPausada && (
@@ -386,16 +430,15 @@ export default function SalaView({ roomId, user, onVolver }) {
           <div className="sala-subtitulos__header">
             <div className="sala-subtitulos__titulo">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <line x1="9" y1="9" x2="15" y2="9"/>
-                <line x1="9" y1="13" x2="15" y2="13"/>
-                <line x1="9" y1="17" x2="13" y2="17"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="17" y2="12"/>
+                <line x1="3" y1="18" x2="14" y2="18"/>
               </svg>
-              <span>Transcripción en Tiempo Real</span>
+              <span>Transcripción en tiempo real</span>
             </div>
             <div className="sala-subtitulos__tamano">
-              <button onClick={() => cambiarTam(2)} aria-label="Aumentar tamaño de letra">A+</button>
-              <button onClick={() => cambiarTam(-2)} aria-label="Disminuir tamaño de letra">A−</button>
+              <button type="button" onClick={() => cambiarTam(-2)} aria-label="Disminuir tamaño de letra">A−</button>
+              <button type="button" onClick={() => cambiarTam(2)} aria-label="Aumentar tamaño de letra">A+</button>
             </div>
           </div>
 
@@ -412,99 +455,122 @@ export default function SalaView({ roomId, user, onVolver }) {
           </div>
 
           <div className="sala-subtitulos__status">
-            {grabando && !pausado && (
-              <>
-                <IconoMicrofono size={14} />
-                <span>Escuchando al profesor...</span>
-                <span
-                  className="nivel-audio"
-                  role="meter"
-                  aria-label="Nivel de entrada del micrófono"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={nivelPorcentaje}
-                >
-                  <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
+            <div className="sala-subtitulos__status-left">
+              {grabando && !pausado && (
+                <>
+                  <IconoMicrofono size={14} />
+                  <span>Escuchando al docente</span>
+                </>
+              )}
+              {((grabando && pausado) || (rol === 'listener' && sesionPausada)) && (
+                <span style={{ color: 'var(--warn-fg)', fontWeight: 600 }}>Transmisión en pausa</span>
+              )}
+              {finalizando && <span>Finalizando y guardando...</span>}
+              {!grabando && !finalizando && !(rol === 'listener' && sesionPausada) && (
+                <span>
+                  {rol === 'listener' ? 'Conectado como oyente' : 'Listo para iniciar'}
                 </span>
-              </>
-            )}
-            {(grabando && pausado) || (rol === 'listener' && sesionPausada) ? (
-              <span style={{ color: 'var(--warning)' }}>Transmisión en pausa</span>
-            ) : null}
-            {finalizando && <span style={{ color: 'var(--muted)' }}>Finalizando y guardando...</span>}
-            {!grabando && !finalizando && !(rol === 'listener' && sesionPausada) && (
-              <span style={{ color: 'var(--muted)' }}>
-                {rol === 'listener' ? 'Conectado como oyente' : 'Listo para iniciar'}
+              )}
+            </div>
+            {grabando && !pausado && (
+              <span
+                className="nivel-audio"
+                role="meter"
+                aria-label="Nivel de entrada del micrófono"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={nivelPorcentaje}
+              >
+                <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
               </span>
             )}
           </div>
         </section>
 
         <section className="sala-video">
-          <div className="sala-video__player">
-            {senaActual ? (
-              <SenaPlayer sena={senaActual} playId={senaPlayId} onEnded={alTerminar} />
-            ) : (
-              <div className="sala-video__placeholder">
-                <div className="sala-video__placeholder-icon">
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}>
-                    <path d="M23 7l-7 5 7 5V7z"/>
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                  </svg>
+          <div className="sala-panel-header">
+            <div className="sala-subtitulos__titulo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 11V6a2 2 0 0 0-4 0v4"/>
+                <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
+                <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+              </svg>
+              <span>Apoyo terminológico LSCh</span>
+            </div>
+          </div>
+
+          <div className="sala-video__body">
+            <div className="sala-video__player">
+              {senaActual ? (
+                <SenaPlayer sena={senaActual} playId={senaPlayId} onEnded={alTerminar} />
+              ) : (
+                <div className="sala-video__placeholder">
+                  <div className="sala-video__placeholder-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 7l-7 5 7 5V7z"/>
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                  </div>
+                  <div className="sala-video__placeholder-text">
+                    Esperando concepto del glosario...
+                  </div>
                 </div>
-                <div className="sala-video__placeholder-text">
-                  Esperando video de la seña...
-                </div>
+              )}
+            </div>
+
+            {(senasPendientes.length > 0 || senasOmitidas > 0) && (
+              <div className="cola-senas" role="status">
+                <span className="cola-senas__label">En cola ({senasPendientes.length})</span>
+                {senasPendientes.length > 0 && (
+                  <div className="cola-senas__chips">
+                    {senasPendientes.map((item, idx) => (
+                      <span key={`${item.termino_id || item.texto_visible}-${idx}`} className="cola-senas__chip">
+                        {item.texto_visible}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {senasOmitidas > 0 && (
+                  <span className="cola-senas__omitidas">
+                    {senasOmitidas} {senasOmitidas === 1 ? 'omitida' : 'omitidas'} · disponibles en el historial
+                  </span>
+                )}
               </div>
             )}
           </div>
-          {(senasPendientes.length > 0 || senasOmitidas > 0) && (
-            <div className="cola-senas" role="status">
-              <span>En cola: {senasPendientes.length}</span>
-              {senasOmitidas > 0 && (
-                <span>
-                  {' · '}
-                  {senasOmitidas} {senasOmitidas === 1 ? 'omitida' : 'omitidas'} · disponibles en el historial
-                </span>
-              )}
-            </div>
-          )}
         </section>
       </div>
 
       {rol === 'emitter' && (
         <footer className="sala-bottombar">
           <div className="sala-estado">
-            <div className="sala-estado__label">Estado del Sistema</div>
-            <div className="sala-estado__sub">
-              {grabando && (
-                <>
-                  <span>{pausado ? 'En pausa' : 'Transmitiendo'} · {formatearTiempo(tiempo)}</span>
-                  {!pausado && (
-                    <span className="nivel-audio" aria-hidden="true">
-                      <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
-                    </span>
-                  )}
-                </>
-              )}
-              {finalizando && <span>Finalizando y guardando...</span>}
-              {!grabando && !finalizando && <span>Listo para iniciar</span>}
-            </div>
+            <span className="sala-estado__label">
+              {grabando
+                ? (pausado ? `En pausa · ${formatearTiempo(tiempo)}` : `Sesión en vivo · ${formatearTiempo(tiempo)}`)
+                : (finalizando ? 'Finalizando y guardando...' : 'Listo para iniciar')}
+            </span>
+            {grabando && !pausado && (
+              <span className="nivel-audio" aria-hidden="true">
+                <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
+              </span>
+            )}
           </div>
           <div className="sala-controles">
             {!grabando ? (
-              <button className="btn btn--ghost-pause" onClick={abrirModalCondiciones} disabled={finalizando}>
-                <IconoMicrofono size={18} /> {finalizando ? 'Guardando...' : 'Iniciar Transmisión'}
+              <button type="button" className="btn btn--primary" onClick={abrirModalCondiciones} disabled={finalizando}>
+                <IconoMicrofono size={16} />
+                <span>{finalizando ? 'Guardando...' : 'Iniciar transmisión'}</span>
               </button>
             ) : (
               <>
-                <button className="btn btn--ghost-pause" onClick={pausado ? reanudar : pausar}>
-                  <IconoPausa size={18} />
-                  {pausado ? 'Reanudar' : 'Pausar'} Transcripción
+                <button type="button" className="btn btn--outline" onClick={pausado ? reanudar : pausar}>
+                  <IconoPausa size={15} />
+                  <span>{pausado ? 'Reanudar transcripción' : 'Pausar transcripción'}</span>
                 </button>
-                <button className="btn btn--detener-finalizar" onClick={abrirModalFinalizar}>
-                  <IconoStop size={16} />
-                  Finalizar y Guardar
+                <button type="button" className="btn btn--danger" onClick={abrirModalFinalizar}>
+                  <IconoStop size={14} />
+                  <span>Finalizar y guardar</span>
                 </button>
               </>
             )}

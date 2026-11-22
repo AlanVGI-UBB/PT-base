@@ -44,9 +44,15 @@ export default function FinalizarModal({ open, onConfirm, onCancel }) {
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="finalizar-titulo"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal__header">
-          <h2 className="modal__title">¿Finalizar Sesión?</h2>
+          <h2 id="finalizar-titulo" className="modal__title">¿Finalizar Sesión?</h2>
           <button className="modal__close" onClick={onCancel} aria-label="Cerrar">
             <IconoX size={18} />
           </button>

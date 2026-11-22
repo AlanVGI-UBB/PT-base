@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { loginRequest, normalizarRut } from '../api/cliente'
+import ThemeToggle from '../components/ThemeToggle'
 
-const IconoInstalar = ({ size = 18 }) => (
+const IconoInstalar = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
     <polyline points="7 10 12 15 17 10"/>
@@ -9,7 +10,7 @@ const IconoInstalar = ({ size = 18 }) => (
   </svg>
 )
 
-const IconoMenu = ({ size = 18 }) => (
+const IconoMenu = ({ size = 15 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="1"/>
     <circle cx="19" cy="12" r="1"/>
@@ -17,7 +18,7 @@ const IconoMenu = ({ size = 18 }) => (
   </svg>
 )
 
-export default function LoginView({ onLogin }) {
+export default function LoginView({ onLogin, theme, onToggleTheme }) {
   const [rut, setRut] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -69,7 +70,7 @@ export default function LoginView({ onLogin }) {
     setAviso('')
     const rutNorm = normalizarRut(rut)
     if (!rutNorm) {
-      setError('RUT inválido. Verifica el formato (ej. 12.345.678-9).')
+      setError('RUT inválido. Verifica el formato (ej. 12.345.678-5).')
       return
     }
     setLoading(true)
@@ -83,51 +84,64 @@ export default function LoginView({ onLogin }) {
   }
 
   return (
-    <main className="vista">
-      <div className="login">
-        <h1>Puente LSCh</h1>
-        <p className="login__sub">Inicia sesión con tu RUT institucional</p>
-        <form className="login__form" onSubmit={handleSubmit}>
-          <label className="campo">
-            <span>RUT</span>
-            <input
-              type="text"
-              value={rut}
-              onChange={(e) => setRut(e.target.value)}
-              placeholder="12345678-5"
-              autoFocus
-            />
-          </label>
-          <label className="campo">
-            <span>Contraseña</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </label>
-          {error && <div className="login__error">{error}</div>}
-          {aviso && <div className="login__error">{aviso}</div>}
-          <button className="btn btn--profesor" type="submit" disabled={loading}>
-            {loading ? 'Ingresando...' : 'Ingresar'}
-          </button>
-        </form>
+    <main className="login-page">
+      <div className="login-page__top">
+        <span className="login-page__brand">Puente LSCh</span>
+        {onToggleTheme && <ThemeToggle theme={theme} onToggle={onToggleTheme} />}
+      </div>
 
-        {!standalone && (
-          <div className="login__instalar">
-            <button onClick={instalar} className="btn btn--fuente" style={{ width: '100%' }}>
-              <IconoInstalar size={18} />
-              Instalar aplicación
+      <div className="login-page__center">
+        <section className="login-card">
+          <header className="login-card__head">
+            <span className="eyebrow">APOYO EN AULA · LSCH</span>
+            <h1>Iniciar sesión</h1>
+            <p className="login__sub">Ingresa con tu RUT institucional para acceder a tus salas y apuntes.</p>
+          </header>
+
+          <form className="login__form" onSubmit={handleSubmit}>
+            <label className="campo">
+              <span>RUT</span>
+              <input
+                type="text"
+                value={rut}
+                onChange={(e) => setRut(e.target.value)}
+                placeholder="12345678-5"
+                autoComplete="username"
+                autoFocus
+              />
+            </label>
+            <label className="campo">
+              <span>Contraseña</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+              />
+            </label>
+            {error && <div className="login__error" role="alert">{error}</div>}
+            {aviso && <div className="login__aviso" role="status">{aviso}</div>}
+            <button className="btn btn--primary btn--full" type="submit" disabled={loading}>
+              {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
-            {mostrarAyuda && !instalable && (
-              <div className="login__ayuda">
-                <IconoMenu size={16} />
-                <span>Abrí el menú de Chrome (⋮) y seleccioná <strong>"Agregar a pantalla de inicio"</strong></span>
-              </div>
-            )}
-          </div>
-        )}
+          </form>
+
+          {!standalone && (
+            <div className="login__instalar">
+              <button type="button" onClick={instalar} className="btn btn--outline btn--full">
+                <IconoInstalar size={16} />
+                <span>Instalar aplicación</span>
+              </button>
+              {mostrarAyuda && !instalable && (
+                <div className="login__ayuda">
+                  <IconoMenu size={15} />
+                  <span>Abre el menú de tu navegador (⋮) y selecciona <strong>«Agregar a pantalla de inicio»</strong>.</span>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   )

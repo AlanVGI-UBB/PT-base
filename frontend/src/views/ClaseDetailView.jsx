@@ -3,6 +3,7 @@ import { fetchHistorialDetalle } from '../api/cliente'
 import { liberarClips } from '../api/clips'
 import Feedback from '../components/Feedback'
 import SenaPlayer from '../components/SenaPlayer'
+import ThemeToggle from '../components/ThemeToggle'
 
 const ETIQUETA_DISCONTINUIDAD = {
   pausa: 'Transmisión pausada',
@@ -84,7 +85,7 @@ function formatearMarcaTiempo(ms) {
   return `${min}:${seg}`
 }
 
-export default function ClaseDetailView() {
+export default function ClaseDetailView({ theme, onToggleTheme }) {
   const [clase, setClase] = useState(null)
   const [eventos, setEventos] = useState([])
   const [error, setError] = useState('')
@@ -263,14 +264,26 @@ export default function ClaseDetailView() {
   return (
     <main className="sala">
       <header className="sala-topbar">
-        <button className="btn btn--ghost" onClick={() => window.location.hash = '#/historial'}>
-          <IconoVolver size={18} /> <span>Volver</span>
-        </button>
-        <h1 className="sala-titulo">{tituloPantalla}</h1>
-        {clase.cierre === 'timeout' && (
-          <span className="badge-incompleto">Registro incompleto</span>
-        )}
-        <span className="sala-badge-historial">HISTORIAL</span>
+        <div className="sala-topbar__left">
+          <button type="button" className="btn btn--ghost" onClick={() => { window.location.hash = '#/historial' }}>
+            <IconoVolver size={16} /> <span>Volver</span>
+          </button>
+          <span className="sala-topbar__sep" aria-hidden="true" />
+          <span className="sala-topbar__brand">Puente LSCh</span>
+        </div>
+
+        <div className="sala-topbar__center">
+          {clase.cod_ramo && <span className="code-pill">{clase.cod_ramo}</span>}
+          <h1 className="sala-titulo">{tituloPantalla}</h1>
+        </div>
+
+        <div className="sala-topbar__right">
+          {clase.cierre === 'timeout' && (
+            <span className="badge-incompleto">Registro incompleto</span>
+          )}
+          <span className="sala-badge-historial">HISTORIAL</span>
+          {onToggleTheme && <ThemeToggle theme={theme} onToggle={onToggleTheme} />}
+        </div>
       </header>
 
       <div className="sala-grid">
@@ -280,23 +293,27 @@ export default function ClaseDetailView() {
               <IconoTranscripcion size={16} />
               <span>Transcripción</span>
             </div>
-            <div className="sala-subtitulos__modos">
-              <button
-                className={`sala-subtitulos__modo-btn ${modo === 'apunte' ? 'sala-subtitulos__modo-btn--active' : ''}`}
-                onClick={() => { setModo('apunte'); setReplayPlaying(false) }}
-              >
-                Apunte
-              </button>
-              <button
-                className={`sala-subtitulos__modo-btn ${modo === 'replay' ? 'sala-subtitulos__modo-btn--active' : ''}`}
-                onClick={entrarAReplay}
-              >
-                Replay
-              </button>
-            </div>
-            <div className="sala-subtitulos__tamano">
-              <button onClick={() => cambiarTam(2)} aria-label="Aumentar tamaño de letra">A+</button>
-              <button onClick={() => cambiarTam(-2)} aria-label="Disminuir tamaño de letra">A−</button>
+            <div className="sala-subtitulos__controls">
+              <div className="sala-subtitulos__modos">
+                <button
+                  type="button"
+                  className={`sala-subtitulos__modo-btn ${modo === 'apunte' ? 'sala-subtitulos__modo-btn--active' : ''}`}
+                  onClick={() => { setModo('apunte'); setReplayPlaying(false) }}
+                >
+                  Apunte
+                </button>
+                <button
+                  type="button"
+                  className={`sala-subtitulos__modo-btn ${modo === 'replay' ? 'sala-subtitulos__modo-btn--active' : ''}`}
+                  onClick={entrarAReplay}
+                >
+                  Replay
+                </button>
+              </div>
+              <div className="sala-subtitulos__tamano">
+                <button type="button" onClick={() => cambiarTam(-2)} aria-label="Disminuir tamaño de letra">A−</button>
+                <button type="button" onClick={() => cambiarTam(2)} aria-label="Aumentar tamaño de letra">A+</button>
+              </div>
             </div>
           </div>
 
@@ -333,7 +350,7 @@ export default function ClaseDetailView() {
                 <p
                   key={i}
                   className="sala-subtitulo sala-subtitulo--final"
-                  style={i === replayPos ? { fontWeight: 600 } : { opacity: 0.6, cursor: 'pointer' }}
+                  style={i === replayPos ? { fontWeight: 500 } : { opacity: 0.55, cursor: 'pointer' }}
                   onClick={() => { if (i !== replayPos) saltarAPosicion(i) }}
                 >
                   {highlight(e.texto, e.senas)}
@@ -353,37 +370,51 @@ export default function ClaseDetailView() {
         </section>
 
         <section className="sala-video">
-          <div className="sala-video__player">
-            {modo === 'replay' && senaActual ? (
-              <SenaPlayer
-                sena={senaActual}
-                playId={`${replayRunId}-${replayPos}-${senaIdx}`}
-                reproduciendo={replayPlaying && !clipsTerminados}
-                velocidad={replayVelocidad}
-                onEnded={() => {
-                  if (!replayPlaying) return
-                  if (senaIdx + 1 < senasActuales.length) {
-                    setSenaIdx((i) => i + 1)
-                  } else {
-                    setClipsHechosPara(claveSegmento)
-                  }
-                }}
-              />
-            ) : (
-              <div className="sala-video__placeholder">
-                <div className="sala-video__placeholder-icon">
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto' }}>
-                    <path d="M23 7l-7 5 7 5V7z"/>
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-                  </svg>
+          <div className="sala-panel-header">
+            <div className="sala-subtitulos__titulo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 11V6a2 2 0 0 0-4 0v4"/>
+                <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
+                <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+              </svg>
+              <span>Apoyo terminológico LSCh</span>
+            </div>
+          </div>
+
+          <div className="sala-video__body">
+            <div className="sala-video__player">
+              {modo === 'replay' && senaActual ? (
+                <SenaPlayer
+                  sena={senaActual}
+                  playId={`${replayRunId}-${replayPos}-${senaIdx}`}
+                  reproduciendo={replayPlaying && !clipsTerminados}
+                  velocidad={replayVelocidad}
+                  onEnded={() => {
+                    if (!replayPlaying) return
+                    if (senaIdx + 1 < senasActuales.length) {
+                      setSenaIdx((i) => i + 1)
+                    } else {
+                      setClipsHechosPara(claveSegmento)
+                    }
+                  }}
+                />
+              ) : (
+                <div className="sala-video__placeholder">
+                  <div className="sala-video__placeholder-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M23 7l-7 5 7 5V7z"/>
+                      <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                    </svg>
+                  </div>
+                  <div className="sala-video__placeholder-text">
+                    {modo === 'replay'
+                      ? 'Sin señas en este segmento'
+                      : <>Video de la seña disponible<br/>al iniciar el replay</>}
+                  </div>
                 </div>
-                <div className="sala-video__placeholder-text">
-                  {modo === 'replay'
-                    ? 'Sin señas en este segmento'
-                    : <>Video de la seña disponible<br/>al iniciar el replay</>}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>
@@ -391,24 +422,26 @@ export default function ClaseDetailView() {
       {modo === 'replay' && (
         <footer className="sala-bottombar">
           <div className="sala-estado">
-            <div className="sala-estado__label">Modo Replay</div>
-            <div className="sala-estado__sub">Reproducción continua al ritmo de lectura y señas</div>
+            <span className="sala-estado__label">Modo Replay</span>
+            <span className="sala-estado__sub">Ritmo continuo de lectura y señas</span>
           </div>
           <div className="sala-controles">
-            <button className="btn btn--ghost-pause" onClick={handleTogglePlay}>
-              {replayPlaying ? <IconoPausa size={18} /> : <IconoPlay size={18} />}
-              {replayPlaying ? 'Pausar' : 'Reproducir'}
+            <button type="button" className="btn btn--primary" onClick={handleTogglePlay}>
+              {replayPlaying ? <IconoPausa size={15} /> : <IconoPlay size={15} />}
+              <span>{replayPlaying ? 'Pausar' : 'Reproducir'}</span>
             </button>
-            {[1, 1.5, 2].map((v) => (
-              <button
-                key={v}
-                className={`btn ${replayVelocidad === v ? 'btn--detener-finalizar' : 'btn--ghost-pause'}`}
-                onClick={() => setReplayVelocidad(v)}
-                style={replayVelocidad === v ? { background: 'var(--accent)', color: '#fff' } : {}}
-              >
-                {v}x
-              </button>
-            ))}
+            <div className="sala-velocidades" role="group" aria-label="Velocidad de reproducción">
+              {[1, 1.5, 2].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`sala-velocidad-btn ${replayVelocidad === v ? 'sala-velocidad-btn--active' : ''}`}
+                  onClick={() => setReplayVelocidad(v)}
+                >
+                  {v}x
+                </button>
+              ))}
+            </div>
             <input
               type="range"
               min={0}

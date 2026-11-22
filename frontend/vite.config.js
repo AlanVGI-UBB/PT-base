@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'Puente LSCh',
         short_name: 'Puente LSCh',
         description: 'Apoyo a la inclusión de estudiantes sordos mediante Lengua de Señas Chilena.',
-        theme_color: '#1f6feb',
-        background_color: '#0d1117',
+        theme_color: '#16325B',
+        background_color: '#F7F5F0',
         display: 'standalone',
         start_url: '/',
         icons: [

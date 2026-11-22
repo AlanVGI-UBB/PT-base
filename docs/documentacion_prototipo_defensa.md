@@ -265,7 +265,7 @@ frontend/
 ├── src/
 │   ├── main.jsx                       # Punto de entrada React 18
 │   ├── App.jsx                        # Router manual por window.location.hash
-│   ├── App.css                        # Tema oscuro completo y diseño responsive
+│   ├── App.css                        # Diseño Editorial Académico dual (claro/oscuro) en Plus Jakarta Sans y responsive
 │   ├── api/
 │   │   ├── cliente.js                 # Cliente fetch con Bearer, normalización RUT, manejo 401/403
 │   │   └── clips.js                   # Descarga autenticada de clips a blob:, caché Map, precargar() y liberarClips()
@@ -275,9 +275,11 @@ frontend/
 │   ├── hooks/
 │   │   ├── useAuth.js                 # Persistencia de sesión en localStorage y evento puente-auth-expired
 │   │   ├── useColaSenas.js            # Cola secuencial (máx. 3 pendientes) y ventana 20 s anti-repetición
+│   │   ├── useTheme.js                # Persistencia de tema claro/oscuro en localStorage y sincronía data-theme/meta
 │   │   └── useWebSocket.js            # Reconexión con backoff exponencial [3, 6, 12, 24] s (máx 5) y detener()
 │   ├── components/
-│   │   ├── Header.jsx                 # Navbar con logo, tabs Inicio/Historial y avatar
+│   │   ├── Header.jsx                 # Navbar editorial con tabs Inicio/Historial, tema, usuario y avatar
+│   │   ├── ThemeToggle.jsx            # Selector accesible de modo claro / oscuro
 │   │   ├── EstadoConexion.jsx         # Indicador visual conectado/reconectando/desconectado/fallo
 │   │   ├── Feedback.jsx               # Banner visual de error/warning/info
 │   │   ├── CondicionesModal.jsx       # Aviso informativo y confirmación obligatoria previa a capturar (RN15)
@@ -307,6 +309,7 @@ frontend/
    * Cada **1600 muestras (100 ms)** calcula la energía RMS y escribe un `ArrayBuffer` de **3200 bytes** en formato entero de 16 bits *little-endian* mediante `DataView.setInt16(..., true)`, transfiriéndolo por `port.postMessage({ buffer, rms }, [buffer])` sin copia de memoria.
 
 ### 6.3 Vistas y experiencia de usuario
+* **Sistema visual y temas (`App.css`, `useTheme.js`, `ThemeToggle.jsx`):** interfaz en estética *Editorial Académico* con tipografía unificada (`Plus Jakarta Sans`) y soporte dual para **modo claro** (alabastro cálido `#F7F5F0`, azul marino institucional `#16325B` y resaltado ámbar `#D9822B`, activo por defecto) y **modo oscuro** (grafito cálido `#131519` y tarjetas `#1C1F26`), con conmutador accesible presente en todas las vistas y preferencia persistida en `localStorage` (`puente_lsch_theme`, aplicada antes del primer renderizado).
 * **Login (`LoginView.jsx`):** valida formato y dígito verificador chileno módulo 11 (`normalizarRut`) antes de llamar al servidor; persiste la sesión al recargar o abrir nuevas pestañas (`useAuth.js`); gestiona `beforeinstallprompt` (o guía manual de Chrome) para instalar la PWA.
 * **Dashboard (`DashboardView.jsx`):** consulta las asignaturas inscritas con `puede_capturar` y el estado en vivo de cada sala (`GET /api/salas/{roomId}/estado`), mostrando `"En vivo"` / `"Entrar a la clase"` cuando hay transmisión activa, `"Iniciar Transmisión de Clase"` solo si el usuario tiene `puede_capturar`, y `"Sin clase activa"` sin botón de inicio en caso contrario.
 * **Sala en vivo (`SalaView.jsx`):**
@@ -391,7 +394,7 @@ frontend/
 | `pytest backend/tests` | **71 passed, 1 skipped** | Cubre auth/scrypt/JWT/clips y concurrencia SQLite (14), historial/cierre/tipos (5), índice (4), matching (7), sala/WS/acceso/pausa (14), esquema SQLite (6), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (17) |
 | `pytest ml/tests` | **11 passed** | Cubre `normalizacion.py` (4), `evaluar_matching.py` (1), `evaluar_asr.py` (5), `prueba_carga.py` (1) |
 | `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA (verificada también tras `SPEC-009`) |
-| `pnpm --prefix frontend build` | OK (48 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
+| `pnpm --prefix frontend build` | OK (50 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
 | Evaluación ASR real (`small` CUDA + prompt) | **WER `3.16–3.56 %` · p95 `805–821 ms`** | Sobre `clase_01_cerca.wav` (`404.65 s`) y `clase_02_cerca.wav` (`414.21 s`) a ritmo `1x`; glosario `100 %` (`57/57`) y `95.71 %` (`67/70`); detalle en `docs/resultados_poc.md` |
 | Evaluación de matching (`"prueba"`) | **Prec. `96.34 %` · Rec. `97.53 %`** | Partición protegida de `66` frases (`TP=79, FP=3, FN=2`); compuestos `100 %` (`21/21`) |
 | Carga WebSocket 5 min (`A` y `B`, `stub`) | **`0` perdidos/dup. · p95 `3–4 ms`** | `1+20` en 1 sala y `2 × (1+10)` en 2 salas (`3940` eventos entregados en c/u) sobre `localhost` |
