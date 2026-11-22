@@ -11,6 +11,8 @@ services:
       - ASR_PROVIDER=${ASR_PROVIDER:-stub}
       - WHISPER_MODEL=${WHISPER_MODEL:-base}
       - WHISPER_DEVICE=${WHISPER_DEVICE:-cpu}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
     volumes:
       - whisper_cache:/root/.cache/huggingface
     restart: unless-stopped

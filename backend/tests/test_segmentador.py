@@ -220,6 +220,32 @@ async def test_whisper_provider_cierra_por_falta_de_tramas(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_whisper_provider_vaciado_en_pausa_sin_cerrar_stream(monkeypatch):
+    monkeypatch.setenv("ASR_PROMPT_GLOSARIO", "false")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    fake = _FakeModeloWhisper(respuestas=["antes de pausa", "despues de reanudar"])
+    provider = FasterWhisperProvider(modelo=fake, silencio_ms=500, parcial_ms=2000)
+
+    async def audio():
+        for _ in range(3):
+            yield _trama_voz(100)
+        # Señal de vaciado al pausar (trama vacía)
+        yield b""
+        # Nuevo segmento tras reanudar
+        for _ in range(3):
+            yield _trama_voz(100)
+
+    resultados = [r async for r in provider.transcribe_stream(audio())]
+    assert [(r.texto, r.estable) for r in resultados] == [
+        ("antes de pausa", True),
+        ("despues de reanudar", True),
+    ]
+    assert resultados[0].segmento_id != resultados[1].segmento_id
+
+
+@pytest.mark.asyncio
 async def test_whisper_provider_omite_provisionales_si_hay_atraso(monkeypatch):
     monkeypatch.setenv("ASR_PROMPT_GLOSARIO", "false")
     from app.core.config import get_settings

@@ -1001,7 +1001,7 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 
 ---
 
-## 2026-11-22 — Mejoras tras prueba real en vivo: captura PCM nativa y Replay continuo sin tiempos muertos
+## 2026-11-22 — `3df46e1` — Mejoras tras prueba real en vivo: captura PCM nativa y Replay continuo sin tiempos muertos
 **Refs:** hallazgos de prueba manual en vivo (`SPEC-006`, `SPEC-007`)
 
 **Resumen:** Tras la primera prueba interactiva con micrófono real en Zen Browser (Windows 11), se corrigió la compatibilidad de captura PCM usando frecuencia nativa del hardware sin cancelación de eco conflictiva, y se rediseñó el modo Replay para respetar Play/Pausa real, aplicar velocidad a los videos y avanzar continuamente al ritmo de lectura y señas sin silencios muertos.
@@ -1017,3 +1017,41 @@ matching, mediciones de la PoC, y acceso/sesión/saneamiento.
 - `pytest backend/tests` → `59 passed, 1 skipped` (`@pytest.mark.modelo`).
 - `pytest ml/tests` → `11 passed`.
 - `pnpm --prefix frontend build` → OK (46 módulos).
+
+---
+
+## 2026-11-22 — SPEC-009: acceso por inscripción, permiso de captura, estado de sesión, seguridad y saneamiento
+**Refs:** SPEC-009 `specs/SPEC-009-acceso-sesion-saneamiento.md` (R1–R25, Completada)
+
+**Resumen:** Se cerraron las brechas de control de acceso, estado de sesión, seguridad y mantenimiento entre el prototipo y la especificación del informe: autorización por inscripción en salas/glosario/estado/clips, permiso explícito `puede_capturar`, pausa compartida en servidor con discontinuidades y cierre `explicito|timeout`, aviso previo de condiciones, contraseñas con `scrypt`, JWT de 480 min sin secreto fijo, CORS acotado, limpieza de código sin uso y documentación vigente.
+
+**Cambios:**
+- **Esquema, permisos y seguridad (`backend/`):**
+  - `data/schema.sql`, `app/core/db.py` — agrega `inscripcion.puede_capturar`, `clase.cierre`, `clase.condiciones_confirmadas` y `evento_clase.tipo` con migraciones idempotentes.
+  - `app/core/permisos.py` — **nuevo**: `resolver_sala`, `inscripcion`, `inscripcion_en_curso`, `exigir_inscripcion` y `exigir_inscripcion_curso`.
+  - `app/core/auth.py`, `app/auth/routes.py` — derivación de contraseñas con `hashlib.scrypt` y sal aleatoria de 16 bytes (`scrypt$16384$8$1$...`), verificación con `hmac.compare_digest` y vigencia de JWT según `JWT_EXP_MIN` (`480`).
+  - `app/core/config.py`, `.env.example`, `docker-compose.yml` — elimina `AUTH_PROVIDER`, deja `JWT_SECRET` vacío (genera secreto aleatorio al arrancar con `logger.warning`), agrega `JWT_EXP_MIN=480` y `CORS_ORIGINS=http://localhost:5173`.
+  - `data/seed_glosario.json`, `scripts/seed_glosario.py` — tres usuarios de prueba (`12345678-5` con captura, `9876543-3` oyente sin captura, `11111111-1` solo en `MAT-101` para pruebas negativas), reutilizando `app.core.auth.hash_password`.
+- **Clips protegidos, estado de sesión y limpieza (`backend/`, `frontend/nginx.conf`, `ml/`):**
+  - `app/glossary/repository.py`, `app/main.py`, `frontend/nginx.conf` — agrega `GET /api/cursos/{curso_id}/senas/{termino_id}/video` (401/403/404/200 `video/mp4`, ruta desde BD), retira el montaje público `/data/videos_senas` y `location /data/`, elimina `/ws/echo`, `list_cursos`, `insert_curso` e `insert_termino`, y acota `CORSMiddleware` con `allow_credentials=False`.
+  - `app/salas/manager.py`, `app/asr/whisper_local.py`, `app/main.py` — elimina `RoomState.timeline` e `inicio_ms`; mantiene `RoomState.estado` (`activa|pausada`), maneja `pausar`/`reanudar`, descarta tramas en pausa, vacía el segmento abierto al pausar (`b""` en `FasterWhisperProvider`), envía `estado_sesion` al conectarse un oyente, exige `condiciones=1` al emisor y registra discontinuidades (`pausa`, `reanudacion`, `desconexion`) más `cierre` (`explicito|timeout`).
+  - `app/historial/repository.py`, `app/historial/routes.py` — reemplaza `usuario_participa` por `app.core.permisos.inscripcion`, expone `cierre`, `tipo` y `puede_capturar` (sin `rut_emisor`), y calcula `palabras`/`preview` solo sobre `tipo='segmento'`.
+  - `ml/prueba_carga.py`, `ml/comun.py` — compatibilidad con `&condiciones=1` y rutas protegidas de clips.
+- **Frontend (`frontend/src/`):**
+  - `api/clips.js` — **nuevo**: descarga clips con `Authorization: Bearer`, caché en `Map` de object URLs, `precargar(glosario)` sin bloquear y `liberarClips()` al salir.
+  - `api/cliente.js` — elimina `fetchCursos`, adjunta `error.status` y propaga `403` en `fetchSalaEstado`.
+  - `components/CondicionesModal.jsx` — **nuevo**: aviso informativo y confirmación obligatoria previa a solicitar el micrófono (`R14`).
+  - `components/SenaPlayer.jsx` — reproduce clips desde URL de objeto autenticada (`obtenerClip`).
+  - `views/DashboardView.jsx`, `views/SalaView.jsx` — UI condicional según `puede_capturar`, precarga de clips al entrar a sala, modal de condiciones + `&condiciones=1`, acciones WS `pausar`/`reanudar` y banner `"Transmisión en pausa"`.
+  - `views/HistorialView.jsx`, `views/ClaseDetailView.jsx`, `App.css` — insignia `"Registro incompleto"` en cierres `timeout`, separadores de pausa/reanudación/desconexión con marca de tiempo en Apunte (omitidos por Replay) y liberación de blob URLs al desmontar.
+- **Pruebas y documentación:**
+  - `backend/tests/` (`test_auth.py`, `test_historial.py`, `test_sala.py`, `test_schema.py`, `test_seed.py`, `test_segmentador.py`) — cobertura completa de R1–R24 con secretos de ≥ 32 bytes.
+  - `docs/decisiones_tecnicas.md` — **nuevo**: tabla de divergencias entre informe/plan y prototipo.
+  - `README.md`, `AGENTS.md`, `specs/SPEC-009-acceso-sesion-saneamiento.md`, `specs/README.md`, `docs/documentacion_prototipo_defensa.md` — actualizados al estado real post `SPEC-009`.
+
+**Verificación:**
+- `ruff check backend ml` → `All checks passed!`
+- `pytest backend/tests` → `70 passed, 1 skipped` (`@pytest.mark.modelo`).
+- `pytest ml/tests` → `11 passed`.
+- `pnpm --prefix frontend build` → OK (48 módulos).
+- `python backend/scripts/seed_glosario.py` → OK (2 cursos, 15 términos, 3 usuarios, 5 inscripciones).

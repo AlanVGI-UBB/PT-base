@@ -1,6 +1,6 @@
 # Documentación Técnica y Guía de Defensa — Puente LSCh
 
-**Estado del repositorio documentado:** hasta `SPEC-008` (implementada y verificada, con resultados reproducibles consolidados en `docs/resultados_poc.md`).  
+**Estado del repositorio documentado:** hasta `SPEC-009` (PoC completa y verificada, con resultados reproducibles en `docs/resultados_poc.md` y registro de decisiones en `docs/decisiones_tecnicas.md`).  
 **Propósito:** reunir en un único documento todo lo que está efectivamente construido en código, cómo funciona internamente cada pieza, qué decisiones técnicas lo respaldan, qué limitaciones existen hoy y cómo defender el proyecto frente a preguntas técnicas, metodológicas o normativas de la comisión evaluadora.
 
 ---
@@ -21,7 +21,7 @@
 | **Transcripción real (PCM + faster-whisper)** | Implementado | `AudioWorklet` 16 kHz s16le, `Segmentador` RMS, `FasterWhisperProvider` local, retiro de Google | `SPEC-006` |
 | **Glosario piloto, clips de ensayo y matching v2** | Implementado | Curso piloto provisional `INF-221` (15 conceptos) + control `MAT-101`, 15 MP4 de ensayo, doble clave + bloqueos + abstenciones, cola acotada | `SPEC-007` |
 | **Mediciones cuantitativas de la PoC** | Implementado (brecha acústica R9 declarada) | Instrumentación `metrica_segmento`, `evaluar_asr.py`, `evaluar_matching.py`, `prueba_carga.py`, 2 audios propios (`~6.7` y `~6.9` min, condición cercana) y resultados en `docs/resultados_poc.md` | `SPEC-008` |
-| **Acceso por inscripción, pausa compartida y seguridad** | Pendiente (Borrador) | Permiso `puede_capturar`, clips protegidos, pausa en servidor, `scrypt`, CORS/JWT | `SPEC-009` |
+| **Acceso por inscripción, pausa compartida y seguridad** | Implementado | Permiso `puede_capturar`, autorización en WS/glosario/estado/clips, pausa en servidor con discontinuidades y cierre `explicito\|timeout`, aviso de condiciones, `scrypt`, JWT 480 min, CORS acotado, saneamiento y `docs/decisiones_tecnicas.md` | `SPEC-009` |
 | **Co-diseño PIESDI y banco real (80–150 términos)** | Fuera de software (`OE1`) | Acuerdo con docente, validación con intérpretes y grabación real | Propuesta / Informe |
 
 ### Decisión estructural clave: el paradigma centrado en el estudiante
@@ -210,9 +210,10 @@ backend/
 | `SPACY_MODEL` | `"es_core_news_md"` | Modelo de `spaCy` cargado por `get_nlp()` |
 | `DB_PATH` | `backend/data/glosario.db` | Ruta del archivo SQLite |
 | `STUB_INTERVAL_MS` | `1500` | Intervalo entre frases en modo `stub` |
-| `JWT_SECRET` | `"cambiar-en-produccion"` | Secreto HMAC-SHA256 para JWT |
+| `JWT_SECRET` | `""` (aleatorio si vacío) | Secreto HMAC-SHA256 para JWT (genera uno aleatorio con `logger.warning` si queda vacío) |
+| `JWT_EXP_MIN` | `480` | Vigencia del token en minutos (8 horas, suficiente para una jornada de clases) |
+| `CORS_ORIGINS` | `"http://localhost:5173"` | Lista separada por comas de orígenes CORS permitidos (`allow_credentials=False`) |
 | `SALA_TIMEOUT_MS` | `30000` | Gracia tras desconexión abrupta del emisor antes de cerrar |
-| `AUTH_PROVIDER` | `"local"` | Reservado para futura autenticación institucional |
 | `METRICAS` | `True` | Activa/desactiva el registro de tiempos en `metrica_segmento` |
 
 ---
@@ -222,20 +223,21 @@ backend/
 El esquema SQLite habilita `PRAGMA journal_mode=WAL` y `PRAGMA foreign_keys=ON`. Contiene 7 tablas:
 
 1. **`curso`:** `(id PK, cod_ramo, nombre)`. Ej.: `1, "INF-221", "Estructuras de Datos"`.
-2. **`termino`:** `(id PK, curso_id FK, texto_visible, formas_json, bloqueos_json, video_url, estado)`. Ya no almacena lemas manuales ni `n_palabras`; `estado` restringe `ensayo | publicado | retirado` vía `CHECK`.
-3. **`usuario`:** `(rut PK, password_hash, nombre, apellido)`.
-4. **`inscripcion`:** `(rut FK, curso_id FK, seccion, PK(rut, curso_id, seccion))`.
-5. **`clase`:** `(id PK, room_id, curso_id FK, seccion, rut_emisor FK, fecha_inicio, fecha_fin, duracion_ms, titulo)`. Registra cada sesión de clase.
-6. **`evento_clase`:** `(id PK, clase_id FK, timestamp_ms, texto, estable, senas_json, abstenciones_json)`. Almacena los segmentos consolidados, todas las señas detectadas y las abstenciones por bloqueo en JSON.
+2. **`termino`:** `(id PK, curso_id FK, texto_visible, formas_json, bloqueos_json, video_url, estado)`. Ya no almacena lemas manuales ni `n_palabras`; `estado` restringe `ensayo | publicado | retirado` vía `CHECK`. La columna `video_url` guarda el nombre de archivo interno y las rutas públicas se exponen vía `/api/cursos/{curso_id}/senas/{termino_id}/video`.
+3. **`usuario`:** `(rut PK, password_hash, nombre, apellido)`. `password_hash` usa `hashlib.scrypt` con sal aleatoria de 16 bytes por usuario (`scrypt$16384$8$1$<sal>$<derivada>`).
+4. **`inscripcion`:** `(rut FK, curso_id FK, seccion, puede_capturar, PK(rut, curso_id, seccion))`.
+5. **`clase`:** `(id PK, room_id, curso_id FK, seccion, rut_emisor FK, fecha_inicio, fecha_fin, duracion_ms, titulo, cierre, condiciones_confirmadas)`. `cierre` toma `explicito | timeout`.
+6. **`evento_clase`:** `(id PK, clase_id FK, timestamp_ms, texto, estable, senas_json, abstenciones_json, tipo)`. `tipo` distingue `segmento | pausa | reanudacion | desconexion`.
 7. **`metrica_segmento`:** `(id PK, clase_id FK, segmento_id, audio_inicio_ms, audio_fin_ms, llegada_fin_ms, asr_ms, nlp_ms, emitido_ms, receptores)`. Instrumenta latencias con reloj monotónico por segmento final (las tablas obsoletas `sesion` y `segmento` de `SPEC-002` fueron retiradas).
 
 ### Datos sembrados actualmente (`backend/data/seed_glosario.json`)
 * **2 cursos:**
   * `INF-221` (*Estructuras de Datos*) — curso piloto **provisional** propuesto por el autor para la PoC (declarado en la clave `"nota"` del JSON y en `README.md`, sin acuerdo con PIESDI ni con un docente), con **15 conceptos** en `estado="ensayo"`: *arreglo, lista enlazada, pila, cola, árbol binario, nodo, puntero, grafo, tabla hash, recursión, algoritmo, complejidad, ordenamiento, búsqueda binaria, memoria*.
   * `MAT-101` (*Álgebra Lineal*) — curso de control **sin términos** para verificar aislamiento entre salas.
-* **2 usuarios de prueba (password `test123`, RUT con dígito verificador válido):**
-  * `12345678-5` — Juan Pérez (inscrito en ambos cursos).
-  * `9876543-3` — María González (inscrita en ambos cursos).
+* **3 usuarios de prueba (password `test123`, RUT con dígito verificador válido, hashes `scrypt` únicos):**
+  * `12345678-5` — Juan Pérez (inscrito en `INF-221` sec. `1` y `MAT-101` sec. `3`, `puede_capturar=1`).
+  * `9876543-3` — María González (inscrita en `INF-221` sec. `1` y `MAT-101` sec. `3`, `puede_capturar=0`).
+  * `11111111-1` — Pedro Soto (inscrito solo en `MAT-101` sec. `3`, `puede_capturar=0` — pruebas negativas `CA01`).
 * **15 clips MP4 de ensayo** en `backend/data/videos_senas/` (8.2–10.6 kB cada uno, H.264 640×360, 3 s, `-movflags +faststart`), generados por `backend/scripts/generar_clips_ensayo.py` con tarjetas de texto (`"CLIP DE ENSAYO"`, concepto, `"Sin validación lingüística"`) sin personas y **versionados en Git** para que un clon limpio arranque sin pasos manuales.
 
 ### Datos y corpus para evaluación (`ml/`)
@@ -311,21 +313,23 @@ frontend/
 | Método | Ruta | Autenticación | Descripción / Respuesta |
 |---|---|---|---|
 | `GET` | `/health` | Pública | `{"status": "ok"}` |
-| `POST` | `/api/auth/login` | Pública | Recibe `{rut, password}`; valida hash y devuelve `{token, rut, nombre, apellido}` o `401` |
-| `GET` | `/api/auth/usuario/me` | `Bearer` | Datos del usuario autenticado y sus inscripciones (`401` si falta/inválido) |
-| `GET` | `/api/cursos` | `Bearer` | Lista cursos inscritos del RUT del token (`id, cod_ramo, nombre, seccion`) |
-| `GET` | `/api/cursos/{curso_id}/glosario` | `Bearer` | Lista términos del curso desde SQLite |
-| `GET` | `/api/salas/{room_id}/estado` | `Bearer` | Devuelve `{room_id, activa, rut_emisor}` |
-| `GET` | `/api/historial` | `Bearer` | Clases de las secciones donde el usuario está inscrito, con `palabras` y `preview` |
-| `GET` | `/api/historial/{clase_id}` | `Bearer` | Detalle de clase y sus eventos; exige ser emisor o estar inscrito (`403` si no, `404` si no existe) |
-| `GET` | `/data/videos_senas/{archivo}` | Pública (estática) | Sirve archivos MP4 de señas |
+| `POST` | `/api/auth/login` | Pública | Recibe `{rut, password}`; valida hash `scrypt` con `hmac.compare_digest` y devuelve `{token, rut, nombre, apellido}` o `401` |
+| `GET` | `/api/auth/usuario/me` | `Bearer` | Datos del usuario autenticado y sus inscripciones con `puede_capturar` (`401` si falta/inválido) |
+| `GET` | `/api/cursos` | `Bearer` | Lista cursos inscritos del RUT del token (`id, cod_ramo, nombre, seccion, puede_capturar`) |
+| `GET` | `/api/cursos/{curso_id}/glosario` | `Bearer` + inscripción | Lista términos del curso con `video_url` protegida (`403` si no está inscrito) |
+| `GET` | `/api/cursos/{curso_id}/senas/{termino_id}/video` | `Bearer` + inscripción | Sirve el clip `video/mp4` desde DB (`401` sin token, `403` sin inscripción, `404` si retirado o inexistente) |
+| `GET` | `/api/salas/{room_id}/estado` | `Bearer` + inscripción | Devuelve `{room_id, curso_id, activa, puede_capturar}` sin `rut_emisor` (`403` si no está inscrito) |
+| `GET` | `/api/historial` | `Bearer` | Clases de las secciones donde el usuario está inscrito, con `cierre`, `palabras` y `preview` (solo `tipo='segmento'`) |
+| `GET` | `/api/historial/{clase_id}` | `Bearer` | Detalle de clase (`cierre`) y sus eventos (`tipo`), exigiendo ser emisor o estar inscrito (`403` / `404`) |
 
-### 7.2 Protocolo WebSocket (`/ws/sala/{room_id}?rol=emitter|listener&token=...`)
+### 7.2 Protocolo WebSocket (`/ws/sala/{room_id}?rol=emitter|listener&token=...&condiciones=1`)
 
+* **Validaciones de acceso al conectar:** token JWT válido, sala válida e inscripción del RUT en el curso y sección (`No tienes acceso a esta sala`). Para `rol=emitter`, además exige `puede_capturar = 1` y `condiciones=1`.
 * **Mensajes Cliente (emisor) → Servidor:**
-  * **Trama binaria:** PCM s16le mono 16 kHz (3200 bytes = 100 ms; el servidor descarta tramas impares o `> ASR_MAX_TRAMA_BYTES`).
-  * **Texto JSON:** `{"action": "finalizar", "titulo": "Texto opcional" | null}`.
+  * **Trama binaria:** PCM s16le mono 16 kHz (3200 bytes = 100 ms; descartada si la sala está pausada o si tiene longitud impar / `> ASR_MAX_TRAMA_BYTES`).
+  * **Texto JSON:** `{"action": "pausar"}`, `{"action": "reanudar"}`, `{"action": "finalizar", "titulo": "Texto opcional" | null}`.
 * **Mensajes Servidor → Clientes (emisor y oyentes):**
+  * **Estado de sesión (al conectarse un oyente y en cada pausa/reanudación):** `{"type": "estado_sesion", "estado": "activa" | "pausada", "timestamp_ms": 12340}`.
   * **Segmento provisional o final:**
     ```json
     {
@@ -337,7 +341,7 @@ frontend/
         {
           "termino_id": 2,
           "texto_visible": "lista enlazada",
-          "video_url": "/data/videos_senas/lista_enlazada.mp4",
+          "video_url": "/api/cursos/1/senas/2/video",
           "estado": "ensayo",
           "texto_detectado": "listas enlazadas"
         }
@@ -348,9 +352,7 @@ frontend/
     ```
   * **Desconexión inesperada del emisor:** `{"type": "emisor_desconectado", "mensaje": "..."}`.
   * **Cierre consolidado:** `{"type": "clase_finalizada", "clase_id": 1}` (seguido del cierre de WebSockets oyentes).
-  * **Error de acceso o sala:** `{"type": "error", "mensaje": "..."}` (token inválido/expirado, `room_id` inválido, curso inexistente, sala ya activa para segundo emisor, o sala inactiva para oyente).
-
-*(Nota: sigue existiendo `/ws/echo` en `main.py` como vestigio de `SPEC-001`, cuya eliminación está prevista en `SPEC-009`.)*
+  * **Error de acceso o sala:** `{"type": "error", "mensaje": "..."}`.
 
 ---
 
@@ -360,7 +362,7 @@ frontend/
    * Backend en `backend/venv` (Python 3.14.0): `uvicorn app.main:app --port 8000` (con `$env:ASR_PROVIDER="whisper"` para inferencia real en GPU RTX 3050).
    * Frontend: `pnpm --prefix frontend dev` en `http://localhost:5173`.
 2. **Docker Compose (`docker-compose.yml`):**
-   * `backend`: imagen `python:3.11-slim` con `libgomp1`, `faster-whisper`, `es_core_news_md`; variables `ASR_PROVIDER` (`stub`), `WHISPER_MODEL` (`base`), `WHISPER_DEVICE` (`cpu`) y volumen persistente `whisper_cache` en `/root/.cache/huggingface`.
+   * `backend`: imagen `python:3.11-slim` con `libgomp1`, `faster-whisper`, `es_core_news_md`; variables `ASR_PROVIDER`, `WHISPER_MODEL`, `WHISPER_DEVICE`, `JWT_SECRET`, `CORS_ORIGINS` y volumen persistente `whisper_cache` en `/root/.cache/huggingface`.
    * `frontend`: build multi-stage (Node 20 + pnpm → `nginx:alpine` + OpenSSL). Al arrancar, `docker-entrypoint.sh` sustituye `${BACKEND_UPSTREAM}` (por defecto `backend:8000`, configurable ej. a `host.docker.internal:8000` para apuntar a un backend nativo con GPU) y genera una CA autofirmada (`Puente LSCh Dev CA`) más un certificado TLS con SAN para `CERT_HOST` (`localhost` o IP local), exponiendo `/ca.crt` para instalar la CA en dispositivos móviles.
    * **Scripts de arranque:**
      * `run.ps1`: detecta la IPv4 local, construye y levanta `backend` y `frontend` con `CERT_HOST=$ip` e imprime los pasos para instalar el certificado en Android/Windows.
@@ -373,36 +375,29 @@ frontend/
 | Verificación | Resultado observado | Alcance / Condición |
 |---|---|---|
 | `ruff check backend ml` | `All checks passed!` | Lint completo de `backend/` y `ml/` |
-| `pytest backend/tests` | **59 passed, 1 skipped** | Cubre auth (7), historial (5), índice (4), matching (7), sala/WS (10), esquema SQLite (6), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (16) |
+| `pytest backend/tests` | **70 passed, 1 skipped** | Cubre auth/scrypt/JWT/clips (13), historial/cierre/tipos (5), índice (4), matching (7), sala/WS/acceso/pausa (14), esquema SQLite (6), seed/clips (4), segmentador + `FasterWhisperProvider` con modelo simulado (17) |
 | `pytest ml/tests` | **11 passed** | Cubre `normalizacion.py` (4), `evaluar_matching.py` (1), `evaluar_asr.py` (5), `prueba_carga.py` (1) |
 | `pytest backend/tests -m modelo` | **1 passed** | Prueba de humo real cargando `WhisperModel('tiny')` en CUDA (verificada en `SPEC-006`) |
-| `pnpm --prefix frontend build` | OK (46 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
+| `pnpm --prefix frontend build` | OK (48 módulos) | Genera bundle productivo y Service Worker PWA en `frontend/dist/` |
 | Evaluación ASR real (`small` CUDA + prompt) | **WER `3.16–3.56 %` · p95 `805–821 ms`** | Sobre `clase_01_cerca.wav` (`404.65 s`) y `clase_02_cerca.wav` (`414.21 s`) a ritmo `1x`; glosario `100 %` (`57/57`) y `95.71 %` (`67/70`); detalle en `docs/resultados_poc.md` |
 | Evaluación de matching (`"prueba"`) | **Prec. `96.34 %` · Rec. `97.53 %`** | Partición protegida de `66` frases (`TP=79, FP=3, FN=2`); compuestos `100 %` (`21/21`) |
 | Carga WebSocket 5 min (`A` y `B`, `stub`) | **`0` perdidos/dup. · p95 `3–4 ms`** | `1+20` en 1 sala y `2 × (1+10)` en 2 salas (`3940` eventos entregados en c/u) sobre `localhost` |
-| `docker compose up --build` | **No ejecutado en esta revisión** | El daemon de Docker Desktop no estaba iniciado |
-| Prueba manual en navegador con micrófono físico y 2 dispositivos | **Pendiente de ejecución interactiva** | — |
+| Prueba interactiva en navegador con micrófono real | **Verificada (1 dispositivo)** | Transcripción en vivo y Replay continuo probados en Zen Browser (Windows 11); resta prueba interactiva con 2 dispositivos en red |
 
 ---
 
 ## 10. Limitaciones actuales conocidas (transparencia técnica)
 
-Estas brechas están identificadas explícitamente entre el prototipo actual (`SPEC-008`) y los requerimientos del informe de avance; `SPEC-009` aborda el cierre de las brechas de control de acceso, sesión y seguridad:
+Tras completar `SPEC-009` (acceso por inscripción, permiso de captura, clips protegidos, pausa compartida en servidor, discontinuidades, aviso de condiciones, `scrypt`, JWT 480 min y CORS acotado), las limitaciones vigentes del prototipo son:
 
-1. **Seguridad y control de acceso incompletos (cubre `SPEC-009`):**
-   * Hoy `ws_sala` solo valida que el token sea válido y que el `cod_ramo` exista: un usuario autenticado no inscrito puede escuchar una sala o crear una clase en una sección inexistente; `GET /api/cursos/{id}/glosario` y `/data/videos_senas/*` no verifican inscripción/permiso.
-   * El rol `emitter` se asigna por orden de llegada (quien entra primero), sin columna `puede_capturar` ni aviso previo de condiciones de registro.
-   * Las contraseñas usan SHA-256 con sal fija (`"puente_lsch_salt"`), el token expira en 1 hora (menor a una clase de 90 min), `CORS` usa `allow_origins=["*"]` y `JWT_SECRET` tiene un valor por defecto conocido.
-2. **Pausa solo local (cubre `SPEC-009`):**
-   * Pausar detiene el envío desde el navegador, pero el servidor no cambia el estado de la sala, los oyentes no ven aviso de "Transmisión en pausa" y la discontinuidad no se registra en `evento_clase`.
-3. **Glosario provisional y límites de desambiguación (`OE1` / alcance PoC):**
+1. **Glosario provisional y límites de desambiguación (`OE1` / alcance PoC):**
    * Aunque el glosario ya es coherente con `INF-221` y los clips son tarjetas MP4 reproducibles rotuladas como ensayo, siguen siendo recursos **sin validación lingüística ni participación de PIESDI**.
    * El mecanismo de `bloqueos` resuelve usos ambiguos conocidos de antemano (ej. `"de memoria"`, `"pila de cuadernos"`, `"hacer cola"`), pero las mediciones sobre `"prueba"` mostraron sus dos límites: `3` FP por contextos no vistos (*"cola larga"*, *"pila de pruebas"*, *"pila del micrófono"*) y `2` FN porque el bloqueo `"de memoria"` suprime compuestos técnicos reales (*"fuga de memoria"*, *"asignación de memoria"*).
-4. **Límites de la evidencia cuantitativa obtenida en la PoC (`docs/resultados_poc.md`):**
+2. **Límites de la evidencia cuantitativa obtenida en la PoC (`docs/resultados_poc.md`):**
    * El corpus ASR usa **voz única leída del autor** (no aula real espontánea) y ambas muestras (`6.7` y `6.9` min) quedaron grabadas con micrófono cercano en ambiente silencioso, dejando **pendiente la condición acústica con ruido ambiente o mayor distancia** (`R9`).
    * `RNF01` se midió solo en servidor (sin captura inicial de `100 ms`, red Wi-Fi real ni renderizado en receptor), la prueba de carga usó `ASR_PROVIDER=stub` en `localhost` y no hubo evaluación con usuarios sordos.
-5. **Alcance diferido a Proyecto de Título (2027) y PIESDI:**
-   * Co-diseño y banco real de 80–150 términos con PIESDI (`OE1`), reglas acotadas de ordenamiento de glosas (`RF15`), recuperación de eventos perdidos tras corte de red (`RF20`), reconexión del emisor a la misma clase, interfaz WCAG 2.2 AA (`RNF08`), administración desde la app (`RF24–RF27`) y reconocimiento de señas por cámara (`signs_recognition/`).
+3. **Alcance diferido a Proyecto de Título (2027) y PIESDI:**
+   * Co-diseño y banco real de 80–150 términos con PIESDI (`OE1`), reglas acotadas de ordenamiento de glosas (`RF15`), recuperación de eventos perdidos tras corte de red (`RF20`), reconexión del emisor a la misma clase, auditoría y políticas de conservación/eliminación (`RF28–RF29`), interfaz WCAG 2.2 AA (`RNF08`), administración de usuarios/cursos/permisos desde la app (`RF02–RF03`, `RF24–RF27`), inicio de sesión institucional y reconocimiento de señas por cámara (`signs_recognition/`).
 
 ---
 
@@ -458,10 +453,10 @@ Estas brechas están identificadas explícitamente entre el prototipo actual (`S
 
 ### Seguridad, privacidad y operación
 15. **¿Se graba el audio de las clases? ¿Cómo abordan la privacidad de datos?**
-    No. El audio PCM solo existe en memoria transitoria durante el procesamiento del segmento y jamás se escribe a disco ni en la base de datos (`RNF11`). En SQLite se persiste únicamente el texto consolidado y los eventos de señas (y métricas de tiempo por segmento si `METRICAS=true`, desactivable con `METRICAS=false`). En cuanto a contraseñas, JWT y acceso por inscripción, las brechas detectadas en el prototipo actual (SHA-256 fijo, autorización incompleta de salas/clips) están especificadas y acotadas en `SPEC-009` para su cierre antes de pruebas con participantes.
+    No. El audio PCM solo existe en memoria transitoria durante el procesamiento del segmento y jamás se escribe a disco ni en la base de datos (`RNF11`). En SQLite se persiste únicamente el texto consolidado, los eventos de señas y las marcas de discontinuidad (y métricas de tiempo por segmento si `METRICAS=true`, desactivable con `METRICAS=false`). Además, tras `SPEC-009`, las contraseñas usan derivación `scrypt` con sal única por usuario, los tokens JWT duran 8 horas (`480 min`), `CORS` está acotado, todas las rutas (salas WS, glosario, estado y clips MP4) exigen inscripción y el emisor debe confirmar el aviso de condiciones antes de activar el micrófono.
 
 16. **¿Por qué usan HTTPS y certificados propios si es un proyecto universitario local?**
     Los navegadores modernos bloquean `navigator.mediaDevices.getUserMedia`, `AudioWorklet` y la instalación de PWA en cualquier origen que no sea `localhost` o `https://`. Para que un estudiante acceda desde su celular por Wi-Fi a la IP del computador servidor (`run.ps1`) o por internet (`run-cloudflare.ps1`), el contenedor `nginx` sirve TLS válido mediante una CA de desarrollo instalable o terminación HTTPS de Cloudflare.
 
 17. **¿Qué faltaría para pasar de este prototipo de Anteproyecto al sistema final de Proyecto de Título (2027)?**
-    En el corto plazo (cierre del Anteproyecto, `SPEC-009` y brecha acústica de `R9`): cerrar autorización por inscripción, permiso de captura, pausa compartida y seguridad (`scrypt`/CORS/JWT), y complementar las mediciones con una grabación en aula real o condición degradada con ruido/distancia. Para Proyecto de Título (semestre 2027): trabajo lingüístico con PIESDI y docente del curso (80–150 señas validadas), reglas acotadas de ordenamiento de glosas (`RF15`), análisis de contexto o excepciones sobre bloqueos (`"fuga de memoria"`), reconexión con recuperación por secuencia (`RF20`), auditoría/conservación (`RF28–RF29`), interfaz accesible WCAG 2.2 AA (`RNF08`) y evaluación empírica con estudiantes sordos.
+    En el corto plazo, complementar las mediciones de `SPEC-008` con una grabación en aula real o condición degradada con ruido/distancia (`R9`) y realizar una prueba manual con dos dispositivos en red. Para Proyecto de Título (semestre 2027): trabajo lingüístico con PIESDI y docente del curso (80–150 señas validadas), reglas acotadas de ordenamiento de glosas (`RF15`), análisis de contexto o excepciones sobre bloqueos (`"fuga de memoria"`), reconexión con recuperación por secuencia (`RF20`), auditoría/conservación (`RF28–RF29`), administración desde la app (`RF02–RF03`, `RF24–RF27`), interfaz accesible WCAG 2.2 AA (`RNF08`) y evaluación empírica con estudiantes sordos.

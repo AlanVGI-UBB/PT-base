@@ -7,19 +7,21 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.asr.base import AsrConfigError, get_asr_provider
+from app.asr.stub import StubAsrProvider
 from app.auth.routes import router as auth_router
 from app.core.auth import obtener_rut, verificar_token
 from app.core.config import get_settings
 from app.core.db import get_connection
+from app.core.permisos import exigir_inscripcion_curso, inscripcion, resolver_sala
 from app.evaluation.metricas import registrar_segmento
 from app.glossary.indice import obtener_indice_curso
 from app.glossary.matching import buscar_terminos
-from app.glossary.repository import ensure_schema, list_terminos
+from app.glossary.repository import ensure_schema, list_terminos, obtener_termino_video
 from app.historial.repository import crear_clase, finalizar_clase, guardar_evento
 from app.historial.routes import router as historial_router
 from app.salas.manager import RoomManager
@@ -42,17 +44,21 @@ async def lifespan(app: FastAPI):
         RoomManager.limpiar()
 
 
-app = FastAPI(title="Puente LSCh API", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Puente LSCh API", version="0.4.0", lifespan=lifespan)
+
+_cors_origins = [
+    origin.strip()
+    for origin in get_settings().CORS_ORIGINS.split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.mount("/data/videos_senas", StaticFiles(directory=str(DATA_DIR / "videos_senas")), name="videos_senas")
 
 app.include_router(auth_router)
 app.include_router(historial_router)
@@ -68,41 +74,54 @@ def api_cursos(request: Request):
     rut = obtener_rut(request)
     conn = get_connection()
     rows = conn.execute(
-        "SELECT c.id, c.cod_ramo, c.nombre, i.seccion "
+        "SELECT c.id, c.cod_ramo, c.nombre, i.seccion, i.puede_capturar "
         "FROM inscripcion i "
         "JOIN curso c ON c.id = i.curso_id "
         "WHERE i.rut = ? ORDER BY c.id, i.seccion",
         (rut,),
     ).fetchall()
-    return [dict(r) for r in rows]
+    return [
+        {
+            "id": r["id"],
+            "cod_ramo": r["cod_ramo"],
+            "nombre": r["nombre"],
+            "seccion": r["seccion"],
+            "puede_capturar": bool(r["puede_capturar"]),
+        }
+        for r in rows
+    ]
 
 
 @app.get("/api/cursos/{curso_id}/glosario")
 async def api_glosario(request: Request, curso_id: int) -> list[dict]:
-    obtener_rut(request)
+    rut = obtener_rut(request)
+    exigir_inscripcion_curso(rut, curso_id)
     return list_terminos(curso_id)
 
 
-@app.websocket("/ws/echo")
-async def ws_echo(ws: WebSocket) -> None:
-    await ws.accept()
-    try:
-        while True:
-            payload = await ws.receive_text()
-            await ws.send_json(
-                {
-                    "type": "echo",
-                    "text": payload,
-                    "received_at": datetime.now(timezone.utc).isoformat(),
-                    "echoed_at": datetime.now(timezone.utc).isoformat(),
-                }
-            )
-    except WebSocketDisconnect:
-        return
+@app.get("/api/cursos/{curso_id}/senas/{termino_id}/video")
+def video_sena(request: Request, curso_id: int, termino_id: int) -> FileResponse:
+    rut = obtener_rut(request)
+    exigir_inscripcion_curso(rut, curso_id)
+    termino = obtener_termino_video(curso_id, termino_id)
+    if not termino or termino.get("estado") == "retirado":
+        raise HTTPException(status_code=404, detail="Clip no disponible")
+    videos_dir = (DATA_DIR / "videos_senas").resolve()
+    nombre_archivo = Path(termino["video_url"]).name
+    ruta = (videos_dir / nombre_archivo).resolve()
+    if ruta.parent != videos_dir or not ruta.is_file():
+        raise HTTPException(status_code=404, detail="Archivo de video no encontrado")
+    return FileResponse(str(ruta), media_type="video/mp4")
 
 
 @app.websocket("/ws/sala/{room_id}")
-async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), token: str = Query("")):
+async def ws_sala(
+    ws: WebSocket,
+    room_id: str,
+    rol: str = Query("listener"),
+    token: str = Query(""),
+    condiciones: str = Query("0"),
+):
     rut = verificar_token(token)
     if not rut:
         await ws.accept()
@@ -110,28 +129,39 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
         await ws.close()
         return
 
-    partes = room_id.rsplit("-", 1)
-    if len(partes) != 2:
+    resuelta = resolver_sala(room_id)
+    if not resuelta:
         await ws.accept()
-        await ws.send_json({"type": "error", "mensaje": "Formato de room_id inválido. Usar COD_RAMO-SECCION"})
+        await ws.send_json({"type": "error", "mensaje": "No tienes acceso a esta sala"})
         await ws.close()
         return
-    cod_ramo, seccion = partes
+    curso_id, seccion = resuelta
 
-    conn = get_connection()
-    curso_row = conn.execute(
-        "SELECT id, nombre FROM curso WHERE cod_ramo = ?", (cod_ramo,)
-    ).fetchone()
-    if not curso_row:
+    insc = inscripcion(rut, curso_id, seccion)
+    if not insc:
         await ws.accept()
-        await ws.send_json({"type": "error", "mensaje": f"Curso {cod_ramo} no encontrado"})
+        await ws.send_json({"type": "error", "mensaje": "No tienes acceso a esta sala"})
         await ws.close()
         return
-    curso_id = curso_row["id"]
 
     await ws.accept()
 
     if rol == "emitter":
+        if not insc["puede_capturar"]:
+            await ws.send_json({"type": "error", "mensaje": "No tienes permiso de captura en esta sala"})
+            await ws.close()
+            return
+
+        if condiciones != "1":
+            await ws.send_json(
+                {
+                    "type": "error",
+                    "mensaje": "Debes confirmar las condiciones de registro antes de capturar",
+                }
+            )
+            await ws.close()
+            return
+
         if await RoomManager.existe(room_id):
             await ws.send_json({"type": "error", "mensaje": "Ya existe una transmisión activa en esta sala"})
             await ws.close()
@@ -159,7 +189,14 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
 
         sala = await RoomManager.crear(room_id, curso_id, seccion, rut, ws, indice)
         inicio_iso = datetime.now(timezone.utc).isoformat()
-        clase_id_db = crear_clase(room_id, curso_id, seccion, rut, inicio_iso)
+        clase_id_db = crear_clase(
+            room_id,
+            curso_id,
+            seccion,
+            rut,
+            inicio_iso,
+            condiciones_confirmadas=True,
+        )
         sala.clase_id = clase_id_db
 
         logger.info("Sala %s creada por %s (clase %d)", room_id, rut, clase_id_db)
@@ -185,6 +222,8 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                         return
                     trama = msg.get("bytes")
                     if trama is not None:
+                        if sala.estado == "pausada":
+                            continue
                         if len(trama) % 2 != 0 or len(trama) > max_trama_bytes:
                             if not session_state["trama_invalida_registrada"]:
                                 logger.warning(
@@ -200,7 +239,49 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                     elif msg.get("text") is not None:
                         try:
                             data = json.loads(msg["text"])
-                            if data.get("action") == "finalizar":
+                            action = data.get("action")
+                            if action == "pausar" and sala.estado != "pausada":
+                                ts_ms = int(time.time() * 1000) - t_inicio
+                                await RoomManager.set_estado(room_id, "pausada", ts_ms)
+                                await audio_queue.put(b"")
+                                guardar_evento(
+                                    clase_id_db,
+                                    ts_ms,
+                                    None,
+                                    True,
+                                    "[]",
+                                    "[]",
+                                    tipo="pausa",
+                                )
+                                await RoomManager.broadcast(
+                                    room_id,
+                                    {
+                                        "type": "estado_sesion",
+                                        "estado": "pausada",
+                                        "timestamp_ms": ts_ms,
+                                    },
+                                )
+                            elif action == "reanudar" and sala.estado != "activa":
+                                ts_ms = int(time.time() * 1000) - t_inicio
+                                await RoomManager.set_estado(room_id, "activa", ts_ms)
+                                guardar_evento(
+                                    clase_id_db,
+                                    ts_ms,
+                                    None,
+                                    True,
+                                    "[]",
+                                    "[]",
+                                    tipo="reanudacion",
+                                )
+                                await RoomManager.broadcast(
+                                    room_id,
+                                    {
+                                        "type": "estado_sesion",
+                                        "estado": "activa",
+                                        "timestamp_ms": ts_ms,
+                                    },
+                                )
+                            elif action == "finalizar":
                                 session_state["titulo"] = data.get("titulo")
                                 session_state["finalizar"] = True
                                 await audio_queue.put(None)
@@ -219,12 +300,15 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 yield chunk
 
         async def _transcribir():
+            es_stub = isinstance(provider, StubAsrProvider)
             async for resultado in provider.transcribe_stream(
                 _audio_gen(),
                 contexto=contexto,
             ):
                 if stop_event.is_set():
                     break
+                if es_stub and sala.estado == "pausada":
+                    continue
                 if not resultado.texto.strip():
                     continue
                 ts_ms = int(time.time() * 1000) - t_inicio
@@ -246,6 +330,7 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                         True,
                         senas_json,
                         abstenciones_json,
+                        tipo="segmento",
                     )
                 else:
                     senas = []
@@ -322,6 +407,19 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                     with contextlib.suppress(BaseException):
                         await t
 
+                cierre = "explicito" if session_state["finalizar"] else "timeout"
+                if not session_state["finalizar"]:
+                    ts_desc = int(time.time() * 1000) - t_inicio
+                    guardar_evento(
+                        clase_id_db,
+                        ts_desc,
+                        None,
+                        True,
+                        "[]",
+                        "[]",
+                        tipo="desconexion",
+                    )
+
                 if session_state["disconectado"] and not session_state["finalizar"]:
                     timeout_ms = settings.SALA_TIMEOUT_MS
                     logger.info(
@@ -343,22 +441,36 @@ async def ws_sala(ws: WebSocket, room_id: str, rol: str = Query("listener"), tok
                 titulo = session_state["titulo"]
                 if titulo is not None:
                     titulo = titulo.strip() or None
-                finalizar_clase(clase_id_db, fin_iso, duracion, titulo)
+                finalizar_clase(clase_id_db, fin_iso, duracion, titulo, cierre=cierre)
                 await _cerrar_listeners({"type": "clase_finalizada", "clase_id": clase_id_db})
-                logger.info("Sala %s finalizada (clase %d, %d ms, titulo=%r)", room_id, clase_id_db, duracion, titulo)
+                logger.info(
+                    "Sala %s finalizada (clase %d, %d ms, cierre=%s, titulo=%r)",
+                    room_id,
+                    clase_id_db,
+                    duracion,
+                    cierre,
+                    titulo,
+                )
             finally:
                 await RoomManager.eliminar(room_id)
                 with contextlib.suppress(Exception):
                     await ws.close()
 
     elif rol == "listener":
-        if not await RoomManager.existe(room_id):
+        estado_info = await RoomManager.agregar_listener(room_id, ws)
+        if estado_info is None:
             await ws.send_json({"type": "error", "mensaje": "No hay transmisión activa en esta sala"})
             await ws.close()
             return
-
-        await RoomManager.agregar_listener(room_id, ws)
-        logger.info("Listener conectado a sala %s", room_id)
+        estado_actual, estado_ts_ms = estado_info
+        await ws.send_json(
+            {
+                "type": "estado_sesion",
+                "estado": estado_actual,
+                "timestamp_ms": estado_ts_ms,
+            }
+        )
+        logger.info("Listener conectado a sala %s (estado=%s)", room_id, estado_actual)
         try:
             while True:
                 msg = await ws.receive()

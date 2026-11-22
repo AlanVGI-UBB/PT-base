@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchHistorialDetalle } from '../api/cliente'
+import { liberarClips } from '../api/clips'
 import Feedback from '../components/Feedback'
 import SenaPlayer from '../components/SenaPlayer'
+
+const ETIQUETA_DISCONTINUIDAD = {
+  pausa: 'Transmisión pausada',
+  reanudacion: 'Transmisión reanudada',
+  desconexion: 'Emisor desconectado',
+}
 
 const FUENTE_KEY = 'puente_lsch_font_size'
 const LECTURA_BASE_MS = 1400
@@ -109,8 +116,18 @@ export default function ClaseDetailView() {
       })
   }, [claseId])
 
+  useEffect(() => () => liberarClips(), [])
+
+  const eventosApunte = useMemo(
+    () => (eventos || []).filter((e) => {
+      const tipo = e.tipo || 'segmento'
+      if (tipo !== 'segmento') return true
+      return Boolean(e.estable || e.texto)
+    }),
+    [eventos],
+  )
   const estables = useMemo(
-    () => (eventos || []).filter((e) => e.estable || e.texto),
+    () => (eventos || []).filter((e) => (e.tipo || 'segmento') === 'segmento' && (e.estable || e.texto)),
     [eventos],
   )
   const eventoActual = modo === 'replay' ? (estables[replayPos] || null) : null
@@ -250,6 +267,9 @@ export default function ClaseDetailView() {
           <IconoVolver size={18} /> <span>Volver</span>
         </button>
         <h1 className="sala-titulo">{tituloPantalla}</h1>
+        {clase.cierre === 'timeout' && (
+          <span className="badge-incompleto">Registro incompleto</span>
+        )}
         <span className="sala-badge-historial">HISTORIAL</span>
       </header>
 
@@ -281,14 +301,33 @@ export default function ClaseDetailView() {
           </div>
 
           <div className="sala-subtitulos__contenido" ref={subtitulosRef} style={{ fontSize: `${tamFuente}px` }}>
-            {estables.length === 0 ? (
+            {modo === 'apunte' ? (
+              eventosApunte.length === 0 ? (
+                <p className="sala-subtitulos__vacio">No hay transcripción disponible.</p>
+              ) : (
+                eventosApunte.map((e, i) => {
+                  const tipo = e.tipo || 'segmento'
+                  if (tipo !== 'segmento') {
+                    const etiqueta = ETIQUETA_DISCONTINUIDAD[tipo] || tipo
+                    return (
+                      <div
+                        key={i}
+                        className={`apunte-separador ${tipo === 'desconexion' ? 'apunte-separador--desconexion' : ''}`}
+                        role="separator"
+                      >
+                        <span>{etiqueta} · {formatearMarcaTiempo(e.timestamp_ms)}</span>
+                      </div>
+                    )
+                  }
+                  return (
+                    <p key={i} className="sala-subtitulo sala-subtitulo--final">
+                      {highlight(e.texto, e.senas)}
+                    </p>
+                  )
+                })
+              )
+            ) : estables.length === 0 ? (
               <p className="sala-subtitulos__vacio">No hay transcripción disponible.</p>
-            ) : modo === 'apunte' ? (
-              estables.map((e, i) => (
-                <p key={i} className="sala-subtitulo sala-subtitulo--final">
-                  {highlight(e.texto, e.senas)}
-                </p>
-              ))
             ) : (
               estables.slice(0, replayPos + 1).map((e, i) => (
                 <p

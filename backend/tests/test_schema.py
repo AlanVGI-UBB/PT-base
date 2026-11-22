@@ -89,16 +89,24 @@ def test_nuevas_tablas(db_path):
         "INSERT INTO usuario (rut, password_hash, nombre, apellido) "
         "VALUES ('11-1', 'hash', 'A', 'B')"
     )
-    conn.execute("INSERT INTO inscripcion (rut, curso_id, seccion) VALUES ('11-1', 1, 'SEC1')")
     conn.execute(
-        "INSERT INTO clase (room_id, curso_id, seccion, rut_emisor, fecha_inicio) "
-        "VALUES ('INF-221-SEC1', 1, 'SEC1', '11-1', '2026-01-01')"
+        "INSERT INTO inscripcion (rut, curso_id, seccion, puede_capturar) "
+        "VALUES ('11-1', 1, 'SEC1', 1)"
     )
     conn.execute(
-        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json, abstenciones_json) "
-        "VALUES (1, 0, 'test', 1, '[]', '[]')"
+        "INSERT INTO clase (room_id, curso_id, seccion, rut_emisor, fecha_inicio, cierre, condiciones_confirmadas) "
+        "VALUES ('INF-221-SEC1', 1, 'SEC1', '11-1', '2026-01-01', 'explicito', 1)"
+    )
+    conn.execute(
+        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json, abstenciones_json, tipo) "
+        "VALUES (1, 0, 'test', 1, '[]', '[]', 'segmento')"
     )
     conn.commit()
-    row = conn.execute("SELECT * FROM usuario").fetchone()
-    assert row["rut"] == "11-1"
+    insc = conn.execute("SELECT puede_capturar FROM inscripcion WHERE rut = '11-1'").fetchone()
+    clase = conn.execute("SELECT cierre, condiciones_confirmadas FROM clase WHERE id = 1").fetchone()
+    ev = conn.execute("SELECT tipo FROM evento_clase WHERE clase_id = 1").fetchone()
+    assert insc["puede_capturar"] == 1
+    assert clase["cierre"] == "explicito"
+    assert clase["condiciones_confirmadas"] == 1
+    assert ev["tipo"] == "segmento"
     conn.close()

@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from weakref import WeakKeyDictionary
 
 from fastapi import WebSocket
@@ -21,9 +20,9 @@ class RoomState:
     emitter_ws: WebSocket | None = None
     listeners: set[WebSocket] = field(default_factory=set)
     indice: Indice = field(default_factory=lambda: Indice(entradas={}, max_ngrama=0))
-    timeline: list[dict] = field(default_factory=list)
-    inicio_ms: int = 0
     clase_id: int | None = None
+    estado: str = "activa"
+    estado_ts_ms: int = 0
 
 
 class RoomManager:
@@ -68,7 +67,6 @@ class RoomManager:
                 rut_emisor=rut_emisor,
                 emitter_ws=emitter_ws,
                 indice=indice,
-                inicio_ms=int(datetime.now(timezone.utc).timestamp() * 1000),
             )
             cls._salas[room_id] = sala
             return sala
@@ -79,13 +77,23 @@ class RoomManager:
             return cls._salas.get(room_id)
 
     @classmethod
-    async def agregar_listener(cls, room_id: str, ws: WebSocket) -> bool:
+    async def set_estado(cls, room_id: str, estado: str, timestamp_ms: int) -> bool:
         async with cls._get_lock():
             sala = cls._salas.get(room_id)
             if not sala:
                 return False
-            sala.listeners.add(ws)
+            sala.estado = estado
+            sala.estado_ts_ms = timestamp_ms
             return True
+
+    @classmethod
+    async def agregar_listener(cls, room_id: str, ws: WebSocket) -> tuple[str, int] | None:
+        async with cls._get_lock():
+            sala = cls._salas.get(room_id)
+            if not sala:
+                return None
+            sala.listeners.add(ws)
+            return sala.estado, sala.estado_ts_ms
 
     @classmethod
     async def quitar_listener(cls, room_id: str, ws: WebSocket) -> None:

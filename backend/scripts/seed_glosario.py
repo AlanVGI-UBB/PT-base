@@ -1,23 +1,17 @@
-import hashlib
 import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from app.core.auth import hash_password
 from app.core.db import get_connection, init_schema
 from app.glossary.indice import construir_indice, limpiar_cache_indices
 from app.glossary.repository import list_terminos
 
 
-def hash_pass(password: str) -> str:
-    return hashlib.sha256((password + "puente_lsch_salt").encode()).hexdigest()
-
-
-def _resolver_video_url(video: str) -> str:
-    if video.startswith("/"):
-        return video
-    return f"/data/videos_senas/{video}"
+def _resolver_archivo_video(video: str) -> str:
+    return Path(video).name
 
 
 def main() -> None:
@@ -55,7 +49,7 @@ def main() -> None:
                 termino["concepto"],
                 json.dumps(termino["formas"], ensure_ascii=False),
                 json.dumps(termino.get("bloqueos", []), ensure_ascii=False),
-                _resolver_video_url(video),
+                _resolver_archivo_video(video),
                 termino.get("estado", "ensayo"),
             ),
         )
@@ -64,14 +58,24 @@ def main() -> None:
     for usuario in data.get("usuarios", []):
         conn.execute(
             "INSERT INTO usuario (rut, password_hash, nombre, apellido) VALUES (?, ?, ?, ?)",
-            (usuario["rut"], hash_pass(usuario["password"]), usuario["nombre"], usuario["apellido"]),
+            (
+                usuario["rut"],
+                hash_password(usuario["password"]),
+                usuario["nombre"],
+                usuario["apellido"],
+            ),
         )
     conn.commit()
 
     for insc in data.get("inscripciones", []):
         conn.execute(
-            "INSERT INTO inscripcion (rut, curso_id, seccion) VALUES (?, ?, ?)",
-            (insc["rut"], insc["curso_id"], insc["seccion"]),
+            "INSERT INTO inscripcion (rut, curso_id, seccion, puede_capturar) VALUES (?, ?, ?, ?)",
+            (
+                insc["rut"],
+                insc["curso_id"],
+                insc["seccion"],
+                1 if insc.get("puede_capturar") else 0,
+            ),
         )
     conn.commit()
 

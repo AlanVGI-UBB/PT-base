@@ -36,7 +36,9 @@ async function peticion(url, opciones = {}) {
   if (!resp.ok) {
     if (resp.status === 401) expulsarSesion()
     const err = await resp.json().catch(() => ({}))
-    throw new Error(err.detail || 'Error de red o del servidor')
+    const error = new Error(err.detail || 'Error de red o del servidor')
+    error.status = resp.status
+    throw error
   }
   return resp.json()
 }
@@ -54,10 +56,6 @@ export async function loginRequest(rut, password) {
   return resp.json()
 }
 
-export async function fetchCursos() {
-  return peticion('/api/cursos')
-}
-
 export async function fetchCursosUsuario() {
   return peticion('/api/cursos')
 }
@@ -71,7 +69,7 @@ export async function fetchGlosario(cursoId) {
 }
 
 export async function fetchSalaEstado(roomId) {
-  return peticion(`/api/salas/${roomId}/estado`).catch(() => ({ activa: false }))
+  return peticion(`/api/salas/${roomId}/estado`)
 }
 
 export async function fetchHistorial() {

@@ -222,6 +222,9 @@ export default function HistorialView({ user }) {
                         </header>
 
                         <h3 className="historial-card__titulo">{truncar(titulo, 32)}</h3>
+                        {c.cierre === 'timeout' && (
+                          <span className="badge-incompleto">Registro incompleto</span>
+                        )}
                         <p className="historial-card__desc">{descripcion}</p>
 
                         <footer className="historial-card__foot">

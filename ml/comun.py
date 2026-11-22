@@ -199,8 +199,7 @@ def cargar_terminos_seed(seed_path: Path, curso_id: int = 1) -> list[dict]:
     for idx, t in enumerate(data.get("terminos", []), start=1):
         if t["curso_id"] != curso_id:
             continue
-        video = t.get("video") or t.get("video_url", "")
-        video_url = video if video.startswith("/") else f"/data/videos_senas/{video}"
+        video_url = f"/api/cursos/{t['curso_id']}/senas/{idx}/video"
         terminos.append(
             {
                 "id": idx,

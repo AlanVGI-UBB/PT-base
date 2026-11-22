@@ -7,12 +7,6 @@ def ensure_schema() -> None:
     init_schema()
 
 
-def list_cursos() -> list[dict]:
-    conn = get_connection()
-    rows = conn.execute("SELECT id, cod_ramo, nombre FROM curso ORDER BY id").fetchall()
-    return [dict(r) for r in rows]
-
-
 def list_terminos(curso_id: int) -> list[dict]:
     conn = get_connection()
     rows = conn.execute(
@@ -27,38 +21,16 @@ def list_terminos(curso_id: int) -> list[dict]:
         bloqueos = json.loads(item.pop("bloqueos_json") or "[]")
         item["formas"] = formas
         item["bloqueos"] = bloqueos
+        item["video_url"] = f"/api/cursos/{item['curso_id']}/senas/{item['id']}/video"
         resultado.append(item)
     return resultado
 
 
-def insert_curso(curso_id: int, nombre: str, cod_ramo: str = "") -> None:
+def obtener_termino_video(curso_id: int, termino_id: int) -> dict | None:
     conn = get_connection()
-    conn.execute(
-        "INSERT OR IGNORE INTO curso (id, cod_ramo, nombre) VALUES (?, ?, ?)",
-        (curso_id, cod_ramo, nombre),
-    )
-    conn.commit()
-
-
-def insert_termino(
-    curso_id: int,
-    texto_visible: str,
-    formas: list[str],
-    video_url: str,
-    bloqueos: list[str] | None = None,
-    estado: str = "ensayo",
-) -> None:
-    conn = get_connection()
-    conn.execute(
-        "INSERT INTO termino (curso_id, texto_visible, formas_json, bloqueos_json, video_url, estado) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (
-            curso_id,
-            texto_visible,
-            json.dumps(formas, ensure_ascii=False),
-            json.dumps(bloqueos or [], ensure_ascii=False),
-            video_url,
-            estado,
-        ),
-    )
-    conn.commit()
+    row = conn.execute(
+        "SELECT id, curso_id, video_url, estado "
+        "FROM termino WHERE id = ? AND curso_id = ?",
+        (termino_id, curso_id),
+    ).fetchone()
+    return dict(row) if row else None

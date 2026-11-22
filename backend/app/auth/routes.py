@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.core.auth import crear_token, hash_password, obtener_rut
+from app.core.auth import crear_token, obtener_rut, verificar_password
 from app.core.db import get_connection
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -29,7 +29,7 @@ def login(req: LoginRequest):
     if not row:
         raise HTTPException(status_code=401, detail="RUT o contraseña inválidos")
 
-    if row["password_hash"] != hash_password(req.password):
+    if not verificar_password(req.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="RUT o contraseña inválidos")
 
     token = crear_token(req.rut)
@@ -53,7 +53,7 @@ def usuario_me(request: Request):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     inscripciones = conn.execute(
-        "SELECT i.curso_id, c.cod_ramo, c.nombre, i.seccion "
+        "SELECT i.curso_id, c.cod_ramo, c.nombre, i.seccion, i.puede_capturar "
         "FROM inscripcion i "
         "JOIN curso c ON c.id = i.curso_id "
         "WHERE i.rut = ?",
@@ -70,6 +70,7 @@ def usuario_me(request: Request):
                 "cod_ramo": ins["cod_ramo"],
                 "nombre": ins["nombre"],
                 "seccion": ins["seccion"],
+                "puede_capturar": bool(ins["puede_capturar"]),
             }
             for ins in inscripciones
         ],

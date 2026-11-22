@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS inscripcion (
     rut TEXT NOT NULL REFERENCES usuario(rut),
     curso_id INTEGER NOT NULL REFERENCES curso(id),
     seccion TEXT NOT NULL,
+    puede_capturar INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (rut, curso_id, seccion)
 );
 
@@ -37,7 +38,9 @@ CREATE TABLE IF NOT EXISTS clase (
     fecha_inicio TEXT NOT NULL,
     fecha_fin TEXT,
     duracion_ms INTEGER DEFAULT 0,
-    titulo TEXT
+    titulo TEXT,
+    cierre TEXT,
+    condiciones_confirmadas INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS evento_clase (
@@ -47,7 +50,8 @@ CREATE TABLE IF NOT EXISTS evento_clase (
     texto TEXT,
     estable INTEGER DEFAULT 0,
     senas_json TEXT,
-    abstenciones_json TEXT
+    abstenciones_json TEXT,
+    tipo TEXT NOT NULL DEFAULT 'segmento'
 );
 
 CREATE TABLE IF NOT EXISTS metrica_segmento (

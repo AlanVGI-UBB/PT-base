@@ -68,7 +68,9 @@ def test_seed_script_puebla_y_curso_control_queda_vacio(tmp_path, monkeypatch):
     db_path = str(tmp_path / "seed_test.db")
     monkeypatch.setenv("DB_PATH", db_path)
 
+    from app.core.auth import verificar_password
     from app.core.config import get_settings
+    from app.core.db import get_connection
 
     get_settings.cache_clear()
     from app.core import db as db_mod
@@ -82,6 +84,21 @@ def test_seed_script_puebla_y_curso_control_queda_vacio(tmp_path, monkeypatch):
     indice_control = obtener_indice_curso(2)
     assert indice_control.max_ngrama == 0
     assert buscar_terminos("arreglo lista enlazada pila", indice_control).senas == []
+
+    conn = get_connection()
+    usuarios = conn.execute("SELECT rut, password_hash FROM usuario ORDER BY rut").fetchall()
+    assert len(usuarios) == 3
+    hashes = [u["password_hash"] for u in usuarios]
+    assert len(set(hashes)) == 3
+    for h in hashes:
+        assert h.startswith("scrypt$16384$8$1$")
+        assert verificar_password("test123", h)
+
+    insc_piloto = conn.execute(
+        "SELECT rut, puede_capturar FROM inscripcion WHERE curso_id = 1 ORDER BY rut"
+    ).fetchall()
+    permisos = {r["rut"]: r["puede_capturar"] for r in insc_piloto}
+    assert permisos == {"12345678-5": 1, "9876543-3": 0}
 
 
 def test_generar_clips_no_sobrescribe_sin_forzar(tmp_path, monkeypatch):

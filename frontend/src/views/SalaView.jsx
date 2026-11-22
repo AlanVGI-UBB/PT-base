@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchSalaEstado, expulsarSesion, getToken } from '../api/cliente'
+import { fetchGlosario, fetchSalaEstado, expulsarSesion, getToken } from '../api/cliente'
+import { liberarClips, precargar } from '../api/clips'
 import { iniciar as iniciarCapturaPcm } from '../audio/capturaPcm'
+import CondicionesModal from '../components/CondicionesModal'
 import FinalizarModal from '../components/FinalizarModal'
 import Feedback from '../components/Feedback'
 import EstadoConexion from '../components/EstadoConexion'
@@ -78,12 +80,16 @@ export default function SalaView({ roomId, user, onVolver }) {
   const { actual: senaActual, pendientes: senasPendientes, omitidas: senasOmitidas, playId: senaPlayId, encolar, alTerminar } = useColaSenas()
   const [grabando, setGrabando] = useState(false)
   const [pausado, setPausado] = useState(false)
+  const [sesionPausada, setSesionPausada] = useState(false)
   const [finalizando, setFinalizando] = useState(false)
   const [nivelAudio, setNivelAudio] = useState(0)
   const [sinAudio, setSinAudio] = useState(false)
   const [sesionIniciada, setSesionIniciada] = useState(false)
+  const [condicionesConfirmadas, setCondicionesConfirmadas] = useState(false)
+  const [modalCondicionesAbierto, setModalCondicionesAbierto] = useState(false)
   const [modalAbierto, setModalAbierto] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const [mensajeSinTransmision, setMensajeSinTransmision] = useState('')
   const [tiempo, setTiempo] = useState(0)
   const [tamFuente, setTamFuente] = useState(() => Number(localStorage.getItem(FUENTE_KEY)) || 18)
 
@@ -96,22 +102,45 @@ export default function SalaView({ roomId, user, onVolver }) {
 
   useEffect(() => {
     if (!roomId || !user) return
+    setDeterminando(true)
+    setFeedback(null)
+    setMensajeSinTransmision('')
     fetchSalaEstado(roomId)
       .then((estado) => {
-        const r = estado.activa ? 'listener' : 'emitter'
-        setRol(r)
+        if (estado.curso_id) {
+          fetchGlosario(estado.curso_id)
+            .then((glosario) => precargar(glosario))
+            .catch(() => {})
+        }
+        if (estado.activa) {
+          setRol('listener')
+          setSesionIniciada(true)
+        } else if (estado.puede_capturar) {
+          setRol('emitter')
+        } else {
+          setRol(null)
+          setMensajeSinTransmision('Aún no hay una transmisión en esta sala')
+        }
         setDeterminando(false)
-        if (r === 'listener') setSesionIniciada(true)
       })
-      .catch(() => {
+      .catch((err) => {
+        setRol(null)
         setDeterminando(false)
-        setFeedback({ tipo: 'error', mensaje: 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.' })
+        if (err?.status === 403) {
+          setFeedback({ tipo: 'error', mensaje: err.message || 'No tienes acceso a esta sala' })
+        } else {
+          setFeedback({ tipo: 'error', mensaje: 'No se pudo conectar con el servidor. Verifica tu conexión e inténtalo de nuevo.' })
+        }
       })
   }, [roomId, user])
 
   const token = getToken()
   const wsUrl = rol && sesionIniciada && token
-    ? `${WS_URL}/ws/sala/${roomId}?rol=${rol}&token=${encodeURIComponent(token)}`
+    ? rol === 'emitter'
+      ? (condicionesConfirmadas
+          ? `${WS_URL}/ws/sala/${roomId}?rol=emitter&token=${encodeURIComponent(token)}&condiciones=1`
+          : null)
+      : `${WS_URL}/ws/sala/${roomId}?rol=listener&token=${encodeURIComponent(token)}`
     : null
 
   const manejarMensaje = useCallback((data) => {
@@ -134,10 +163,13 @@ export default function SalaView({ roomId, user, onVolver }) {
       if (data.final && data.senas && data.senas.length > 0) {
         encolar(data.senas)
       }
+    } else if (data.type === 'estado_sesion') {
+      setSesionPausada(data.estado === 'pausada')
     } else if (data.type === 'clase_finalizada') {
       clearTimeout(finalizarFallbackRef.current)
       setFinalizando(false)
       setSesionIniciada(false)
+      setSesionPausada(false)
       setFeedback({ tipo: 'info', mensaje: 'La clase terminó y se guardó en tu historial' })
       volverTimeoutRef.current = setTimeout(() => { window.location.hash = '#/dashboard' }, 2500)
     } else if (data.type === 'emisor_desconectado') {
@@ -166,6 +198,7 @@ export default function SalaView({ roomId, user, onVolver }) {
       clearInterval(intervalRef.current)
       clearTimeout(volverTimeoutRef.current)
       clearTimeout(finalizarFallbackRef.current)
+      liberarClips()
     }
   }, [])
 
@@ -193,8 +226,10 @@ export default function SalaView({ roomId, user, onVolver }) {
       capturaRef.current = captura
       setGrabando(true)
       setPausado(false)
+      setSesionPausada(false)
       setTiempo(0)
       intervalRef.current = setInterval(() => setTiempo((t) => t + 1), 1000)
+      setCondicionesConfirmadas(true)
       setSesionIniciada(true)
     } catch {
       setFeedback({
@@ -204,19 +239,30 @@ export default function SalaView({ roomId, user, onVolver }) {
     }
   }, [wsRef])
 
+  const abrirModalCondiciones = useCallback(() => setModalCondicionesAbierto(true), [])
+  const cancelarCondiciones = useCallback(() => setModalCondicionesAbierto(false), [])
+  const confirmarCondiciones = useCallback(() => {
+    setModalCondicionesAbierto(false)
+    iniciar()
+  }, [iniciar])
+
   const pausar = useCallback(() => {
     capturaRef.current?.pausar()
     setPausado(true)
+    setSesionPausada(true)
     setNivelAudio(0)
     setSinAudio(false)
-  }, [])
+    enviar(JSON.stringify({ action: 'pausar' }))
+  }, [enviar])
 
   const reanudar = useCallback(() => {
     ultimoAudioRef.current = Date.now()
     setSinAudio(false)
     capturaRef.current?.reanudar()
     setPausado(false)
-  }, [])
+    setSesionPausada(false)
+    enviar(JSON.stringify({ action: 'reanudar' }))
+  }, [enviar])
 
   const abrirModalFinalizar = useCallback(() => setModalAbierto(true), [])
   const cancelarFinalizar = useCallback(() => setModalAbierto(false), [])
@@ -229,6 +275,7 @@ export default function SalaView({ roomId, user, onVolver }) {
     setSinAudio(false)
     setGrabando(false)
     setPausado(false)
+    setSesionPausada(false)
     setModalAbierto(false)
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       setFinalizando(true)
@@ -266,7 +313,11 @@ export default function SalaView({ roomId, user, onVolver }) {
     return (
       <main className="sala">
         <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-          <Feedback tipo="error" mensaje={feedback?.mensaje} onClose={() => setFeedback(null)} />
+          {mensajeSinTransmision ? (
+            <Feedback tipo="info" mensaje={mensajeSinTransmision} />
+          ) : (
+            <Feedback tipo="error" mensaje={feedback?.mensaje} onClose={() => setFeedback(null)} />
+          )}
           <button className="btn btn--ghost" onClick={onVolver}>
             <IconoSalir size={18} /> <span>Volver al inicio</span>
           </button>
@@ -293,9 +344,9 @@ export default function SalaView({ roomId, user, onVolver }) {
         )}
         <h1 className="sala-titulo">{roomId.replace('-', ' — ')}</h1>
         {estadoWs === 'conectado' && (
-          <span className="sala-en-vivo">
+          <span className={`sala-en-vivo ${sesionPausada ? 'sala-en-vivo--pausada' : ''}`}>
             <span className="sala-en-vivo__dot" />
-            EN VIVO
+            {sesionPausada ? 'EN PAUSA' : 'EN VIVO'}
           </span>
         )}
         {sesionIniciada && <EstadoConexion estado={estadoWs} intentos={intentos} />}
@@ -305,6 +356,12 @@ export default function SalaView({ roomId, user, onVolver }) {
           </button>
         )}
       </header>
+
+      {sesionPausada && (
+        <div className="sala-pausa-banner" role="status">
+          Transmisión en pausa
+        </div>
+      )}
 
       {feedback && (
         <div style={{ flexShrink: 0 }}>
@@ -365,9 +422,11 @@ export default function SalaView({ roomId, user, onVolver }) {
                 </span>
               </>
             )}
-            {grabando && pausado && <span style={{ color: 'var(--warning)' }}>Pausado</span>}
+            {(grabando && pausado) || (rol === 'listener' && sesionPausada) ? (
+              <span style={{ color: 'var(--warning)' }}>Transmisión en pausa</span>
+            ) : null}
             {finalizando && <span style={{ color: 'var(--muted)' }}>Finalizando y guardando...</span>}
-            {!grabando && !finalizando && (
+            {!grabando && !finalizando && !(rol === 'listener' && sesionPausada) && (
               <span style={{ color: 'var(--muted)' }}>
                 {rol === 'listener' ? 'Conectado como oyente' : 'Listo para iniciar'}
               </span>
@@ -414,7 +473,7 @@ export default function SalaView({ roomId, user, onVolver }) {
             <div className="sala-estado__sub">
               {grabando && (
                 <>
-                  <span>Transmitiendo · {formatearTiempo(tiempo)}</span>
+                  <span>{pausado ? 'En pausa' : 'Transmitiendo'} · {formatearTiempo(tiempo)}</span>
                   {!pausado && (
                     <span className="nivel-audio" aria-hidden="true">
                       <span className="nivel-audio__barra" style={{ width: `${nivelPorcentaje}%` }} />
@@ -428,7 +487,7 @@ export default function SalaView({ roomId, user, onVolver }) {
           </div>
           <div className="sala-controles">
             {!grabando ? (
-              <button className="btn btn--ghost-pause" onClick={iniciar} disabled={finalizando}>
+              <button className="btn btn--ghost-pause" onClick={abrirModalCondiciones} disabled={finalizando}>
                 <IconoMicrofono size={18} /> {finalizando ? 'Guardando...' : 'Iniciar Transmisión'}
               </button>
             ) : (
@@ -446,6 +505,12 @@ export default function SalaView({ roomId, user, onVolver }) {
           </div>
         </footer>
       )}
+
+      <CondicionesModal
+        open={modalCondicionesAbierto}
+        onConfirm={confirmarCondiciones}
+        onCancel={cancelarCondiciones}
+      />
 
       <FinalizarModal
         open={modalAbierto}

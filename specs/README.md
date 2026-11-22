@@ -64,7 +64,7 @@ Comandos/procedimientos para validar la implementación.
 | SPEC-006 | Transcripción real: captura PCM en el navegador + faster-whisper local | Completada |
 | SPEC-007 | Glosario del curso piloto provisional, clips de ensayo y motor de coincidencia | Completada |
 | SPEC-008 | Mediciones de la prueba de concepto: transcripción, coincidencia y distribución | Completada (brecha acústica R9 declarada) |
-| SPEC-009 | Acceso por inscripción, permiso de captura, estado de sesión y saneamiento | Borrador |
+| SPEC-009 | Acceso por inscripción, permiso de captura, estado de sesión y saneamiento | Completada |
 
 ### Cierre del anteproyecto (SPEC-006 a SPEC-009)
 

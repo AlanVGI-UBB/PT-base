@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-
-const API_BASE = import.meta.env.VITE_API_URL
-const API_URL = API_BASE !== undefined ? API_BASE : 'http://localhost:8000'
+import { obtenerClip } from '../api/clips'
 
 export default function SenaPlayer({
   sena,
@@ -12,13 +10,39 @@ export default function SenaPlayer({
   onEnded,
 }) {
   const item = sena || (senas && senas[0]) || null
+  const [blobUrl, setBlobUrl] = useState(null)
   const [error, setError] = useState(false)
   const videoRef = useRef(null)
   const onEndedRef = useRef(onEnded)
   onEndedRef.current = onEnded
 
   useEffect(() => {
+    let cancelado = false
     setError(false)
+    if (!item?.video_url) {
+      setBlobUrl(null)
+      if (item) setError(true)
+      return undefined
+    }
+    obtenerClip(item.video_url)
+      .then((url) => {
+        if (cancelado) return
+        if (!url) {
+          setBlobUrl(null)
+          setError(true)
+        } else {
+          setBlobUrl(url)
+        }
+      })
+      .catch(() => {
+        if (!cancelado) {
+          setBlobUrl(null)
+          setError(true)
+        }
+      })
+    return () => {
+      cancelado = true
+    }
   }, [item?.video_url, playId])
 
   useEffect(() => {
@@ -31,7 +55,7 @@ export default function SenaPlayer({
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || error) return
+    if (!video || error || !blobUrl) return
     video.playbackRate = velocidad
     if (reproduciendo) {
       const promesa = video.play()
@@ -41,7 +65,7 @@ export default function SenaPlayer({
     } else {
       video.pause()
     }
-  }, [reproduciendo, velocidad, item?.video_url, playId, error])
+  }, [reproduciendo, velocidad, blobUrl, playId, error])
 
   if (!item) return null
 
@@ -53,11 +77,11 @@ export default function SenaPlayer({
         )}
         {error ? (
           <div className="sena-error">Video no disponible</div>
-        ) : (
+        ) : blobUrl ? (
           <video
             ref={videoRef}
             key={`${item.video_url || 'sin-video'}-${playId}`}
-            src={item.video_url ? `${API_URL}${item.video_url}` : undefined}
+            src={blobUrl}
             autoPlay={reproduciendo}
             preload="auto"
             muted
@@ -69,6 +93,8 @@ export default function SenaPlayer({
             onEnded={() => onEndedRef.current?.()}
             onError={() => setError(true)}
           />
+        ) : (
+          <div className="sena-error">Cargando clip...</div>
         )}
         <span className="sena-label">{item.texto_visible}</span>
       </div>

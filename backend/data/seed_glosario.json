@@ -6,13 +6,15 @@
     ],
     "usuarios": [
         {"rut": "12345678-5", "password": "test123", "nombre": "Juan", "apellido": "Pérez"},
-        {"rut": "9876543-3", "password": "test123", "nombre": "María", "apellido": "González"}
+        {"rut": "9876543-3", "password": "test123", "nombre": "María", "apellido": "González"},
+        {"rut": "11111111-1", "password": "test123", "nombre": "Pedro", "apellido": "Soto"}
     ],
     "inscripciones": [
-        {"rut": "12345678-5", "curso_id": 1, "seccion": "1"},
-        {"rut": "12345678-5", "curso_id": 2, "seccion": "3"},
-        {"rut": "9876543-3", "curso_id": 1, "seccion": "1"},
-        {"rut": "9876543-3", "curso_id": 2, "seccion": "3"}
+        {"rut": "12345678-5", "curso_id": 1, "seccion": "1", "puede_capturar": true},
+        {"rut": "12345678-5", "curso_id": 2, "seccion": "3", "puede_capturar": true},
+        {"rut": "9876543-3", "curso_id": 1, "seccion": "1", "puede_capturar": false},
+        {"rut": "9876543-3", "curso_id": 2, "seccion": "3", "puede_capturar": false},
+        {"rut": "11111111-1", "curso_id": 2, "seccion": "3", "puede_capturar": false}
     ],
     "terminos": [
         {

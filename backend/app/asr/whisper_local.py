@@ -294,7 +294,12 @@ class FasterWhisperProvider:
 
                 ventanas: list[Ventana] = []
                 for trama, llegada_ms in tramas:
-                    ventanas.extend(segmentador.alimentar(trama, llegada_ms=llegada_ms))
+                    if len(trama) == 0:
+                        v_flush = segmentador.cerrar(llegada_ms=llegada_ms)
+                        if v_flush is not None:
+                            ventanas.append(v_flush)
+                    else:
+                        ventanas.extend(segmentador.alimentar(trama, llegada_ms=llegada_ms))
                 if terminado:
                     v_fin = segmentador.cerrar(llegada_ms=fin_llegada_ms)
                     if v_fin is not None:

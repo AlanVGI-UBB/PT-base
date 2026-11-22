@@ -53,8 +53,8 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
         await Promise.all(
           data.map(async (c) => {
             const roomId = `${c.cod_ramo}-${c.seccion}`
-            const estado = await fetchSalaEstado(roomId)
-            map[roomId] = estado.activa
+            const estado = await fetchSalaEstado(roomId).catch(() => ({ activa: false }))
+            map[roomId] = Boolean(estado.activa)
           })
         )
         setEstados(map)
@@ -122,12 +122,14 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
                 <span className={`estado-dot ${claseActiva ? 'estado-dot--vivo' : ''}`} />
                 {claseActiva ? 'En vivo' : 'Sin clase activa'}
               </div>
-              <div className="clase-actual__actions">
-                <button className="btn btn--primary" onClick={() => irASala(roomClaseActual)}>
-                  <IconoMicrofono size={20} />
-                  <span>{claseActiva ? 'Entrar a la clase' : 'Iniciar Transmisión de Clase'}</span>
-                </button>
-              </div>
+              {(claseActiva || claseActual.puede_capturar) && (
+                <div className="clase-actual__actions">
+                  <button className="btn btn--primary" onClick={() => irASala(roomClaseActual)}>
+                    <IconoMicrofono size={20} />
+                    <span>{claseActiva ? 'Entrar a la clase' : 'Iniciar Transmisión de Clase'}</span>
+                  </button>
+                </div>
+              )}
             </section>
 
             {otrasAsignaturas.length > 0 && (
@@ -149,10 +151,12 @@ export default function DashboardView({ user, onIrSala, onLogout }) {
                             {activa ? 'En vivo' : 'Sin clase activa'}
                           </span>
                         </div>
-                        <button className="btn btn--ghost-outline" onClick={() => irASala(roomId)}>
-                          <IconoPlay size={18} />
-                          <span>{activa ? 'Entrar a la clase' : 'Iniciar'}</span>
-                        </button>
+                        {(activa || c.puede_capturar) && (
+                          <button className="btn btn--ghost-outline" onClick={() => irASala(roomId)}>
+                            <IconoPlay size={18} />
+                            <span>{activa ? 'Entrar a la clase' : 'Iniciar'}</span>
+                          </button>
+                        )}
                       </div>
                     )
                   })}

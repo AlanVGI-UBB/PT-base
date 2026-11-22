@@ -211,7 +211,7 @@ async def _ejecutar_sala(
     tramas_wav: list[bytes] | None,
 ) -> dict[str, Any]:
     tok_q = urllib.parse.quote(token, safe="")
-    ws_em = f"{url_ws.rstrip('/')}/ws/sala/{room_id}?rol=emitter&token={tok_q}"
+    ws_em = f"{url_ws.rstrip('/')}/ws/sala/{room_id}?rol=emitter&token={tok_q}&condiciones=1"
     ws_lis = f"{url_ws.rstrip('/')}/ws/sala/{room_id}?rol=listener&token={tok_q}"
 
     emitidos_sala: list[dict[str, Any]] = []

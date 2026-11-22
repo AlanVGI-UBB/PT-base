@@ -7,22 +7,30 @@ def crear_clase(
     seccion: str,
     rut_emisor: str,
     inicio: str,
+    condiciones_confirmadas: bool = False,
 ) -> int:
     conn = get_connection()
     cur = conn.execute(
-        "INSERT INTO clase (room_id, curso_id, seccion, rut_emisor, fecha_inicio) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (room_id, curso_id, seccion, rut_emisor, inicio),
+        "INSERT INTO clase "
+        "(room_id, curso_id, seccion, rut_emisor, fecha_inicio, condiciones_confirmadas) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (room_id, curso_id, seccion, rut_emisor, inicio, 1 if condiciones_confirmadas else 0),
     )
     conn.commit()
     return cur.lastrowid
 
 
-def finalizar_clase(clase_id: int, fin: str, duracion_ms: int, titulo: str | None = None) -> None:
+def finalizar_clase(
+    clase_id: int,
+    fin: str,
+    duracion_ms: int,
+    titulo: str | None = None,
+    cierre: str = "explicito",
+) -> None:
     conn = get_connection()
     conn.execute(
-        "UPDATE clase SET fecha_fin = ?, duracion_ms = ?, titulo = ? WHERE id = ?",
-        (fin, duracion_ms, titulo, clase_id),
+        "UPDATE clase SET fecha_fin = ?, duracion_ms = ?, titulo = ?, cierre = ? WHERE id = ?",
+        (fin, duracion_ms, titulo, cierre, clase_id),
     )
     conn.commit()
 
@@ -30,16 +38,18 @@ def finalizar_clase(clase_id: int, fin: str, duracion_ms: int, titulo: str | Non
 def guardar_evento(
     clase_id: int,
     timestamp_ms: int,
-    texto: str,
+    texto: str | None,
     estable: bool,
     senas_json: str,
     abstenciones_json: str = "[]",
+    tipo: str = "segmento",
 ) -> None:
     conn = get_connection()
     conn.execute(
-        "INSERT INTO evento_clase (clase_id, timestamp_ms, texto, estable, senas_json, abstenciones_json) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (clase_id, timestamp_ms, texto, 1 if estable else 0, senas_json, abstenciones_json),
+        "INSERT INTO evento_clase "
+        "(clase_id, timestamp_ms, texto, estable, senas_json, abstenciones_json, tipo) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (clase_id, timestamp_ms, texto, 1 if estable else 0, senas_json, abstenciones_json, tipo),
     )
     conn.commit()
 
@@ -49,12 +59,12 @@ def listar_clases(rut: str) -> list[dict]:
     rows = conn.execute(
         "SELECT c.id, c.room_id, c.curso_id, co.nombre as curso_nombre, "
         "co.cod_ramo, c.seccion, c.rut_emisor, c.fecha_inicio, c.fecha_fin, "
-        "c.duracion_ms, c.titulo, "
+        "c.duracion_ms, c.titulo, c.cierre, "
         "COALESCE((SELECT SUM(CASE WHEN texto IS NULL OR texto = '' THEN 0 "
         "ELSE LENGTH(texto) - LENGTH(REPLACE(texto, ' ', '')) + 1 END) "
-        "FROM evento_clase WHERE clase_id = c.id), 0) as palabras, "
-        "(SELECT texto FROM evento_clase WHERE clase_id = c.id AND estable = 1 "
-        "ORDER BY timestamp_ms LIMIT 1) as preview "
+        "FROM evento_clase WHERE clase_id = c.id AND tipo = 'segmento'), 0) as palabras, "
+        "(SELECT texto FROM evento_clase WHERE clase_id = c.id AND tipo = 'segmento' AND estable = 1 "
+        "ORDER BY timestamp_ms, id LIMIT 1) as preview "
         "FROM clase c "
         "JOIN curso co ON co.id = c.curso_id "
         "JOIN inscripcion i ON i.curso_id = c.curso_id AND i.seccion = c.seccion "
@@ -82,17 +92,8 @@ def obtener_clase(clase_id: int) -> dict | None:
 def obtener_eventos(clase_id: int) -> list[dict]:
     conn = get_connection()
     rows = conn.execute(
-        "SELECT id, clase_id, timestamp_ms, texto, estable, senas_json "
-        "FROM evento_clase WHERE clase_id = ? ORDER BY timestamp_ms",
+        "SELECT id, clase_id, timestamp_ms, texto, estable, senas_json, tipo "
+        "FROM evento_clase WHERE clase_id = ? ORDER BY timestamp_ms, id",
         (clase_id,),
     ).fetchall()
     return [dict(r) for r in rows]
-
-
-def usuario_participa(rut: str, curso_id: int, seccion: str) -> bool:
-    conn = get_connection()
-    row = conn.execute(
-        "SELECT 1 FROM inscripcion WHERE rut = ? AND curso_id = ? AND seccion = ?",
-        (rut, curso_id, seccion),
-    ).fetchone()
-    return row is not None

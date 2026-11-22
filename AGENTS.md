@@ -5,8 +5,9 @@ en este repositorio. Debe respetar las reglas del proyecto.
 
 ## Documentación base
 
-- Proyecto y alcance: `docs/README.md`
+- Visión general y ejecución: `README.md`
 - Plan técnico de desarrollo (etapas, decisiones de stack): `docs/plan_desarrollo_tecnico.md`
+- Decisiones técnicas del prototipo: `docs/decisiones_tecnicas.md`
 - Especificaciones que rigen cada entrega: `specs/` (trabajamos a base de specs).
   Cada spec tiene objetivos, alcance, requisitos, criterios de aceptación y verificación.
 
@@ -35,7 +36,9 @@ pytest ml/tests
 pnpm --prefix frontend build
 ```
 
-No existe todavía suite de tests. Cuando una spec introduzca tests, añadirla aquí.
+Las pruebas del backend viven en `backend/tests/` (incluyendo una prueba opcional
+marcada con `@pytest.mark.modelo` que requiere `pytest backend/tests -m modelo`)
+y las pruebas del pipeline de medición en `ml/tests/`.
 
 ## Convenciones
 

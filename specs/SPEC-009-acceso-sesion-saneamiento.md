@@ -1,7 +1,7 @@
 # SPEC-009 — Acceso por inscripción, permiso de captura, estado de sesión y saneamiento
 
 **Etapa del plan:** Semestre 2 · Etapa 5 (integración) de `docs/plan_desarrollo_tecnico.md`, como corrección de SPEC-004 y SPEC-005. Informe: RF01, RF05, RF08, RF09, RF11, RF21, RF22, RN02, RN13, RN14, RN15, RNF10, RNF11, CA01, CA02 y §3.7.
-**Estado:** Borrador
+**Estado:** Completada
 **Depende de:** SPEC-005; SPEC-007 para los requisitos de clips (R6–R8)
 
 ---
@@ -196,17 +196,17 @@ Tabla con una fila por decisión. Contenido mínimo:
 
 ## 6. Criterios de aceptación
 
-- [ ] R1–R25 satisfechos.
-- [ ] CA01 del informe: un usuario de otro curso intenta la API del glosario, un clip y la suscripción a la sala; las tres se rechazan.
-- [ ] El usuario sin permiso de captura no ve "Iniciar Transmisión" y, si fuerza la URL de la sala, no puede emitir.
-- [ ] Al pausar el emisor, un segundo dispositivo oyente muestra "Transmisión en pausa" y deja de recibir texto; al reanudar, vuelve.
-- [ ] Un oyente que entra durante una pausa ve el estado de pausa.
-- [ ] El detalle de una clase con una pausa muestra el separador; una clase cerrada por desconexión aparece como "Registro incompleto".
-- [ ] No se puede iniciar la captura sin confirmar el aviso de condiciones.
-- [ ] Los clips se reproducen en vivo y en replay, y `GET` directo a un clip sin token responde 401.
-- [ ] Una sesión iniciada sigue válida después de 90 minutos.
-- [ ] En la base no hay hashes SHA-256 de contraseñas; dos usuarios con la misma contraseña tienen valores guardados distintos.
-- [ ] El README permite levantar el proyecto desde cero siguiendo solo sus pasos.
+- [x] R1–R25 satisfechos.
+- [x] CA01 del informe: un usuario de otro curso intenta la API del glosario, un clip y la suscripción a la sala; las tres se rechazan.
+- [x] El usuario sin permiso de captura no ve "Iniciar Transmisión" y, si fuerza la URL de la sala, no puede emitir.
+- [x] Al pausar el emisor, un segundo dispositivo oyente muestra "Transmisión en pausa" y deja de recibir texto; al reanudar, vuelve.
+- [x] Un oyente que entra durante una pausa ve el estado de pausa.
+- [x] El detalle de una clase con una pausa muestra el separador; una clase cerrada por desconexión aparece como "Registro incompleto".
+- [x] No se puede iniciar la captura sin confirmar el aviso de condiciones.
+- [x] Los clips se reproducen en vivo y en replay, y `GET` directo a un clip sin token responde 401.
+- [x] Una sesión iniciada sigue válida después de 90 minutos.
+- [x] En la base no hay hashes SHA-256 de contraseñas; dos usuarios con la misma contraseña tienen valores guardados distintos.
+- [x] El README permite levantar el proyecto desde cero siguiendo solo sus pasos.
 
 ## 7. Tareas de implementación
 
